@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
     exe.linkSystemLibrary("dl");
     exe.linkSystemLibrary("rt");
     exe.linkSystemLibrary("X11");
-    exe.addIncludePath(.{ .cwd_relative = "/home/daniel/raylib/src" });
+    //exe.addIncludePath(.{ .cwd_relative = "/home/daniel/raylib/src" });
     //exe.addClangArg("-L/home/daniel/raylib/src");
     // Install the executable
     b.installArtifact(exe);
