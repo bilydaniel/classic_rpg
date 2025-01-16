@@ -1,4 +1,5 @@
 const std = @import("std");
+//const ray = @import("raylib");
 const ray = @cImport({
     @cInclude("raylib.h");
 });
@@ -13,7 +14,6 @@ pub fn main() !void {
     std.debug.print("Hello world\n", .{});
     ray.InitWindow(800, 600, "RPG");
     defer ray.CloseWindow();
-
     ray.SetTargetFPS(60);
 
     while (!ray.WindowShouldClose()) {}
