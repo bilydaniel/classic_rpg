@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
 
     // Link with raylib
     exe.linkLibC();
+    exe.addSystemCommand(&.{ "pkg-config", "--cflags", "--libs", "raylib" });
     exe.linkSystemLibrary("raylib");
 
     // Install the executable
