@@ -113,22 +113,23 @@ pub fn main() !void {
         c.ClearBackground(c.BLACK);
         //TODO: draw player
 
-        // c.DrawRectangle(@as(c_int, @intCast(player.x * tile_width)), @as(c_int, @intCast(player.y * tile_height)), 16, 24, c.YELLOW);
+        c.DrawRectangle(
+            @as(c_int, @intCast(player.x * tile_width)),
+            @as(c_int, @intCast(player.y * tile_height)),
+            16,
+            24,
+            c.YELLOW,
+        );
+
+        c.DrawTexture(player_texture, @as(c_int, @intCast(player.x * tile_width)), @as(c_int, @intCast(player.y * tile_height)), c.WHITE);
         c.EndTextureMode();
 
         c.BeginDrawing();
         c.ClearBackground(c.BLACK);
 
-        const scaled_player_width = 16;
-        const scaled_player_height = 24;
-        c.DrawTexturePro(
-            player_texture,
-            c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, @floatFromInt(player_texture.width)), .height = @as(f32, @floatFromInt(player_texture.height)) }, // Source (full texture)
-            c.Rectangle{ .x = @as(f32, @floatFromInt(player.x * tile_width)), .y = @as(f32, @floatFromInt(player.y * tile_height)), .width = @as(f32, scaled_player_width), .height = @as(f32, scaled_player_height) }, // Destination (scaled position and size)
-            c.Vector2{ .x = 0, .y = 0 }, // No origin shift
-            0.0, // No rotation
-            c.WHITE,
-        );
+        //const scaled_player_width = 16;
+        //const scaled_player_height = 24;
+        //c.DrawTexturePro(player_texture, c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, @floatFromInt(player_texture.width)), .height = @as(f32, @floatFromInt(player_texture.height)) }, c.Rectangle{ .x = @as(f32, @floatFromInt(player.x * tile_width)), .y = @as(f32, @floatFromInt(player.y * tile_height)), .width = @as(f32, scaled_player_width), .height = @as(f32, scaled_player_height) }, c.Vector2{ .x = 0, .y = 0 }, 0.0, c.WHITE);
 
         c.DrawTexturePro(
             screen.texture,
@@ -139,7 +140,6 @@ pub fn main() !void {
             c.WHITE,
         );
 
-        c.DrawTexture(player_texture, @as(c_int, @intCast(player.x * tile_width)), @as(c_int, @intCast(player.y * tile_height)), c.WHITE);
         c.EndDrawing();
     }
 }
