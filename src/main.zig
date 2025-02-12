@@ -1,5 +1,5 @@
 const std = @import("std");
-//const ray = @import("raylib");
+const game = @import("game/game.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -9,8 +9,6 @@ const game_height: i32 = 360;
 //TODO: make resizable
 const window_width: i32 = game_width * 2;
 const window_height: i32 = game_height * 2;
-const level_width: i32 = 100;
-const level_height: i32 = 100;
 
 const tile_width: i32 = 16;
 const tile_height: i32 = 24;
@@ -34,19 +32,6 @@ const Coordinates = struct {
     y: i32,
 };
 
-const Level = struct {
-    grid: [level_height][level_width]Tile, //TODO: do i want to have it always the same size?
-    width: usize,
-    height: usize,
-
-    pub fn init() Level {
-        return Level{
-            .width = level_width,
-            .height = level_height,
-        };
-    }
-};
-
 const Tile = struct {
     x: usize,
     y: usize,
@@ -57,6 +42,8 @@ const Tile = struct {
 const Item = union(enum) {};
 
 pub fn main() !void {
+    const gameInstance = game.Game.init();
+
     c.InitWindow(window_width, window_height, "RPG");
     defer c.CloseWindow();
 
@@ -110,8 +97,11 @@ pub fn main() !void {
         }
 
         c.BeginTextureMode(screen);
+        //TODO: DRAW LEVEL
+
+        gameInstance.world.currentLevel.Draw();
+
         c.ClearBackground(c.BLACK);
-        //TODO: draw player
 
         c.DrawRectangle(
             @as(c_int, @intCast(player.x * tile_width)),
@@ -122,6 +112,7 @@ pub fn main() !void {
         );
 
         c.DrawTexture(player_texture, @as(c_int, @intCast(player.x * tile_width)), @as(c_int, @intCast(player.y * tile_height)), c.WHITE);
+
         c.EndTextureMode();
 
         c.BeginDrawing();
