@@ -15,7 +15,7 @@ pub const Level = struct {
     //TODO: REMOVE
     tile_texture: c.Texture2D,
 
-    pub fn init() @This() {
+    pub fn init() !@This() {
         var grid: [config.level_height][config.level_width]Tile = undefined;
 
         for (&grid) |*row| {
@@ -25,9 +25,18 @@ pub const Level = struct {
             }
         }
         std.debug.print("pre: ", .{});
-        const tileTexture = c.LoadTexture("assets/base_tile.png");
+        //const tileTexture = c.LoadTexture("assets/base_tile.png");
         std.debug.print("post: ", .{});
-        std.debug.print("TEXTURE: {}", .{tileTexture});
+
+        const texture_path = "/home/daniel/projects/classic_rpg/assets/base_tile.png";
+        const tileTexture = c.LoadTexture(texture_path);
+
+        // Check if texture loading failed
+        if (tileTexture.id == 0) {
+            std.debug.print("Failed to load texture: {s}\n", .{texture_path});
+            return error.TextureLoadFailed;
+        }
+
         return Level{
             .grid = grid,
             .width = config.level_width,

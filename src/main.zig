@@ -42,10 +42,9 @@ const Tile = struct {
 const Item = union(enum) {};
 
 pub fn main() !void {
-    const gameInstance = game.Game.init();
-
     c.InitWindow(window_width, window_height, "RPG");
     defer c.CloseWindow();
+    const gameInstance = try game.Game.init();
 
     const screen = c.LoadRenderTexture(game_width, game_height);
     defer c.UnloadRenderTexture(screen);
@@ -66,7 +65,9 @@ pub fn main() !void {
     const offset_y = (window_height - scaled_height) / 2;
 
     const tile_texture = c.LoadTexture("assets/base_tile.png");
+    std.debug.print("TEXTURE: {}", .{tile_texture});
     defer c.UnloadTexture(tile_texture);
+
     const player_texture = c.LoadTexture("assets/random_character.png");
     defer c.UnloadTexture(player_texture);
 
