@@ -1,3 +1,4 @@
+const std = @import("std");
 const config = @import("../common/config.zig");
 const c = @cImport({
     @cInclude("raylib.h");
@@ -17,28 +18,29 @@ pub const Level = struct {
     pub fn init() @This() {
         var grid: [config.level_height][config.level_width]Tile = undefined;
 
-        for (0..config.level_height) |i| {
-            for (0..config.level_width) |j| {
-                grid[i][j] = Tile{ .id = 1 };
+        for (&grid) |*row| {
+            for (row) |*tile| {
+                tile.* = Tile{ .id = 1 };
+                //grid[i][j] = Tile{ .id = 1 };
             }
         }
+        std.debug.print("pre: ", .{});
+        const tileTexture = c.LoadTexture("assets/base_tile.png");
+        std.debug.print("post: ", .{});
+        std.debug.print("TEXTURE: {}", .{tileTexture});
         return Level{
             .grid = grid,
             .width = config.level_width,
             .height = config.level_height,
-            .tile_texture = c.LoadTexture("assets/base_tile.png"),
+            .tile_texture = tileTexture,
         };
     }
 
     pub fn Draw(this: @This()) void {
         for (0..config.level_height) |i| {
             for (0..config.level_width) |j| {
-                c.DrawTexture(
-                    this.tile_texture,
-                    @as(c_int, @intCast(j * 16)),
-                    @as(c_int, @intCast(i * 16)),
-                    c.WHITE,
-                );
+                std.debug.print("{}{}{}", .{ i, j, this });
+                //c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * 16)), @as(c_int, @intCast(i * 16)), c.WHITE);
             }
         }
     }
