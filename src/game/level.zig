@@ -24,9 +24,7 @@ pub const Level = struct {
                 //grid[i][j] = Tile{ .id = 1 };
             }
         }
-        std.debug.print("pre: ", .{});
         //const tileTexture = c.LoadTexture("assets/base_tile.png");
-        std.debug.print("post: ", .{});
 
         const texture_path = "/home/daniel/projects/classic_rpg/assets/base_tile.png";
         const tileTexture = c.LoadTexture(texture_path);
@@ -45,12 +43,13 @@ pub const Level = struct {
         };
     }
 
-    pub fn Draw(this: @This()) void {
+    pub fn Draw(this: @This(), screen: c.RenderTexture2D) void {
+        c.BeginTextureMode(screen);
         for (0..config.level_height) |i| {
             for (0..config.level_width) |j| {
-                std.debug.print("{}{}{}", .{ i, j, this });
-                //c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * 16)), @as(c_int, @intCast(i * 16)), c.WHITE);
+                c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * 16)), @as(c_int, @intCast(i * 16)), c.WHITE);
             }
         }
+        c.EndTextureMode();
     }
 };

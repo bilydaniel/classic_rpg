@@ -42,14 +42,30 @@ const Tile = struct {
 const Item = union(enum) {};
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    //const allocator = std.testing.allocator;
+    const list = std.ArrayList(u8).init(allocator);
+    defer list.deinit();
+    std.debug.print("{}", .{list});
+
     c.InitWindow(window_width, window_height, "RPG");
     defer c.CloseWindow();
+
     const gameInstance = try game.Game.init();
 
     const screen = c.LoadRenderTexture(game_width, game_height);
     defer c.UnloadRenderTexture(screen);
 
-    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT);
+    const screen_1 = c.LoadRenderTexture(game_width, game_height);
+    defer c.UnloadRenderTexture(screen_1);
+
+    const screen_2 = c.LoadRenderTexture(game_width, game_height);
+    defer c.UnloadRenderTexture(screen_2);
+
+    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
+    c.SetTextureFilter(screen_1.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
+    c.SetTextureFilter(screen_2.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
     c.SetTargetFPS(60);
 
     var player = Player.init();
@@ -65,7 +81,6 @@ pub fn main() !void {
     const offset_y = (window_height - scaled_height) / 2;
 
     const tile_texture = c.LoadTexture("assets/base_tile.png");
-    std.debug.print("TEXTURE: {}", .{tile_texture});
     defer c.UnloadTexture(tile_texture);
 
     const player_texture = c.LoadTexture("assets/random_character.png");
@@ -97,41 +112,28 @@ pub fn main() !void {
             }
         }
 
-        c.BeginTextureMode(screen);
-        //TODO: DRAW LEVEL
+        //        c.ClearBackground(c.BLACK);
+        gameInstance.world.currentLevel.Draw(screen_2);
 
-        gameInstance.world.currentLevel.Draw();
-
-        c.ClearBackground(c.BLACK);
-
-        c.DrawRectangle(
-            @as(c_int, @intCast(player.x * tile_width)),
-            @as(c_int, @intCast(player.y * tile_height)),
-            16,
-            24,
-            c.YELLOW,
-        );
-
+        c.BeginTextureMode(screen_1);
+        c.ClearBackground(c.BLANK);
         c.DrawTexture(player_texture, @as(c_int, @intCast(player.x * tile_width)), @as(c_int, @intCast(player.y * tile_height)), c.WHITE);
+        c.EndTextureMode();
 
+        c.BeginTextureMode(screen);
+        c.DrawTexture(screen_2.texture, 0, 0, c.WHITE);
+        c.DrawTexture(screen_1.texture, 0, 0, c.WHITE);
         c.EndTextureMode();
 
         c.BeginDrawing();
-        c.ClearBackground(c.BLACK);
-
-        //const scaled_player_width = 16;
-        //const scaled_player_height = 24;
-        //c.DrawTexturePro(player_texture, c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, @floatFromInt(player_texture.width)), .height = @as(f32, @floatFromInt(player_texture.height)) }, c.Rectangle{ .x = @as(f32, @floatFromInt(player.x * tile_width)), .y = @as(f32, @floatFromInt(player.y * tile_height)), .width = @as(f32, scaled_player_width), .height = @as(f32, scaled_player_height) }, c.Vector2{ .x = 0, .y = 0 }, 0.0, c.WHITE);
-
         c.DrawTexturePro(
             screen.texture,
-            c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, game_width), .height = @as(f32, -game_height) },
+            c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, game_width), .height = @as(f32, game_height) },
             c.Rectangle{ .x = offset_x, .y = offset_y, .width = @as(f32, scaled_width), .height = @as(f32, scaled_height) },
             c.Vector2{ .x = 0, .y = 0 },
             0.0,
             c.WHITE,
         );
-
         c.EndDrawing();
     }
 }
