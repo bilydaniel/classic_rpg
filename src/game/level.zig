@@ -43,13 +43,11 @@ pub const Level = struct {
         };
     }
 
-    pub fn Draw(this: @This(), screen: c.RenderTexture2D) void {
-        c.BeginTextureMode(screen);
+    pub fn Draw(this: @This()) void {
         for (0..config.level_height) |i| {
             for (0..config.level_width) |j| {
                 c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * 16)), @as(c_int, @intCast(i * 16)), c.WHITE);
             }
         }
-        c.EndTextureMode();
     }
 };
