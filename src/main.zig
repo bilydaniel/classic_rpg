@@ -52,10 +52,7 @@ pub fn main() !void {
         offset_x = @divFloor(Config.window_width - scaled_width, 2);
         offset_y = @divFloor(Config.window_height - scaled_height, 2);
 
-        c.BeginTextureMode(screen);
-        c.ClearBackground(c.BLACK);
-        game.Draw();
-        c.EndTextureMode();
+        game.Draw(screen);
 
         c.BeginDrawing();
         c.DrawTexturePro(
