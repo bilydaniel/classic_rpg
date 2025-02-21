@@ -33,6 +33,10 @@ pub const Game = struct {
         return game;
     }
 
+    pub fn deinit(this: *Game) void {
+        this.allocator.destroy(this.player);
+    }
+
     pub fn Update(this: @This()) void {
         this.player.Update();
     }

@@ -15,15 +15,14 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const game = try Game.Game.init(allocator);
+    defer game.deinit();
+    defer allocator.destroy(game);
 
     const screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
     defer c.UnloadRenderTexture(screen);
 
     c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
     c.SetTargetFPS(60);
-
-    const tile_texture = c.LoadTexture("assets/base_tile.png");
-    defer c.UnloadTexture(tile_texture);
 
     var scale = @min(
         @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
