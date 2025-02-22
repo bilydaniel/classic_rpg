@@ -1,8 +1,9 @@
 const c = @cImport({
     @cInclude("raylib.h");
 });
+const std = @import("std");
 //TODO: make a better system, dumb as fuck
-pub const assets = struct {
+pub const Assets = struct {
     playerTexture: c.Texture2D,
     baseTile: c.Texture2D,
     enemy: c.Texture2D,
@@ -12,14 +13,15 @@ pub const assets = struct {
         const player_texture = c.LoadTexture("assets/random_character.png");
         const tile_texture = c.LoadTexture("assets/base_tile.png");
         const enemy_texture = c.LoadTexture("assets/enemy.png");
-        return assets{
+        return Assets{
             .playerTexture = player_texture,
             .baseTile = tile_texture,
             .enemy = enemy_texture,
         };
     }
 
-    pub fn deinit(this: @This()) void {
+    pub fn deinit(this: *Assets, allocator: std.mem.Allocator) void {
+        _ = allocator;
         c.UnloadTexture(this.playerTexture);
         c.UnloadTexture(this.baseTile);
         c.UnloadTexture(this.enemy);

@@ -43,6 +43,11 @@ pub const Level = struct {
         };
     }
 
+    pub fn deinit(this: *Level, allocator: std.mem.Allocator) void {
+        _ = allocator;
+        c.UnloadTexture(this.tile_texture);
+    }
+
     pub fn Draw(this: @This()) void {
         for (0..config.level_height) |i| {
             for (0..config.level_width) |j| {

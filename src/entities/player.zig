@@ -22,9 +22,13 @@ pub const Player = struct {
         return player;
     }
 
+    pub fn deinit(this: *Player, allocator: std.mem.Allocator) void {
+        allocator.destroy(this);
+    }
+
     pub fn Update(this: *Player) void {
         this.timeSinceInput += c.GetFrameTime();
-        if (this.timeSinceInput > 0.10) {
+        if (this.timeSinceInput > 0.15) {
             if (c.IsKeyDown(c.KEY_S)) {
                 //TODO: wait
                 this.timeSinceInput = 0;
@@ -68,7 +72,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn Draw(this: *Player, assets: *const Assets.assets) void {
+    pub fn Draw(this: *Player, assets: *const Assets.Assets) void {
         c.DrawTexture(assets.playerTexture, @as(c_int, @intCast(this.x * Config.tile_width)), @as(c_int, @intCast(this.y * Config.tile_height)), c.WHITE);
     }
 };
