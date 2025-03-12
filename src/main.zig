@@ -67,7 +67,7 @@ pub fn main() !void {
         var buffer: [32]u8 = undefined;
         const num = c.GetFrameTime();
         const formatted = try std.fmt.bufPrint(&buffer, "{d}", .{num});
-        c.DrawText(formatted.ptr, 100, 100, 20, c.WHITE);
+        c.DrawText(formatted.ptr, 0, 0, 20, c.WHITE);
         c.EndDrawing();
     }
 }

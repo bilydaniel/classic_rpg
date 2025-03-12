@@ -1,6 +1,7 @@
 const std = @import("std");
 const Assets = @import("../game/assets.zig");
 const Config = @import("../common/config.zig");
+const Types = @import("../common/types.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -8,62 +9,33 @@ const c = @cImport({
 pub const Player = struct {
     x: i32,
     y: i32,
+    destination: ?Types.Vector2Int,
     speed: i32,
-    timeSinceInput: f32,
 
     pub fn init(allocator: std.mem.Allocator) !*Player {
         const player = try allocator.create(Player);
         player.* = .{
-            .x = 2,
-            .y = 3,
+            .x = 3,
+            .y = 2,
             .speed = 1,
-            .timeSinceInput = 0,
+            .destination = null,
         };
         return player;
     }
 
     pub fn Update(this: *Player) void {
-        this.timeSinceInput += c.GetFrameTime();
-        if (this.timeSinceInput > 0.10) {
-            if (c.IsKeyDown(c.KEY_S)) {
-                //TODO: wait
-                this.timeSinceInput = 0;
-            }
-            if (c.IsKeyDown(c.KEY_W)) {
-                this.y -= this.speed;
-                this.timeSinceInput = 0;
-            }
-            if (c.IsKeyDown(c.KEY_X)) {
-                this.y += this.speed;
-                this.timeSinceInput = 0;
-            }
-            if (c.IsKeyDown(c.KEY_A)) {
-                this.x -= this.speed;
-                this.timeSinceInput = 0;
-            }
-            if (c.IsKeyDown(c.KEY_D)) {
+        if (this.destination) |dest| {
+            if (this.x < dest.x) {
                 this.x += this.speed;
-                this.timeSinceInput = 0;
             }
-            if (c.IsKeyDown(c.KEY_Q)) {
-                this.y -= this.speed;
+            if (this.x > dest.x) {
                 this.x -= this.speed;
-                this.timeSinceInput = 0;
             }
-            if (c.IsKeyDown(c.KEY_E)) {
+            if (this.y > dest.y) {
                 this.y -= this.speed;
-                this.x += this.speed;
-                this.timeSinceInput = 0;
             }
-            if (c.IsKeyDown(c.KEY_Z)) {
+            if (this.y < dest.y) {
                 this.y += this.speed;
-                this.x -= this.speed;
-                this.timeSinceInput = 0;
-            }
-            if (c.IsKeyDown(c.KEY_C)) {
-                this.x += this.speed;
-                this.y += this.speed;
-                this.timeSinceInput = 0;
             }
         }
     }
