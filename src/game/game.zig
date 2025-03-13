@@ -66,10 +66,12 @@ pub const Game = struct {
             //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
 
             const destination = c.GetMousePosition();
-            const world = c.GetScreenToWorld2D(destination, this.camera.*);
+            std.debug.print("DESTINATION: x: {d}, y: {d}\n", .{ destination.x, destination.y });
+            //const world = c.GetScreenToWorld2D(destination, this.camera.*);
+            const world = c.GetWorldToScreen2D(destination, this.camera.*);
             //TODO: fix this. Divna funkctionalita mezi targetem a coordinacemi
             //gonna need to figure out a way of doing this
-            std.debug.print("x: {d}, y: {d}\n", .{ world.x, world.y });
+            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
 
             //this.player.destination = destination;
         }
