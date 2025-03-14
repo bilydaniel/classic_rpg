@@ -16,31 +16,9 @@ pub fn main() !void {
 
     const game = try Game.Game.init(allocator);
 
-    const screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
-    defer c.UnloadRenderTexture(screen);
-
-    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
-    c.SetTargetFPS(60);
-
-    const tile_texture = c.LoadTexture("assets/base_tile.png");
-    defer c.UnloadTexture(tile_texture);
-
-    var scale = @min(
-        @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
-        @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
-    );
-
-    var scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
-    var scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
-    var offset_x = @divFloor(Config.window_width - scaled_width, 2);
-    var offset_y = @divFloor(Config.window_height - scaled_height, 2);
-
     const running = true;
     while (!c.WindowShouldClose() and running) {
         game.Update();
-
-        Config.window_width = c.GetScreenWidth();
-        Config.window_height = c.GetScreenHeight();
 
         scale = @min(
             @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
@@ -51,6 +29,7 @@ pub fn main() !void {
         scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
         offset_x = @divFloor(Config.window_width - scaled_width, 2);
         offset_y = @divFloor(Config.window_height - scaled_height, 2);
+        std.debug.print("offset_x: {d}, offset_y : {d}\n", .{ offset_x, offset_y });
 
         game.Draw(screen);
 

@@ -2,6 +2,7 @@ const std = @import("std");
 const World = @import("world.zig");
 const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
+const Window = @import("../game/window.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const c = @cImport({
@@ -14,6 +15,7 @@ pub const Game = struct {
     player: *Player.Player,
     assets: Assets.assets,
     camera: *c.Camera2D,
+    window: Window.Window,
     cameraManual: bool,
     cameraSpeed: f32,
     timeSinceTurn: f32,
@@ -33,6 +35,7 @@ pub const Game = struct {
             .world = try World.World.init(),
             .player = player,
             .assets = Assets.assets.init(),
+            .window = Window.Window.init(),
             .camera = camera,
             .cameraManual = false,
             .cameraSpeed = 128,
@@ -42,6 +45,7 @@ pub const Game = struct {
     }
 
     pub fn Update(this: *Game) void {
+        this.window.Update();
         const delta = c.GetFrameTime();
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs

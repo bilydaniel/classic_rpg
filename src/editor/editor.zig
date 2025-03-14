@@ -4,6 +4,7 @@ const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
+const Utils = @import("../common/utils.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -64,7 +65,9 @@ pub const Editor = struct {
             //destination.x = c.GetMouseX(); //@divFloor(c.GetMouseX(), 16);
             //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
 
-            const destination = c.GetMousePosition();
+            const screen_position = c.GetMousePosition();
+            const render_position = Utils.screenToRenderTextureCoords(screen_pos: c.Vector2, offset_x: i32, offset_y: i32, scaled_width: i32, scaled_height: i32, game_width: f32, game_height: f32)
+
             const world = c.GetScreenToWorld2D(destination, this.camera);
             //TODO: fix this. Divna funkctionalita mezi targetem a coordinacemi
             std.debug.print("x: {d}, y: {d}\n", .{ world.x, world.y });
