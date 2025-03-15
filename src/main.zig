@@ -20,24 +20,13 @@ pub fn main() !void {
     while (!c.WindowShouldClose() and running) {
         game.Update();
 
-        scale = @min(
-            @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
-            @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
-        );
-
-        scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
-        scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
-        offset_x = @divFloor(Config.window_width - scaled_width, 2);
-        offset_y = @divFloor(Config.window_height - scaled_height, 2);
-        std.debug.print("offset_x: {d}, offset_y : {d}\n", .{ offset_x, offset_y });
-
-        game.Draw(screen);
+        game.Draw(game.window.screen);
 
         c.BeginDrawing();
         c.DrawTexturePro(
-            screen.texture,
+            game.window.screen.texture,
             c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, Config.game_width), .height = @as(f32, -Config.game_height) },
-            c.Rectangle{ .x = @as(f32, @floatFromInt(offset_x)), .y = @as(f32, @floatFromInt(offset_y)), .width = @as(f32, @floatFromInt(scaled_width)), .height = @as(f32, @floatFromInt(scaled_height)) },
+            c.Rectangle{ .x = @as(f32, @floatFromInt(game.window.offsetx)), .y = @as(f32, @floatFromInt(game.window.offsety)), .width = @as(f32, @floatFromInt(game.window.scaledWidth)), .height = @as(f32, @floatFromInt(game.window.scaledHeight)) },
             c.Vector2{ .x = 0, .y = 0 },
             0.0,
             c.WHITE,
