@@ -75,11 +75,12 @@ pub const Game = struct {
             const world = c.GetScreenToWorld2D(renderDestination, this.camera.*);
             std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
 
-            this.player.destination = ;
+            this.player.destination = Utils.pixelToTile(world);
         }
 
-        if (this.timeSinceTurn > 0.15) {
+        if (this.timeSinceTurn > 0.25) {
             this.player.Update();
+            this.timeSinceTurn = 0;
         }
     }
 

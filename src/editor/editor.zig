@@ -5,6 +5,7 @@ const Assets = @import("../game/assets.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
+const Window = @import("../game/window.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -18,6 +19,7 @@ pub const Editor = struct {
     cameraManual: bool,
     cameraSpeed: f32,
     timeSinceTurn: f32,
+    window: Window.Window,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         const player = try Player.Player.init(allocator);
@@ -37,6 +39,7 @@ pub const Editor = struct {
             .cameraManual = false,
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
+            .window = Window.Window.init(),
         };
         return game;
     }

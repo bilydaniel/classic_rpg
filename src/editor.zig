@@ -16,49 +16,17 @@ pub fn main() !void {
 
     const editor = try Editor.Editor.init(allocator);
 
-    const screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
-    defer c.UnloadRenderTexture(screen);
-
-    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
-    c.SetTargetFPS(60);
-
-    const tile_texture = c.LoadTexture("assets/base_tile.png");
-    defer c.UnloadTexture(tile_texture);
-
-    var scale = @min(
-        @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
-        @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
-    );
-
-    var scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
-    var scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
-    var offset_x = @divFloor(Config.window_width - scaled_width, 2);
-    var offset_y = @divFloor(Config.window_height - scaled_height, 2);
-
     const running = true;
     while (!c.WindowShouldClose() and running) {
-        game.Update();
+        editor.Update();
 
-        Config.window_width = c.GetScreenWidth();
-        Config.window_height = c.GetScreenHeight();
-
-        scale = @min(
-            @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
-            @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
-        );
-
-        scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
-        scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
-        offset_x = @divFloor(Config.window_width - scaled_width, 2);
-        offset_y = @divFloor(Config.window_height - scaled_height, 2);
-
-        game.Draw(screen);
+        editor.Draw(editor.window.screen);
 
         c.BeginDrawing();
         c.DrawTexturePro(
-            screen.texture,
+            game.window.screen.texture,
             c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, Config.game_width), .height = @as(f32, -Config.game_height) },
-            c.Rectangle{ .x = @as(f32, @floatFromInt(offset_x)), .y = @as(f32, @floatFromInt(offset_y)), .width = @as(f32, @floatFromInt(scaled_width)), .height = @as(f32, @floatFromInt(scaled_height)) },
+            c.Rectangle{ .x = @as(f32, @floatFromInt(game.window.offsetx)), .y = @as(f32, @floatFromInt(game.window.offsety)), .width = @as(f32, @floatFromInt(game.window.scaledWidth)), .height = @as(f32, @floatFromInt(game.window.scaledHeight)) },
             c.Vector2{ .x = 0, .y = 0 },
             0.0,
             c.WHITE,
