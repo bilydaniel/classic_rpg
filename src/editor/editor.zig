@@ -1,5 +1,5 @@
 const std = @import("std");
-const World = @import("world.zig");
+const World = @import("../game/world.zig");
 const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
 const Config = @import("../common/config.zig");
@@ -13,7 +13,6 @@ const c = @cImport({
 pub const Editor = struct {
     allocator: std.mem.Allocator,
     world: World.World,
-    player: *Player.Player,
     assets: Assets.assets,
     camera: c.Camera2D,
     cameraManual: bool,
@@ -22,18 +21,15 @@ pub const Editor = struct {
     window: Window.Window,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
-        const player = try Player.Player.init(allocator);
         const editor = try allocator.create(Editor);
         editor.* = .{
             .allocator = allocator,
             .world = try World.World.init(),
-            .player = player,
             .assets = Assets.assets.init(),
             .camera = c.Camera2D{
                 .offset = c.Vector2{ .x = 0, .y = 0 },
                 .target = c.Vector2{ .x = 0, .y = 0 },
                 .rotation = 0.0,
-                //TODO: add zoom
                 .zoom = 1.0,
             },
             .cameraManual = false,
@@ -41,14 +37,14 @@ pub const Editor = struct {
             .timeSinceTurn = 0,
             .window = Window.Window.init(),
         };
-        return game;
+        return editor;
     }
 
-    pub fn Update(this: *Game) void {
+    pub fn Update(this: *Editor) void {
+        this.window.Update();
         const delta = c.GetFrameTime();
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs
-        //this.player.Update();
 
         if (c.IsKeyDown(c.KEY_W)) {
             this.camera.target.y -= this.cameraSpeed * delta;
@@ -64,33 +60,18 @@ pub const Editor = struct {
         }
 
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-            //var destination: Types.Vector2Int = undefined;
-            //destination.x = c.GetMouseX(); //@divFloor(c.GetMouseX(), 16);
-            //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
-
-            const screen_position = c.GetMousePosition();
-            const render_position = Utils.screenToRenderTextureCoords(screen_pos: c.Vector2, offset_x: i32, offset_y: i32, scaled_width: i32, scaled_height: i32, game_width: f32, game_height: f32)
-
-            const world = c.GetScreenToWorld2D(destination, this.camera);
-            //TODO: fix this. Divna funkctionalita mezi targetem a coordinacemi
-            std.debug.print("x: {d}, y: {d}\n", .{ world.x, world.y });
-
-            //this.player.destination = destination;
-        }
-
-        if (this.timeSinceTurn > 0.15) {
-            this.player.Update();
+            const destination = c.GetMousePosition();
+            const renderDestination = Utils.screenToRenderTextureCoords(destination, this.window);
+            const world = c.GetScreenToWorld2D(renderDestination, this.camera);
+            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
         }
     }
 
-    pub fn Draw(this: *Game, screen: c.RenderTexture2D) void {
-        //this.camera.target = c.Vector2{ .x = @as(f32, @floatFromInt(this.player.x * Config.tile_width)), .y = @as(f32, @floatFromInt(this.player.y * Config.tile_height)) };
-
+    pub fn Draw(this: *Editor, screen: c.RenderTexture2D) void {
         c.BeginTextureMode(screen);
         c.BeginMode2D(this.camera);
         c.ClearBackground(c.BLACK);
         this.world.currentLevel.Draw();
-        this.player.Draw(&this.assets);
         c.EndMode2D();
         c.EndTextureMode();
     }

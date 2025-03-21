@@ -24,9 +24,9 @@ pub fn main() !void {
 
         c.BeginDrawing();
         c.DrawTexturePro(
-            game.window.screen.texture,
+            editor.window.screen.texture,
             c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, Config.game_width), .height = @as(f32, -Config.game_height) },
-            c.Rectangle{ .x = @as(f32, @floatFromInt(game.window.offsetx)), .y = @as(f32, @floatFromInt(game.window.offsety)), .width = @as(f32, @floatFromInt(game.window.scaledWidth)), .height = @as(f32, @floatFromInt(game.window.scaledHeight)) },
+            c.Rectangle{ .x = @as(f32, @floatFromInt(editor.window.offsetx)), .y = @as(f32, @floatFromInt(editor.window.offsety)), .width = @as(f32, @floatFromInt(editor.window.scaledWidth)), .height = @as(f32, @floatFromInt(editor.window.scaledHeight)) },
             c.Vector2{ .x = 0, .y = 0 },
             0.0,
             c.WHITE,
