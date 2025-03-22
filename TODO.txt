@@ -1,1 +1,2 @@
-1. add proper deinit()
+1. Editor => AssetTree
+2. 

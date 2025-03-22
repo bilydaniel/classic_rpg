@@ -6,6 +6,7 @@ const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Window = @import("../game/window.zig");
+const AssetTree = @import("asset_tree.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -19,6 +20,8 @@ pub const Editor = struct {
     cameraSpeed: f32,
     timeSinceTurn: f32,
     window: Window.Window,
+    menuOpen: bool,
+    assetTree: AssetTree.AssetTree,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         const editor = try allocator.create(Editor);
@@ -36,7 +39,10 @@ pub const Editor = struct {
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
             .window = Window.Window.init(),
+            .menuOpen = false,
+            .assetTree = try AssetTree.AssetTree.init(allocator),
         };
+        try editor.assetTree.loadFromDir("assets");
         return editor;
     }
 
@@ -46,17 +52,23 @@ pub const Editor = struct {
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs
 
-        if (c.IsKeyDown(c.KEY_W)) {
-            this.camera.target.y -= this.cameraSpeed * delta;
+        if (!this.menuOpen) {
+            if (c.IsKeyDown(c.KEY_W)) {
+                this.camera.target.y -= this.cameraSpeed * delta;
+            }
+            if (c.IsKeyDown(c.KEY_S)) {
+                this.camera.target.y += this.cameraSpeed * delta;
+            }
+            if (c.IsKeyDown(c.KEY_A)) {
+                this.camera.target.x -= this.cameraSpeed * delta;
+            }
+            if (c.IsKeyDown(c.KEY_D)) {
+                this.camera.target.x += this.cameraSpeed * delta;
+            }
         }
-        if (c.IsKeyDown(c.KEY_S)) {
-            this.camera.target.y += this.cameraSpeed * delta;
-        }
-        if (c.IsKeyDown(c.KEY_A)) {
-            this.camera.target.x -= this.cameraSpeed * delta;
-        }
-        if (c.IsKeyDown(c.KEY_D)) {
-            this.camera.target.x += this.cameraSpeed * delta;
+
+        if (c.IsKeyPressed(c.KEY_Q)) {
+            this.menuOpen = !this.menuOpen;
         }
 
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
