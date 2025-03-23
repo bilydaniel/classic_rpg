@@ -42,7 +42,8 @@ pub const Editor = struct {
             .menuOpen = false,
             .assetTree = try AssetTree.AssetTree.init(allocator),
         };
-        try editor.assetTree.loadFromDir("assets");
+        try editor.assetTree.loadFromDir("assets", editor.assetTree.head);
+        AssetTree.printTree(editor.assetTree.head, 0);
         return editor;
     }
 

@@ -8,7 +8,6 @@ pub const AssetTree = struct {
     pub fn init(allocator: std.mem.Allocator) !AssetTree {
         const head = try Node.init(allocator, "", true);
 
-        std.debug.print("TEST: {}\n", .{head});
         return AssetTree{
             .allocator = allocator,
             .head = head,
@@ -18,24 +17,58 @@ pub const AssetTree = struct {
 
     //pub fn addNode
 
-    pub fn loadFromDir(this: *AssetTree, dirPath: []const u8) !void {
-        var dir = try fs.cwd().openDir(dirPath, .{ .iterate = true });
+    pub fn loadFromDir(this: *AssetTree, parentPath: []const u8, parentNode: *Node) !void {
+        var dir = try fs.cwd().openDir(parentPath, .{ .iterate = true });
         defer dir.close();
 
-        var walker = try dir.walk(this.allocator);
-        defer walker.deinit();
+        var walker = dir.iterate();
 
         while (try walker.next()) |item| {
-            if (item.kind == .directory) {} else {}
-            std.debug.print("{s}\n", .{item.path});
+            if (badType(item)) {
+                continue;
+            }
+            const isDir = item.kind == .directory;
+            const newPath = try fs.path.join(this.allocator, &[_][]const u8{ parentPath, item.name });
+            const newNode = try Node.init(this.allocator, newPath, isDir);
+            try parentNode.children.append(newNode);
+
+            if (isDir) {
+                try loadFromDir(this, newPath, newNode);
+            }
         }
     }
+
+    fn badType(item: std.fs.Dir.Entry) bool {
+        if (std.mem.endsWith(u8, item.name, ":Zone.Identifier")) {
+            return true;
+        }
+        return false;
+    }
 };
+
+pub fn printTree(node: *const Node, depth: usize) void {
+    // Print indentation
+    for (0..depth) |_| {
+        std.debug.print("  ", .{});
+    }
+
+    // Print node info
+    if (!node.isDir) {
+        std.debug.print("📄 {s} \n", .{node.path});
+    } else {
+        std.debug.print("📁 {s}/\n", .{node.path});
+    }
+
+    // Print children
+    for (node.children.items) |child| {
+        printTree(child, depth + 1);
+    }
+}
 
 const Node = struct {
     path: []const u8,
     isDir: bool,
-    children: []Node,
+    children: std.ArrayList(*Node),
 
     pub fn init(allocator: std.mem.Allocator, path: []const u8, isDir: bool) !*Node {
         const node = try allocator.create(Node);
