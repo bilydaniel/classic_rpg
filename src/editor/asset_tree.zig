@@ -1,5 +1,8 @@
 const std = @import("std");
 const fs = std.fs;
+const c = @cImport({
+    @cInclude("raylib.h");
+});
 
 pub const AssetTree = struct {
     head: *Node,
@@ -69,14 +72,23 @@ const Node = struct {
     path: []const u8,
     isDir: bool,
     children: std.ArrayList(*Node),
+    texture: c.Texture2D,
 
     pub fn init(allocator: std.mem.Allocator, path: []const u8, isDir: bool) !*Node {
         const node = try allocator.create(Node);
+        std.debug.print("TEST: {s}\n", .{path});
         node.* = .{
             .path = path,
             .isDir = isDir,
             .children = std.ArrayList(*Node).init(allocator),
+            //.texture = c.LoadTexture(path.ptr),
+            .texture = c.LoadTexture(@ptrCast(path)),
+
+const path_z = try std.cstr.addNullByte(allocator, path);
+defer allocator.free(path_z);
+.texture = c.LoadTexture(path_z.ptr),
         };
+
         return node;
     }
 };

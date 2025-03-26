@@ -6,6 +6,7 @@ const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Window = @import("../game/window.zig");
+const Menu = @import("../ui/menu.zig");
 const AssetTree = @import("asset_tree.zig");
 const c = @cImport({
     @cInclude("raylib.h");
@@ -14,21 +15,21 @@ const c = @cImport({
 pub const Editor = struct {
     allocator: std.mem.Allocator,
     world: World.World,
-    assets: Assets.assets,
     camera: c.Camera2D,
     cameraManual: bool,
     cameraSpeed: f32,
     timeSinceTurn: f32,
     window: Window.Window,
     menuOpen: bool,
+    menu: Menu.Menu,
     assetTree: AssetTree.AssetTree,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         const editor = try allocator.create(Editor);
+        const assetTree = try AssetTree.AssetTree.init(allocator);
         editor.* = .{
             .allocator = allocator,
             .world = try World.World.init(),
-            .assets = Assets.assets.init(),
             .camera = c.Camera2D{
                 .offset = c.Vector2{ .x = 0, .y = 0 },
                 .target = c.Vector2{ .x = 0, .y = 0 },
@@ -39,8 +40,9 @@ pub const Editor = struct {
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
             .window = Window.Window.init(),
+            .assetTree = assetTree,
             .menuOpen = false,
-            .assetTree = try AssetTree.AssetTree.init(allocator),
+            .menu = Menu.Menu.initAssetMenu(assetTree),
         };
         try editor.assetTree.loadFromDir("assets", editor.assetTree.head);
         AssetTree.printTree(editor.assetTree.head, 0);
