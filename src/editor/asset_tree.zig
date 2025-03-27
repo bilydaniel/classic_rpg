@@ -84,9 +84,9 @@ const Node = struct {
             //.texture = c.LoadTexture(path.ptr),
             .texture = c.LoadTexture(@ptrCast(path)),
 
-const path_z = try std.cstr.addNullByte(allocator, path);
-defer allocator.free(path_z);
-.texture = c.LoadTexture(path_z.ptr),
+            //const path_z = try std.cstr.addNullByte(allocator, path);
+            //defer allocator.free(path_z);
+            //.texture = c.LoadTexture(path_z.ptr),
         };
 
         return node;

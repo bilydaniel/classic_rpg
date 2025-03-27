@@ -1,13 +1,13 @@
 const Button = @import("button.zig");
-const AssetTree = @import("../editor/asset_tree.zig");
+const AssetList = @import("../editor/asset_list.zig");
 const std = @import("std");
 
 pub const Menu = struct {
     buttons: []Button.Button,
 
-    pub fn initAssetMenu(assetTree: AssetTree.AssetTree) Menu {
+    pub fn initAssetMenu(assetList: AssetList.AssetList) Menu {
         const buttons: []Button.Button = undefined;
-        std.debug.print("{}\n", .{assetTree});
+        std.debug.print("{d}\n", .{assetList.list.items.len});
         return Menu{
             .buttons = buttons,
         };

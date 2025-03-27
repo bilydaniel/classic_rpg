@@ -8,6 +8,7 @@ const Utils = @import("../common/utils.zig");
 const Window = @import("../game/window.zig");
 const Menu = @import("../ui/menu.zig");
 const AssetTree = @import("asset_tree.zig");
+const AssetList = @import("asset_list.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -22,11 +23,12 @@ pub const Editor = struct {
     window: Window.Window,
     menuOpen: bool,
     menu: Menu.Menu,
-    assetTree: AssetTree.AssetTree,
+    //assetTree: AssetTree.AssetTree,
+    assetList: AssetList.AssetList,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         const editor = try allocator.create(Editor);
-        const assetTree = try AssetTree.AssetTree.init(allocator);
+        const assetList = try AssetList.AssetList.init(allocator);
         editor.* = .{
             .allocator = allocator,
             .world = try World.World.init(),
@@ -40,12 +42,12 @@ pub const Editor = struct {
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
             .window = Window.Window.init(),
-            .assetTree = assetTree,
+            .assetList = assetList,
             .menuOpen = false,
-            .menu = Menu.Menu.initAssetMenu(assetTree),
+            .menu = Menu.Menu.initAssetMenu(assetList),
         };
-        try editor.assetTree.loadFromDir("assets", editor.assetTree.head);
-        AssetTree.printTree(editor.assetTree.head, 0);
+        try editor.assetList.loadFromDir("assets");
+        AssetList.printList(editor.assetList);
         return editor;
     }
 
