@@ -23,12 +23,14 @@ pub const Editor = struct {
     window: Window.Window,
     menuOpen: bool,
     menu: Menu.Menu,
-    //assetTree: AssetTree.AssetTree,
     assetList: AssetList.AssetList,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
-        const editor = try allocator.create(Editor);
+        var editor = try allocator.create(Editor);
         const assetList = try AssetList.AssetList.init(allocator);
+        editor.assetList = assetList;
+        try editor.assetList.loadFromDir("assets");
+        const menu = try Menu.Menu.initAssetMenu(allocator, editor.assetList);
         editor.* = .{
             .allocator = allocator,
             .world = try World.World.init(),
@@ -44,10 +46,8 @@ pub const Editor = struct {
             .window = Window.Window.init(),
             .assetList = assetList,
             .menuOpen = false,
-            .menu = Menu.Menu.initAssetMenu(assetList),
+            .menu = menu,
         };
-        try editor.assetList.loadFromDir("assets");
-        AssetList.printList(editor.assetList);
         return editor;
     }
 
@@ -90,6 +90,9 @@ pub const Editor = struct {
         c.ClearBackground(c.BLACK);
         this.world.currentLevel.Draw();
         c.EndMode2D();
+        if (this.menuOpen) {
+            this.menu.Draw();
+        }
         c.EndTextureMode();
     }
 };

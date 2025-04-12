@@ -23,15 +23,12 @@ pub const AssetList = struct {
         defer walker.deinit();
 
         while (try walker.next()) |item| {
-            std.debug.print("{s}\n", .{item.path});
             if (badType(item)) {
                 continue;
             }
-            //const newPath = try std.fs.path.join(this.allocator, &[_][]const u8{ "assets", item.path });
             const newPath = try std.fmt.allocPrint(this.allocator, "assets/{s}\x00", .{item.path});
             const newPathTerminated = try std.fmt.allocPrint(this.allocator, "{s}\x00", .{newPath});
             defer this.allocator.free(newPath);
-            defer this.allocator.free(newPathTerminated);
             const newNode = try Node.init(this.allocator, newPath, newPathTerminated);
             try this.list.append(newNode);
         }
@@ -60,16 +57,10 @@ const Node = struct {
 
     pub fn init(allocator: std.mem.Allocator, path: []const u8, pathTerminated: []const u8) !*Node {
         const node = try allocator.create(Node);
-        //const path_z = try std.cstr.addNullByte(allocator, path);
-        //defer allocator.free(path_z);
         node.* = .{
             .path = path,
-            //.texture = c.LoadTexture(path.ptr),
             .texture = c.LoadTexture(@ptrCast(pathTerminated)),
-            //.texture = c.LoadTexture(path_z.ptr),
         };
-        std.debug.print("NODE: {s}", .{node.path}); //TODO: asi chyba tady, nejspis blbe zaalokovany string??
-
         return node;
     }
 };
