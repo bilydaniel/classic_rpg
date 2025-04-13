@@ -82,6 +82,11 @@ pub const Editor = struct {
             const world = c.GetScreenToWorld2D(renderDestination, this.camera);
             std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
         }
+
+        //TODO: switch to a state machine??
+        if (this.menuOpen) {
+            this.menu.Update();
+        }
     }
 
     pub fn Draw(this: *Editor, screen: c.RenderTexture2D) void {
@@ -91,7 +96,9 @@ pub const Editor = struct {
         this.world.currentLevel.Draw();
         c.EndMode2D();
         if (this.menuOpen) {
+            c.BeginScissorMode(0, 0, Config.game_width, Config.game_height);
             this.menu.Draw();
+            c.EndScissorMode();
         }
         c.EndTextureMode();
     }
