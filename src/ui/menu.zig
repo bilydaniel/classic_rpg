@@ -17,7 +17,8 @@ pub const Menu = struct {
         var pos: Types.Vector2Int = Types.Vector2Int{ .x = 0, .y = 0 };
         for (assetList.list.items) |asset| {
             var button = try allocator.create(Button.Button);
-            button.initValues(pos, asset.path);
+            const button_label = std.fs.path.basename(asset.path);
+            button.initValues(pos, button_label);
             try buttons.append(button);
             std.debug.print("asset: {any}", .{asset});
             //TODO: add asset into the button
@@ -43,6 +44,6 @@ pub const Menu = struct {
                 button.Update();
             }
         }
-        this.scroll += c.GetMouseWheelMove() * 20.0;
+        this.scroll -= c.GetMouseWheelMove() * 20.0;
     }
 };

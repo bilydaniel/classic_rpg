@@ -28,7 +28,7 @@ pub const AssetList = struct {
             }
             const newPath = try std.fmt.allocPrint(this.allocator, "assets/{s}\x00", .{item.path});
             const newPathTerminated = try std.fmt.allocPrint(this.allocator, "{s}\x00", .{newPath});
-            defer this.allocator.free(newPath);
+            //defer this.allocator.free(newPath);
             const newNode = try Node.init(this.allocator, newPath, newPathTerminated);
             try this.list.append(newNode);
         }

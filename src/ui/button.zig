@@ -11,6 +11,7 @@ pub const Button = struct {
     label: []const u8,
 
     pub fn initValues(this: *Button, pos: Types.Vector2Int, label: []const u8) void {
+        std.debug.print("BUTTON_LABEL: {s}\n", .{label});
         this.pos = pos;
         this.height = 16;
         this.width = 16;
@@ -18,10 +19,13 @@ pub const Button = struct {
     }
 
     pub fn Draw(this: @This(), scroll: f32) void {
-        //c.DrawTexture(texture: Texture2D, posX: c_int, posY: c_int, tint: Color)
-        if (this.pos.y > @as(i32, @intFromFloat(scroll)) and this.pos.y < Config.game_height + @as(i32, @intFromFloat(scroll))) {
-            c.DrawRectangle(@intCast(this.pos.x), this.pos.y, this.width, this.height, c.RED);
-            c.DrawText(this.label.ptr, this.pos.x, this.pos.y, 5, c.YELLOW);
+        // Calculate display position with scroll offset
+        const displayY = this.pos.y - @as(i32, @intFromFloat(scroll));
+
+        // Only draw if visible on screen
+        if (displayY >= 0 and displayY < Config.game_height) {
+            c.DrawRectangle(@intCast(this.pos.x), displayY, this.width, this.height, c.RED);
+            c.DrawText(this.label.ptr, this.pos.x, displayY, 5, c.YELLOW);
         }
     }
 
