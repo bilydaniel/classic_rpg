@@ -22,7 +22,11 @@ pub const Menu = struct {
             try buttons.append(button);
             std.debug.print("asset: {any}", .{asset});
             //TODO: add asset into the button
-            pos.y += 16;
+            pos.x += 128;
+            if (pos.x > 575) {
+                pos.y += 64;
+                pos.x = 0;
+            }
         }
         return Menu{
             .buttons = buttons,
@@ -39,11 +43,9 @@ pub const Menu = struct {
     }
 
     pub fn Update(this: *Menu) void {
-        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
-            for (this.buttons.items) |button| {
-                button.Update();
-            }
-        }
         this.scroll -= c.GetMouseWheelMove() * 20.0;
+        for (this.buttons.items) |button| {
+            button.Update();
+        }
     }
 };

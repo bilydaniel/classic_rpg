@@ -6,6 +6,7 @@ const c = @cImport({
 });
 pub const Button = struct {
     pos: Types.Vector2Int,
+    posDisplay: Types.Vector2Int,
     height: i32,
     width: i32,
     label: []const u8,
@@ -30,6 +31,7 @@ pub const Button = struct {
     }
 
     pub fn Update(this: *Button) void {
+        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {}
         std.debug.print("(button)x: {d}, y: {d}\n", .{ this.pos.x, this.pos.y });
         const mouse_pos = c.GetMousePosition();
         std.debug.print("(mouse)x: {d}, y: {d}\n", .{ mouse_pos.x, mouse_pos.y });
