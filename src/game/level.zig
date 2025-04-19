@@ -10,6 +10,7 @@ const Tile = struct {
 
 pub const Level = struct {
     grid: [config.level_height][config.level_width]Tile, //TODO: do i want to have it always the same size?
+    //TODO: probably just make this a 1D array and just add some MATHS
     width: usize,
     height: usize,
     //TODO: REMOVE

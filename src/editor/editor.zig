@@ -85,11 +85,11 @@ pub const Editor = struct {
 
         //TODO: switch to a state machine??
         if (this.menuOpen) {
-            this.menu.Update();
+            this.menu.Update(); //TODO: this will return the picked asset to use for building
         }
     }
 
-    pub fn Draw(this: *Editor, screen: c.RenderTexture2D) void {
+    pub fn Draw(this: *Editor, screen: c.RenderTexture2D) !void {
         c.BeginTextureMode(screen);
         c.BeginMode2D(this.camera);
         c.ClearBackground(c.BLACK);
@@ -97,7 +97,7 @@ pub const Editor = struct {
         c.EndMode2D();
         if (this.menuOpen) {
             c.BeginScissorMode(0, 0, Config.game_width, Config.game_height);
-            this.menu.Draw();
+            try this.menu.Draw();
             c.EndScissorMode();
         }
         c.EndTextureMode();

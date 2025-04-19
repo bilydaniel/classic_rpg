@@ -35,17 +35,18 @@ pub const Menu = struct {
         };
     }
 
-    pub fn Draw(this: @This()) void {
+    pub fn Draw(this: @This()) !void {
         c.DrawRectangle(0, 0, Config.game_width, Config.game_height, c.GRAY);
         for (this.buttons.items) |button| {
-            button.Draw(this.scroll);
+            try button.Draw();
         }
     }
 
     pub fn Update(this: *Menu) void {
         this.scroll -= c.GetMouseWheelMove() * 20.0;
         for (this.buttons.items) |button| {
-            button.Update();
+            //TODO: check if a button was pressed(value in the button) if it was, return its assets
+            button.Update(this.scroll);
         }
     }
 };

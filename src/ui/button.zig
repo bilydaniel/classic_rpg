@@ -14,26 +14,31 @@ pub const Button = struct {
     pub fn initValues(this: *Button, pos: Types.Vector2Int, label: []const u8) void {
         std.debug.print("BUTTON_LABEL: {s}\n", .{label});
         this.pos = pos;
+        this.posDisplay = pos;
         this.height = 16;
         this.width = 16;
         this.label = label;
     }
 
-    pub fn Draw(this: @This(), scroll: f32) void {
-        // Calculate display position with scroll offset
-        const displayY = this.pos.y - @as(i32, @intFromFloat(scroll));
-
-        // Only draw if visible on screen
-        if (displayY >= 0 and displayY < Config.game_height) {
-            c.DrawRectangle(@intCast(this.pos.x), displayY, this.width, this.height, c.RED);
-            c.DrawText(this.label.ptr, this.pos.x, displayY, 5, c.YELLOW);
+    pub fn Draw(this: @This()) !void {
+        if (this.posDisplay.y >= 0 and this.posDisplay.y < Config.game_height) {
+            const text_length = c.MeasureText(this.label.ptr, 5);
+            c.DrawRectangle(@intCast(this.pos.x), this.posDisplay.y, text_length, this.height, c.RED);
+            //c.DrawText(this.label.ptr, this.pos.x, displayY, 5, c.YELLOW);
+            var buffer: [64]u8 = undefined;
+            const formatted = try std.fmt.bufPrint(&buffer, "{d}", .{this.posDisplay.y});
+            c.DrawText(formatted.ptr, this.pos.x, this.posDisplay.y, 5, c.YELLOW);
         }
     }
 
-    pub fn Update(this: *Button) void {
-        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {}
-        std.debug.print("(button)x: {d}, y: {d}\n", .{ this.pos.x, this.pos.y });
-        const mouse_pos = c.GetMousePosition();
-        std.debug.print("(mouse)x: {d}, y: {d}\n", .{ mouse_pos.x, mouse_pos.y });
+    pub fn Update(this: *Button, scroll: f32) void {
+        this.posDisplay.y = this.pos.y - @as(i32, @intFromFloat(scroll));
+        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
+            const mouse_pos = c.GetMousePosition();
+            const collision = c.CheckCollisionPointRec(mouse_pos, c.Rectangle{ .x = @floatFromInt(this.posDisplay.x), .y = @floatFromInt(this.posDisplay.y), .width = @floatFromInt(this.width), .height = @floatFromInt(this.height) });
+            if (collision) {
+                std.debug.print("CLICKED \n", .{});
+            }
+        }
     }
 };

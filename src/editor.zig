@@ -20,7 +20,7 @@ pub fn main() !void {
     while (!c.WindowShouldClose() and running) {
         editor.Update();
 
-        editor.Draw(editor.window.screen);
+        try editor.Draw(editor.window.screen);
 
         c.BeginDrawing();
         c.DrawTexturePro(
