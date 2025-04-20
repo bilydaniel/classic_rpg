@@ -53,10 +53,12 @@ pub const Level = struct {
             return error.TextureLoadFailed;
         }
 
+        const entities = std.ArrayList(*Entity).init(allocator);
         level.* = .{
             .grid = grid,
             .tile_texture = tileTexture,
             .allocator = allocator,
+            .entities = entities,
         };
         return level;
     }
@@ -69,5 +71,7 @@ pub const Level = struct {
         }
     }
 
-    pub fn Update(this: *Level) void {}
+    pub fn Update(this: *Level) void {
+        std.debug.print("level: {}\n", .{this.entities});
+    }
 };

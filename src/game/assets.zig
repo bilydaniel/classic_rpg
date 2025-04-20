@@ -1,3 +1,4 @@
+const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -6,8 +7,9 @@ pub const assets = struct {
     playerTexture: c.Texture2D,
     baseTile: c.Texture2D,
     enemy: c.Texture2D,
+    allocator: std.mem.Allocator,
 
-    pub fn init() @This() {
+    pub fn init(allocator: std.mem.Allocator) @This() {
         //TODO: try what happens if load fails
         const player_texture = c.LoadTexture("assets/random_character.png");
         const tile_texture = c.LoadTexture("assets/base_tile.png");
@@ -16,6 +18,7 @@ pub const assets = struct {
             .playerTexture = player_texture,
             .baseTile = tile_texture,
             .enemy = enemy_texture,
+            .allocator = allocator,
         };
     }
 
