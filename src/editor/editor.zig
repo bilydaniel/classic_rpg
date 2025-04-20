@@ -15,7 +15,7 @@ const c = @cImport({
 
 pub const Editor = struct {
     allocator: std.mem.Allocator,
-    world: World.World,
+    world: *World.World,
     camera: c.Camera2D,
     cameraManual: bool,
     cameraSpeed: f32,
@@ -33,7 +33,7 @@ pub const Editor = struct {
         const menu = try Menu.Menu.initAssetMenu(allocator, editor.assetList);
         editor.* = .{
             .allocator = allocator,
-            .world = try World.World.init(),
+            .world = try World.World.init(allocator),
             .camera = c.Camera2D{
                 .offset = c.Vector2{ .x = 0, .y = 0 },
                 .target = c.Vector2{ .x = 0, .y = 0 },

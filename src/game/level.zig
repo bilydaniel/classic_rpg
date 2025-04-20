@@ -4,25 +4,42 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+const TileType = enum {
+    empty,
+    wall,
+    floor,
+    water,
+    //TODO:
+};
+
+//TODO: put somewhere else
+const Entity = struct {};
+
 const Tile = struct {
-    id: i32,
+    texture_id: i32,
+    tile_type: TileType,
+    solid: bool, //TODO: no idea if needed, tile_type already says if solid
 };
 
 pub const Level = struct {
     grid: [config.level_height][config.level_width]Tile, //TODO: do i want to have it always the same size?
     //TODO: probably just make this a 1D array and just add some MATHS
-    width: usize,
-    height: usize,
     //TODO: REMOVE
     tile_texture: c.Texture2D,
+    allocator: std.mem.Allocator,
+    entities: std.ArrayList(*Entity),
 
-    pub fn init() !@This() {
+    pub fn init(allocator: std.mem.Allocator) !*Level {
+        const level = try allocator.create(Level);
         var grid: [config.level_height][config.level_width]Tile = undefined;
 
         for (&grid) |*row| {
             for (row) |*tile| {
-                tile.* = Tile{ .id = 1 };
-                //grid[i][j] = Tile{ .id = 1 };
+                tile.* = Tile{
+                    .texture_id = 1,
+                    .tile_type = .floor,
+                    .solid = false,
+                };
             }
         }
         //const tileTexture = c.LoadTexture("assets/base_tile.png");
@@ -36,19 +53,21 @@ pub const Level = struct {
             return error.TextureLoadFailed;
         }
 
-        return Level{
+        level.* = .{
             .grid = grid,
-            .width = config.level_width,
-            .height = config.level_height,
             .tile_texture = tileTexture,
+            .allocator = allocator,
         };
+        return level;
     }
 
     pub fn Draw(this: @This()) void {
         for (0..config.level_height) |i| {
             for (0..config.level_width) |j| {
-                c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * 16)), @as(c_int, @intCast(i * 16)), c.WHITE);
+                c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * config.tile_width)), @as(c_int, @intCast(i * config.tile_height)), c.WHITE);
             }
         }
     }
+
+    pub fn Update(this: *Level) void {}
 };

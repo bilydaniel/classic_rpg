@@ -12,7 +12,7 @@ const c = @cImport({
 
 pub const Game = struct {
     allocator: std.mem.Allocator,
-    world: World.World,
+    world: *World.World,
     player: *Player.Player,
     assets: Assets.assets,
     camera: *c.Camera2D,
@@ -33,7 +33,7 @@ pub const Game = struct {
         };
         game.* = .{
             .allocator = allocator,
-            .world = try World.World.init(),
+            .world = try World.World.init(allocator),
             .player = player,
             .assets = Assets.assets.init(),
             .window = Window.Window.init(),
@@ -82,6 +82,8 @@ pub const Game = struct {
             this.player.Update();
             this.timeSinceTurn = 0;
         }
+
+        this.world.Update();
     }
 
     pub fn Draw(this: *Game, screen: c.RenderTexture2D) void {
@@ -90,7 +92,7 @@ pub const Game = struct {
         c.BeginTextureMode(screen);
         c.BeginMode2D(this.camera.*);
         c.ClearBackground(c.BLACK);
-        this.world.currentLevel.Draw();
+        this.world.Draw();
         this.player.Draw(&this.assets);
         c.EndMode2D();
         c.EndTextureMode();
