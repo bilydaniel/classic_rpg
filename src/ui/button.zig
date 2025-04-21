@@ -1,6 +1,7 @@
 const std = @import("std");
 const Types = @import("../common/types.zig");
 const Config = @import("../common/config.zig");
+const Menu = @import("menu.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -10,14 +11,18 @@ pub const Button = struct {
     height: i32,
     width: i32,
     label: []const u8,
+    callback: ?*const fn (menu: *Menu.Menu, data: ?*anyopaque) void = null,
+    data: ?*anyopaque = null,
 
-    pub fn initValues(this: *Button, pos: Types.Vector2Int, label: []const u8) void {
+    pub fn initValues(this: *Button, pos: Types.Vector2Int, label: []const u8, callback: ?*const fn (menu: *Menu.Menu, data: ?*anyopaque) void, data: ?*anyopaque) void {
         std.debug.print("BUTTON_LABEL: {s}\n", .{label});
         this.pos = pos;
         this.posDisplay = pos;
         this.height = 16;
         this.width = 16;
         this.label = label;
+        this.callback = callback;
+        this.data = data;
     }
 
     pub fn Draw(this: @This()) !void {
@@ -38,6 +43,9 @@ pub const Button = struct {
             const collision = c.CheckCollisionPointRec(mouse_pos, c.Rectangle{ .x = @floatFromInt(this.posDisplay.x), .y = @floatFromInt(this.posDisplay.y), .width = @floatFromInt(this.width), .height = @floatFromInt(this.height) });
             if (collision) {
                 std.debug.print("CLICKED \n", .{});
+                if (this.callback != null) {
+                    this.callback.?(this.data);
+                }
             }
         }
     }
