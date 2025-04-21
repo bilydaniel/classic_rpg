@@ -7,8 +7,6 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Window = @import("../game/window.zig");
 const Menu = @import("../ui/menu.zig");
-const AssetTree = @import("asset_tree.zig");
-const AssetList = @import("asset_list.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -23,14 +21,15 @@ pub const Editor = struct {
     window: Window.Window,
     menuOpen: bool,
     menu: Menu.Menu,
-    assetList: AssetList.AssetList,
+    //TODO: rename into assetmetu, special menu thats gonna return the picked texture, use that to do stuff, make this into the game too? not sure if I want building in the game? -> probably yes
+    assets: Assets.Assets,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         var editor = try allocator.create(Editor);
-        const assetList = try AssetList.AssetList.init(allocator);
-        editor.assetList = assetList;
-        try editor.assetList.loadFromDir("assets");
-        const menu = try Menu.Menu.initAssetMenu(allocator, editor.assetList);
+        const assets = Assets.Assets.init(allocator);
+        editor.assets = assets;
+        try editor.assets.loadFromDir("assets");
+        const menu = try Menu.Menu.initAssetMenu(allocator, editor.assets);
         editor.* = .{
             .allocator = allocator,
             .world = try World.World.init(allocator),
@@ -44,7 +43,7 @@ pub const Editor = struct {
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
             .window = Window.Window.init(),
-            .assetList = assetList,
+            .assets = assets,
             .menuOpen = false,
             .menu = menu,
         };

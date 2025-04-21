@@ -40,7 +40,7 @@ pub const Player = struct {
         }
     }
 
-    pub fn Draw(this: *Player, assets: *const Assets.assets) void {
+    pub fn Draw(this: *Player, assets: *const Assets.Assets) void {
         c.DrawTexture(assets.playerTexture, @as(c_int, @intCast(this.x * Config.tile_width)), @as(c_int, @intCast(this.y * Config.tile_height)), c.WHITE);
     }
 };
