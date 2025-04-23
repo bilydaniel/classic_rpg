@@ -23,9 +23,8 @@ pub const Menu = struct {
         for (assets.list.items) |asset| {
             var button = try allocator.create(Button.Button);
             const button_label = std.fs.path.basename(asset.path);
-            button.initValues(pos, button_label, Menu.assetMenuButtonCallback, asset);
+            button.initValues(pos, button_label, asset);
             try buttons.append(button);
-            std.debug.print("asset: {any}", .{asset});
             //TODO: add asset into the button
             pos.x += 128;
             if (pos.x > 575) {
@@ -51,17 +50,22 @@ pub const Menu = struct {
         }
     }
 
-    pub fn Update(this: *Menu) void {
+    pub fn Update(this: *Menu) ?*anyopaque {
         if (this.isOpen) {
             if (this.isScrollable) {
                 this.scroll -= c.GetMouseWheelMove() * 20.0;
             }
             for (this.buttons.items) |button| {
                 //TODO: check if a button was pressed(value in the button) if it was, return its assets
-                button.Update(this.scroll);
+                this.selectedData = button.Update(this.scroll);
+                if (this.selectedData) |data| {
+                    std.debug.print("SELECTED_DATA: {}", .{data});
+                    return this.selectedData;
+                }
                 //TODO: button will return anyopaque, if button returns something => return it from this menu, work with the data after they are returned from the menu, depending on what kind of menu it is => do something(asset menu returns assets etc)
             }
         }
+        return null;
     }
     pub fn assetMenuButtonCallback(this: *Menu, data: ?*anyopaque) void {
         this.selectedData = data;

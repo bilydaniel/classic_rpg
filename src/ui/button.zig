@@ -12,16 +12,14 @@ pub const Button = struct {
     width: i32,
     label: []const u8,
     callback: ?*const fn (menu: *Menu.Menu, data: ?*anyopaque) void = null,
-    data: ?*anyopaque = null,
+    data: *anyopaque = null,
 
-    pub fn initValues(this: *Button, pos: Types.Vector2Int, label: []const u8, callback: ?*const fn (menu: *Menu.Menu, data: ?*anyopaque) void, data: ?*anyopaque) void {
-        std.debug.print("BUTTON_LABEL: {s}\n", .{label});
+    pub fn initValues(this: *Button, pos: Types.Vector2Int, label: []const u8, data: *anyopaque) void {
         this.pos = pos;
         this.posDisplay = pos;
         this.height = 16;
         this.width = 16;
         this.label = label;
-        this.callback = callback;
         this.data = data;
     }
 
@@ -36,17 +34,15 @@ pub const Button = struct {
         }
     }
 
-    pub fn Update(this: *Button, scroll: f32) void {
+    pub fn Update(this: *Button, scroll: f32) ?*anyopaque {
         this.posDisplay.y = this.pos.y - @as(i32, @intFromFloat(scroll));
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
             const mouse_pos = c.GetMousePosition();
             const collision = c.CheckCollisionPointRec(mouse_pos, c.Rectangle{ .x = @floatFromInt(this.posDisplay.x), .y = @floatFromInt(this.posDisplay.y), .width = @floatFromInt(this.width), .height = @floatFromInt(this.height) });
             if (collision) {
-                std.debug.print("CLICKED \n", .{});
-                if (this.callback != null) {
-                    this.callback.?(this.data);
-                }
+                return this.data;
             }
         }
+        return null;
     }
 };

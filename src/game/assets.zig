@@ -67,7 +67,7 @@ pub const Assets = struct {
     }
 };
 
-const Node = struct {
+pub const Node = struct {
     path: []const u8,
     texture: c.Texture2D,
 

@@ -22,6 +22,7 @@ pub const Editor = struct {
     assetMenu: Menu.Menu,
     //TODO: rename into assetmetu, special menu thats gonna return the picked texture, use that to do stuff, make this into the game too? not sure if I want building in the game? -> probably yes
     assets: Assets.Assets,
+    pickedAsset: ?*Assets.Node = null,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         var editor = try allocator.create(Editor);
@@ -74,22 +75,40 @@ pub const Editor = struct {
         }
 
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-            const destination = c.GetMousePosition();
-            const renderDestination = Utils.screenToRenderTextureCoords(destination, this.window);
-            const world = c.GetScreenToWorld2D(renderDestination, this.camera);
-            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
+            this.pickedAsset = null;
         }
 
         //TODO: switch to a state machine??
-        const picked_asset = this.assetMenu.Update(); //TODO: this will return the picked asset to use for building
-        std.debug.print("picked_asset: {}", .{picked_asset});
+        const picked_asset: ?*Assets.Node = @ptrCast(@alignCast(this.assetMenu.Update())); //TODO: this will return the picked asset to use for building
+        if (picked_asset) |asset| {
+            this.assetMenu.isOpen = false;
+            this.pickedAsset = asset;
+            std.debug.print("picked_asset: {}", .{asset});
+        }
+
+        if (this.pickedAsset) |asset| {
+            if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
+                std.debug.print("asset: {}", .{asset});
+            }
+        }
+    }
+
+    pub fn DrawEditor(this: *Editor) void {
+        if (this.pickedAsset) |asset| {
+            const mouse = c.GetMousePosition();
+            const renderDestination = Utils.screenToRenderTextureCoords(mouse, this.window);
+            const world = c.GetScreenToWorld2D(renderDestination, this.camera);
+
+            c.DrawTexture(asset.texture, @as(c_int, @intFromFloat(world.x)), @as(c_int, @intFromFloat(world.y)), c.WHITE);
+        }
     }
 
     pub fn Draw(this: *Editor, screen: c.RenderTexture2D) !void {
         c.BeginTextureMode(screen);
         c.BeginMode2D(this.camera);
         c.ClearBackground(c.BLACK);
-        this.world.currentLevel.Draw();
+        this.world.Draw();
+        this.DrawEditor();
         c.EndMode2D();
         c.BeginScissorMode(0, 0, Config.game_width, Config.game_height);
         try this.assetMenu.Draw();
