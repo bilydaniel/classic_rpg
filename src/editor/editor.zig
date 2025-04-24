@@ -23,6 +23,7 @@ pub const Editor = struct {
     //TODO: rename into assetmetu, special menu thats gonna return the picked texture, use that to do stuff, make this into the game too? not sure if I want building in the game? -> probably yes
     assets: Assets.Assets,
     pickedAsset: ?*Assets.Node = null,
+    //TODO: separate tiles and entities, open tile menu with different key
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         var editor = try allocator.create(Editor);
