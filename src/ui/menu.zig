@@ -80,13 +80,11 @@ pub const Menu = struct {
                 this.scroll -= c.GetMouseWheelMove() * 20.0;
             }
             for (this.buttons.items) |button| {
-                //TODO: check if a button was pressed(value in the button) if it was, return its assets
                 this.selectedData = button.Update(this.scroll);
                 if (this.selectedData) |data| {
                     std.debug.print("SELECTED_DATA: {}", .{data});
                     return this.selectedData;
                 }
-                //TODO: button will return anyopaque, if button returns something => return it from this menu, work with the data after they are returned from the menu, depending on what kind of menu it is => do something(asset menu returns assets etc)
             }
         }
         return null;

@@ -24,6 +24,7 @@ pub const Editor = struct {
     //TODO: rename into assetmetu, special menu thats gonna return the picked texture, use that to do stuff, make this into the game too? not sure if I want building in the game? -> probably yes
     assets: Assets.Assets,
     pickedAsset: ?*Assets.Node = null,
+    pickedRect: ?*c.Rectangle = null,
     //TODO: separate tiles and entities, open tile menu with different key
     tilesetMenu: Menu.Menu,
     tileset: Tileset.Tileset,
@@ -32,10 +33,11 @@ pub const Editor = struct {
         var editor = try allocator.create(Editor);
         const assets = Assets.Assets.init(allocator);
         const tileset = Tileset.Tileset.init(allocator);
+        tileset.loadTileset("assets/my_tileset.png");
         editor.assets = assets;
-        editor.tileset = tileset;
+        //editor.tileset = tileset;
         try editor.assets.loadFromDir("assets");
-        try editor.tileset.loadTileset("assets/my_tileset.png");
+        //try editor.tileset.loadTileset("assets/my_tileset.png");
         const assetMenu = try Menu.Menu.initAssetMenu(allocator, editor.assets);
         const tilesetMenu = try Menu.Menu.initTilesetMenu(allocator, editor.tileset);
         editor.* = .{
@@ -100,16 +102,22 @@ pub const Editor = struct {
             this.pickedAsset = asset;
         }
 
-        //TODO: continue here!!!
-        const picked_tile: ?*Assets.Node = @ptrCast(@alignCast(this.assetMenu.Update())); //TODO: this will return the picked asset to use for building
-        if (picked_asset) |asset| {
-            this.assetMenu.isOpen = false;
-            this.pickedAsset = asset;
+        //TODO: probably a better way to do this
+        const picked_tileset_rect: ?*c.Rectangle = @ptrCast(@alignCast(this.tilesetMenu.Update()));
+        if (picked_tileset_rect) |rect| {
+            this.tilesetMenu.isOpen = false;
+            this.pickedRect = rect;
         }
 
         if (this.pickedAsset) |asset| {
             if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
                 std.debug.print("asset: {}", .{asset});
+            }
+        }
+
+        if (this.pickedRect) |rect| {
+            if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
+                std.debug.print("rect: {}", .{rect});
             }
         }
     }
@@ -122,6 +130,16 @@ pub const Editor = struct {
 
             c.DrawTexture(asset.texture, @as(c_int, @intFromFloat(world.x)), @as(c_int, @intFromFloat(world.y)), c.WHITE);
         }
+
+        if (this.pickedRect) |rect| {
+            std.debug.print("picked_rect\n", .{});
+            std.debug.print("source: {}", .{this.tileset.source});
+            const mouse = c.GetMousePosition();
+            const renderDestination = Utils.screenToRenderTextureCoords(mouse, this.window);
+            const world = c.GetScreenToWorld2D(renderDestination, this.camera);
+
+            c.DrawTextureRec(this.tileset.source, rect.*, world, c.WHITE);
+        }
     }
 
     pub fn Draw(this: *Editor, screen: c.RenderTexture2D) !void {
@@ -133,6 +151,8 @@ pub const Editor = struct {
         c.EndMode2D();
         c.BeginScissorMode(0, 0, Config.game_width, Config.game_height);
         try this.assetMenu.Draw();
+        try this.tilesetMenu.Draw();
+
         c.EndScissorMode();
         c.EndTextureMode();
     }
