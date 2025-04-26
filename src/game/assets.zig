@@ -50,6 +50,12 @@ pub const Assets = struct {
         }
     }
 
+    pub fn loadTileset(this: *Assets, path: []const u8) !void {
+        const tileset_texture = c.LoadTexture(path.ptr);
+
+        std.debug.print("this: {}\n", .{this});
+        std.debug.print("tileset: {}\n", .{tileset_texture});
+    }
     fn badType(item: std.fs.Dir.Walker.Entry) bool {
         if (item.kind == .directory) {
             return true;

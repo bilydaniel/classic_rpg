@@ -2,6 +2,7 @@ const std = @import("std");
 const World = @import("../game/world.zig");
 const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
+const Tileset = @import("../game/tileset.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
@@ -24,13 +25,19 @@ pub const Editor = struct {
     assets: Assets.Assets,
     pickedAsset: ?*Assets.Node = null,
     //TODO: separate tiles and entities, open tile menu with different key
+    tilesetMenu: Menu.Menu,
+    tileset: Tileset.Tileset,
 
     pub fn init(allocator: std.mem.Allocator) !*Editor {
         var editor = try allocator.create(Editor);
         const assets = Assets.Assets.init(allocator);
+        const tileset = Tileset.Tileset.init(allocator);
         editor.assets = assets;
+        editor.tileset = tileset;
         try editor.assets.loadFromDir("assets");
+        try editor.tileset.loadTileset("assets/my_tileset.png");
         const assetMenu = try Menu.Menu.initAssetMenu(allocator, editor.assets);
+        const tilesetMenu = try Menu.Menu.initTilesetMenu(allocator, editor.tileset);
         editor.* = .{
             .allocator = allocator,
             .world = try World.World.init(allocator),
@@ -46,6 +53,8 @@ pub const Editor = struct {
             .window = Window.Window.init(),
             .assets = assets,
             .assetMenu = assetMenu,
+            .tileset = tileset,
+            .tilesetMenu = tilesetMenu,
         };
         return editor;
     }
@@ -75,6 +84,11 @@ pub const Editor = struct {
             this.assetMenu.isOpen = !this.assetMenu.isOpen;
         }
 
+        if (c.IsKeyPressed(c.KEY_E)) {
+            //TODO: dont want to be able to have both menus open, fix later
+            this.tilesetMenu.isOpen = !this.tilesetMenu.isOpen;
+        }
+
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
             this.pickedAsset = null;
         }
@@ -84,7 +98,13 @@ pub const Editor = struct {
         if (picked_asset) |asset| {
             this.assetMenu.isOpen = false;
             this.pickedAsset = asset;
-            std.debug.print("picked_asset: {}", .{asset});
+        }
+
+        //TODO: continue here!!!
+        const picked_tile: ?*Assets.Node = @ptrCast(@alignCast(this.assetMenu.Update())); //TODO: this will return the picked asset to use for building
+        if (picked_asset) |asset| {
+            this.assetMenu.isOpen = false;
+            this.pickedAsset = asset;
         }
 
         if (this.pickedAsset) |asset| {

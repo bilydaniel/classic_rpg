@@ -6,7 +6,7 @@ const EntityType = enum {
     Item,
 };
 
-const Entity = union(EntityType) {
+pub const Entity = union(EntityType) {
     Player: EntityPlayer,
     Enemy: EntityEnemy,
     Item: EntityItem,
