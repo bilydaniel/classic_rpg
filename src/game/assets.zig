@@ -1,4 +1,5 @@
 const std = @import("std");
+const Utils = @import("../common/utils.zig");
 const fs = std.fs;
 const c = @cImport({
     @cInclude("raylib.h");
@@ -42,10 +43,11 @@ pub const Assets = struct {
             if (badType(item)) {
                 continue;
             }
-            const newPath = try std.fmt.allocPrint(this.allocator, "assets/{s}\x00", .{item.path});
-            const newPathTerminated = try std.fmt.allocPrint(this.allocator, "{s}\x00", .{newPath});
+            const assetpath = try std.fmt.allocPrint(this.allocator, "assets/{s}", .{item.path});
+            //const newPathTerminated = try std.fmt.allocPrint(this.allocator, "{s}\x00", .{newPath});
+            const newPath = try Utils.toNullTerminated(this.allocator, assetpath);
             //defer this.allocator.free(newPath);
-            const newNode = try Node.init(this.allocator, newPath, newPathTerminated);
+            const newNode = try Node.init(this.allocator, newPath);
             try this.list.append(newNode);
         }
     }
@@ -69,13 +71,16 @@ pub const Assets = struct {
 
 pub const Node = struct {
     path: []const u8,
-    texture: c.Texture2D,
+    texture: *c.Texture2D,
 
-    pub fn init(allocator: std.mem.Allocator, path: []const u8, pathTerminated: []const u8) !*Node {
+    pub fn init(allocator: std.mem.Allocator, path: []const u8) !*Node {
+        const texture = try allocator.create(c.Texture2D);
+        texture.* = c.LoadTexture(@ptrCast(path));
+
         const node = try allocator.create(Node);
         node.* = .{
             .path = path,
-            .texture = c.LoadTexture(@ptrCast(pathTerminated)),
+            .texture = texture,
         };
         return node;
     }

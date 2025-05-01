@@ -7,7 +7,7 @@ const c = @cImport({
 
 pub const Tileset = struct {
     allocator: std.mem.Allocator,
-    source: c.Texture2D = .{},
+    source: ?*c.Texture2D = null,
     sourceRects: std.ArrayList(*c.Rectangle),
 
     pub fn init(allocator: std.mem.Allocator) @This() {
@@ -19,8 +19,9 @@ pub const Tileset = struct {
 
     pub fn loadTileset(this: *Tileset, path: []const u8) !void {
         const pathTerminated = try std.fmt.allocPrint(this.allocator, "{s}\x00", .{path});
-        this.source = c.LoadTexture(@ptrCast(pathTerminated));
-        std.debug.print("SOURCE_LOAD: {}", .{this.source});
+        const source = try this.allocator.create(c.Texture2D);
+        source.* = c.LoadTexture(@ptrCast(pathTerminated));
+        this.source = source;
 
         var i: i32 = 0;
         var j: i32 = 0;
@@ -31,5 +32,7 @@ pub const Tileset = struct {
                 try this.sourceRects.append(rect);
             }
         }
+
+        std.debug.print("SOURCE_LOAD: {}", .{this.source});
     }
 };

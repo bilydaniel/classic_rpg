@@ -16,7 +16,6 @@ pub const Game = struct {
     player: *Player.Player,
     assets: Assets.Assets,
     camera: *c.Camera2D,
-    window: Window.Window,
     cameraManual: bool,
     cameraSpeed: f32,
     timeSinceTurn: f32,
@@ -36,7 +35,6 @@ pub const Game = struct {
             .world = try World.World.init(allocator),
             .player = player,
             .assets = Assets.Assets.init(allocator),
-            .window = Window.Window.init(),
             .camera = camera,
             .cameraManual = false,
             .cameraSpeed = 128,
@@ -46,7 +44,7 @@ pub const Game = struct {
     }
 
     pub fn Update(this: *Game) void {
-        this.window.Update();
+        Window.UpdateWindow();
         const delta = c.GetFrameTime();
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs
@@ -71,7 +69,7 @@ pub const Game = struct {
             //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
 
             const destination = c.GetMousePosition();
-            const renderDestination = Utils.screenToRenderTextureCoords(destination, this.window);
+            const renderDestination = Utils.screenToRenderTextureCoords(destination);
             const world = c.GetScreenToWorld2D(renderDestination, this.camera.*);
             std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
 
@@ -86,10 +84,10 @@ pub const Game = struct {
         this.world.Update();
     }
 
-    pub fn Draw(this: *Game, screen: c.RenderTexture2D) void {
+    pub fn Draw(this: *Game) void {
         //this.camera.target = c.Vector2{ .x = @as(f32, @floatFromInt(this.player.x * Config.tile_width)), .y = @as(f32, @floatFromInt(this.player.y * Config.tile_height)) };
 
-        c.BeginTextureMode(screen);
+        c.BeginTextureMode(Window.screen);
         c.BeginMode2D(this.camera.*);
         c.ClearBackground(c.BLACK);
         this.world.Draw();

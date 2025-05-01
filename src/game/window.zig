@@ -6,73 +6,72 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub const Window = struct {
-    screen: c.RenderTexture2D,
-    scale: f32,
-    windowWidth: i32,
-    windowHeight: i32,
-    offsetx: i32,
-    offsety: i32,
-    scaledWidth: i32,
-    scaledHeight: i32,
+pub var screen: c.RenderTexture2D = .{};
+pub var scale: f32 = 0.0;
+pub var windowWidth: i32 = 0;
+pub var windowHeight: i32 = 0;
+pub var offsetx: i32 = 0;
+pub var offsety: i32 = 0;
+pub var scaledWidth: i32 = 0;
+pub var scaledHeight: i32 = 0;
+pub var camera: c.Camera2D = .{};
 
-    pub fn init() Window {
-        const screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
-        c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
+pub fn init() void {
+    screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
+    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
 
-        const scale = @min(
-            @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
-            @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
-        );
+    scale = @min(
+        @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
+        @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
+    );
 
-        const scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
-        const scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
-        const offset_x = @divFloor(Config.window_width - scaled_width, 2);
-        const offset_y = @divFloor(Config.window_height - scaled_height, 2);
-        c.SetTargetFPS(60);
+    const scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
+    const scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
+    const offset_x = @divFloor(Config.window_width - scaled_width, 2);
+    const offset_y = @divFloor(Config.window_height - scaled_height, 2);
+    c.SetTargetFPS(60);
 
-        return Window{
-            .screen = screen,
-            .scale = scale,
-            .offsetx = offset_x,
-            .offsety = offset_y,
-            .scaledWidth = scaled_width,
-            .scaledHeight = scaled_height,
-            .windowWidth = Config.window_width,
-            .windowHeight = Config.window_height,
-        };
+    screen = screen;
+    scale = scale;
+    offsetx = offset_x;
+    offsety = offset_y;
+    scaledWidth = scaled_width;
+    scaledHeight = scaled_height;
+    windowWidth = Config.window_width;
+    windowHeight = Config.window_height;
+    camera = c.Camera2D{
+        .offset = c.Vector2{ .x = 0, .y = 0 },
+        .target = c.Vector2{ .x = 0, .y = 0 },
+        .rotation = 0.0,
+        .zoom = 1.0,
+    };
+}
+
+pub fn UpdateWindow() void {
+    const new_width = c.GetScreenWidth();
+    const new_height = c.GetScreenHeight();
+
+    if (new_width == windowWidth and new_height == windowHeight) {
+        return;
     }
 
-    pub fn deinit(this: *Window) void {
-        defer c.UnloadRenderTexture(this.screen);
-    }
+    windowWidth = new_width;
+    windowHeight = new_height;
 
-    pub fn Update(this: *Window) void {
-        const new_width = c.GetScreenWidth();
-        const new_height = c.GetScreenHeight();
+    scale = @min(
+        @as(f32, @floatFromInt(windowWidth)) / @as(f32, Config.game_width),
+        @as(f32, @floatFromInt(windowHeight)) / @as(f32, Config.game_height),
+    );
 
-        if (new_width == this.windowWidth and new_height == this.windowHeight) {
-            return;
-        }
+    const scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
+    const scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
 
-        this.windowWidth = new_width;
-        this.windowHeight = new_height;
+    const offset_x = @divFloor(windowWidth - scaled_width, 2);
+    const offset_y = @divFloor(windowHeight - scaled_height, 2);
 
-        const scale = @min(
-            @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
-            @as(f32, @floatFromInt(Config.window_height)) / @as(f32, Config.game_height),
-        );
-
-        const scaled_width = @as(i32, @intFromFloat(@as(f32, Config.game_width) * scale));
-        const scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
-
-        const offset_x = @divFloor(Config.window_width - scaled_width, 2);
-        const offset_y = @divFloor(Config.window_height - scaled_height, 2);
-
-        this.scale = scale;
-        this.offsetx = offset_x;
-        this.offsety = offset_y;
-        this.scaledWidth = scaled_width;
-        this.scaledHeight = scaled_height;
-    }
-};
+    scale = scale;
+    offsetx = offset_x;
+    offsety = offset_y;
+    scaledWidth = scaled_width;
+    scaledHeight = scaled_height;
+}

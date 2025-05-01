@@ -2,6 +2,7 @@ const std = @import("std");
 const Editor = @import("editor/editor.zig");
 const Player = @import("entities/player.zig");
 const Config = @import("common/config.zig");
+const Window = @import("game/window.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -14,19 +15,20 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
+    Window.init();
     const editor = try Editor.Editor.init(allocator);
 
     const running = true;
     while (!c.WindowShouldClose() and running) {
         editor.Update();
 
-        try editor.Draw(editor.window.screen);
+        try editor.Draw();
 
         c.BeginDrawing();
         c.DrawTexturePro(
-            editor.window.screen.texture,
+            Window.screen.texture,
             c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, Config.game_width), .height = @as(f32, -Config.game_height) },
-            c.Rectangle{ .x = @as(f32, @floatFromInt(editor.window.offsetx)), .y = @as(f32, @floatFromInt(editor.window.offsety)), .width = @as(f32, @floatFromInt(editor.window.scaledWidth)), .height = @as(f32, @floatFromInt(editor.window.scaledHeight)) },
+            c.Rectangle{ .x = @as(f32, @floatFromInt(Window.offsetx)), .y = @as(f32, @floatFromInt(Window.offsety)), .width = @as(f32, @floatFromInt(Window.scaledWidth)), .height = @as(f32, @floatFromInt(Window.scaledHeight)) },
             c.Vector2{ .x = 0, .y = 0 },
             0.0,
             c.WHITE,

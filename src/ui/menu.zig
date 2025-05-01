@@ -20,17 +20,17 @@ pub const Menu = struct {
     //TODO: each menu has its own init based on the parameters
     pub fn initAssetMenu(allocator: std.mem.Allocator, assets: Assets.Assets) !Menu {
         var buttons: std.ArrayList(*Button.Button) = std.ArrayList(*Button.Button).init(allocator);
-        var pos: Types.Vector2Int = Types.Vector2Int{ .x = 0, .y = 0 };
+        var rectangle: c.Rectangle = c.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
         for (assets.list.items) |asset| {
             var button = try allocator.create(Button.Button);
             const button_label = std.fs.path.basename(asset.path);
-            button.initValues(pos, button_label, asset);
+            button.initValues(rectangle, button_label, asset, asset.*.texture, null);
             try buttons.append(button);
             //TODO: add asset into the button
-            pos.x += 128;
-            if (pos.x > 575) {
-                pos.y += 64;
-                pos.x = 0;
+            rectangle.x += 128;
+            if (rectangle.x > 575) {
+                rectangle.y += 64;
+                rectangle.x = 0;
             }
         }
         return Menu{
@@ -44,16 +44,17 @@ pub const Menu = struct {
 
     pub fn initTilesetMenu(allocator: std.mem.Allocator, tileset: Tileset.Tileset) !Menu {
         var buttons: std.ArrayList(*Button.Button) = std.ArrayList(*Button.Button).init(allocator);
-        var pos: Types.Vector2Int = Types.Vector2Int{ .x = 0, .y = 0 };
+        var rectangle: c.Rectangle = c.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
+
         for (tileset.sourceRects.items) |rect| {
             var button = try allocator.create(Button.Button);
-            const button_label = "TODO";
-            button.initValues(pos, button_label, rect);
+            const button_label = "";
+            button.initValues(rectangle, button_label, rect, tileset.source, rect);
             try buttons.append(button);
-            pos.x += 128;
-            if (pos.x > 575) {
-                pos.y += 64;
-                pos.x = 0;
+            rectangle.x += 128;
+            if (rectangle.x > 575) {
+                rectangle.y += 64;
+                rectangle.x = 0;
             }
         }
         return Menu{
@@ -82,8 +83,7 @@ pub const Menu = struct {
             for (this.buttons.items) |button| {
                 this.selectedData = button.Update(this.scroll);
                 if (this.selectedData) |data| {
-                    std.debug.print("SELECTED_DATA: {}", .{data});
-                    return this.selectedData;
+                    return data;
                 }
             }
         }
