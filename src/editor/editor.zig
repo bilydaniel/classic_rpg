@@ -121,7 +121,7 @@ pub const Editor = struct {
             c.DrawTexture(asset.texture.*, @as(c_int, @intFromFloat(world.x)), @as(c_int, @intFromFloat(world.y)), c.WHITE);
         }
 
-        if (this.pickedRect) |rect| {
+        if (this.pickedTile) |rect| {
             //std.debug.print("picked_rect {}\n", .{rect});
             //std.debug.print("source: {}\n", .{this.tileset.source});
             const mouse = c.GetMousePosition();
@@ -129,7 +129,7 @@ pub const Editor = struct {
             const world = c.GetScreenToWorld2D(renderDestination, Window.camera);
 
             if (this.tileset.source) |source| {
-                c.DrawTextureRec(source.*, rect.*, world, c.WHITE);
+                c.DrawTextureRec(source.*, rect.rect, world, c.WHITE);
             }
         }
     }

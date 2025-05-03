@@ -12,10 +12,11 @@ pub const Button = struct {
     rectDisplay: c.Rectangle,
     label: []const u8,
     data: ?*anyopaque = null,
+    callback: ?*const fn (input: ?*anyopaque) ?*anyopaque,
     icon: ?*c.Texture2D = null,
-    iconRect: ?*c.Rectangle = null,
+    iconRect: ?c.Rectangle = null,
 
-    pub fn initValues(this: *Button, rect: c.Rectangle, label: []const u8, data: *anyopaque, icon: ?*c.Texture2D, iconRect: ?*c.Rectangle) void {
+    pub fn initValues(this: *Button, rect: c.Rectangle, label: []const u8, data: *anyopaque, icon: ?*c.Texture2D, iconRect: ?c.Rectangle) void {
         this.rect = rect;
         this.rect.height = 16;
         this.rect.width = 16;
@@ -29,6 +30,7 @@ pub const Button = struct {
         this.data = data;
         this.icon = icon;
         this.iconRect = iconRect;
+        this.callback = defaultCallback;
     }
 
     pub fn Draw(this: @This()) !void {
@@ -41,7 +43,7 @@ pub const Button = struct {
             if (this.icon) |icon| {
                 if (this.iconRect) |iconrect| {
                     drawn = true;
-                    c.DrawTextureRec(icon.*, iconrect.*, c.Vector2{ .x = this.rectDisplay.x, .y = this.rectDisplay.y }, c.WHITE);
+                    c.DrawTextureRec(icon.*, iconrect, c.Vector2{ .x = this.rectDisplay.x, .y = this.rectDisplay.y }, c.WHITE);
                 } else {
                     c.DrawTexture(icon.*, @as(c_int, @intFromFloat(this.rectDisplay.x)), @as(c_int, @intFromFloat(this.rectDisplay.y)), c.WHITE);
                 }
@@ -67,9 +69,15 @@ pub const Button = struct {
 
             const collision = c.CheckCollisionPointRec(world, this.rectDisplay);
             if (collision) {
-                return this.data;
+                if (this.callback) |callback| {
+                    return callback(this.data);
+                }
             }
         }
         return null;
     }
 };
+
+pub fn defaultCallback(data: ?*anyopaque) ?*anyopaque {
+    return data;
+}

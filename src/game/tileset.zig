@@ -13,7 +13,7 @@ pub const Tileset = struct {
     pub fn init(allocator: std.mem.Allocator) @This() {
         return Tileset{
             .allocator = allocator,
-            .sourceRects = std.ArrayList(*TileNode).init(allocator),
+            .nodes = std.ArrayList(*TileNode).init(allocator),
         };
     }
 
