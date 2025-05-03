@@ -57,6 +57,8 @@ pub const Button = struct {
     }
 
     pub fn Update(this: *Button, scroll: f32) ?*anyopaque {
+        //TODO: promyslet button update, muzu udelat pres callback, mel jsem problem s vracenim hodnoty, muzu vratit pres input pointeru, doslo mi to az ted
+        //nejlepsi asi bude pridat callback a pouzit ho kdyz nebude prazdny, jinak nechat jak je
         this.rectDisplay.y = this.rect.y - scroll;
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
             const mouse = c.GetMousePosition();

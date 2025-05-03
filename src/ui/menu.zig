@@ -81,6 +81,8 @@ pub const Menu = struct {
                 this.scroll -= c.GetMouseWheelMove() * 20.0;
             }
             for (this.buttons.items) |button| {
+                //TODO: promyslet button update, muzu udelat pres callback, mel jsem problem s vracenim hodnoty, muzu vratit pres input pointeru, doslo mi to az ted
+                //nejlepsi asi bude pridat callback a pouzit ho kdyz nebude prazdny, jinak nechat jak je
                 this.selectedData = button.Update(this.scroll);
                 if (this.selectedData) |data| {
                     return data;
