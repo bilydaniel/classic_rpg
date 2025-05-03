@@ -8,12 +8,12 @@ const c = @cImport({
 pub const Tileset = struct {
     allocator: std.mem.Allocator,
     source: ?*c.Texture2D = null,
-    sourceRects: std.ArrayList(*c.Rectangle),
+    nodes: std.ArrayList(*TileNode),
 
     pub fn init(allocator: std.mem.Allocator) @This() {
         return Tileset{
             .allocator = allocator,
-            .sourceRects = std.ArrayList(*c.Rectangle).init(allocator),
+            .sourceRects = std.ArrayList(*TileNode).init(allocator),
         };
     }
 
@@ -25,14 +25,22 @@ pub const Tileset = struct {
 
         var i: i32 = 0;
         var j: i32 = 0;
-        while (i < this.source.height) : (i += 16) {
-            while (j < this.source.width) : (j += 16) {
-                const rect = try this.allocator.create(c.Rectangle);
-                rect.* = c.Rectangle{ .x = @floatFromInt(j), .y = @floatFromInt(i), .height = Config.tile_height, .width = Config.tile_width };
-                try this.sourceRects.append(rect);
+        if (this.source) |tilesource| {
+            while (i < tilesource.height) : (i += 16) {
+                while (j < tilesource.width) : (j += 16) {
+                    const tileNode = try this.allocator.create(TileNode);
+                    tileNode.*.rect = c.Rectangle{ .x = @floatFromInt(j), .y = @floatFromInt(i), .height = Config.tile_height, .width = Config.tile_width };
+                    tileNode.*.id = @intCast(this.nodes.items.len);
+
+                    try this.nodes.append(tileNode);
+                }
+                j = 0;
             }
         }
-
-        std.debug.print("SOURCE_LOAD: {}", .{this.source});
     }
+};
+
+pub const TileNode = struct {
+    id: i32,
+    rect: c.Rectangle,
 };

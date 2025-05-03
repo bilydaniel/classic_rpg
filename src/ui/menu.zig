@@ -46,10 +46,10 @@ pub const Menu = struct {
         var buttons: std.ArrayList(*Button.Button) = std.ArrayList(*Button.Button).init(allocator);
         var rectangle: c.Rectangle = c.Rectangle{ .x = 0, .y = 0, .width = 0, .height = 0 };
 
-        for (tileset.sourceRects.items) |rect| {
+        for (tileset.nodes.items) |node| {
             var button = try allocator.create(Button.Button);
             const button_label = "";
-            button.initValues(rectangle, button_label, rect, tileset.source, rect);
+            button.initValues(rectangle, button_label, node, tileset.source, node.rect);
             try buttons.append(button);
             rectangle.x += 128;
             if (rectangle.x > 575) {
