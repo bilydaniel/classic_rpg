@@ -17,7 +17,7 @@ pub const Editor = struct {
     world: *World.World,
     cameraManual: bool,
     cameraSpeed: f32,
-    timeSinceTurn: f32,
+    deltaTime: f32,
     assetMenu: Menu.Menu,
     //TODO: rename into assetmetu, special menu thats gonna return the picked texture, use that to do stuff, make this into the game too? not sure if I want building in the game? -> probably yes
     assets: Assets.Assets,
@@ -42,7 +42,7 @@ pub const Editor = struct {
             .world = try World.World.init(allocator),
             .cameraManual = false,
             .cameraSpeed = 128,
-            .timeSinceTurn = 0,
+            .deltaTime = 0,
             .assets = assets,
             .assetMenu = assetMenu,
             .tileset = tileset,
@@ -54,7 +54,7 @@ pub const Editor = struct {
     pub fn Update(this: *Editor) void {
         Window.UpdateWindow();
         const delta = c.GetFrameTime();
-        this.timeSinceTurn += delta;
+        this.deltaTime += delta;
         //TODO: make a state machine for inputs
 
         if (!this.assetMenu.isOpen) {
@@ -107,7 +107,12 @@ pub const Editor = struct {
 
         if (this.pickedTile) |tile| {
             if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_LEFT)) {
+                const mouse = c.GetMousePosition();
+                const renderDestination = Utils.screenToRenderTextureCoords(mouse);
+                const world = c.GetScreenToWorld2D(renderDestination, Window.camera);
+                const tileCoords = Types.Vector2Int{ .x = @intFromFloat(world.x / 16), .y = @intFromFloat(world.y / 16) };
                 std.debug.print("rect: {}\n", .{tile});
+                std.debug.print("mouse: {}\n", .{tileCoords});
             }
         }
     }

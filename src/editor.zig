@@ -33,11 +33,11 @@ pub fn main() !void {
             0.0,
             c.WHITE,
         );
-        c.DrawFPS(0, 0);
-        var buffer: [32]u8 = undefined;
-        const num = c.GetFrameTime();
-        const formatted = try std.fmt.bufPrint(&buffer, "{d}", .{num});
-        c.DrawText(formatted.ptr, 0, 0, 20, c.WHITE);
+        //c.DrawFPS(0, 0);
+        //var buffer: [32]u8 = undefined;
+        //const num = c.GetFrameTime();
+        //const formatted = try std.fmt.bufPrint(&buffer, "{d}", .{num});
+        //c.DrawText(formatted.ptr, 0, 0, 20, c.WHITE);
         c.EndDrawing();
     }
 }

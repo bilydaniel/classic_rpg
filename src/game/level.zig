@@ -22,8 +22,8 @@ const Tile = struct {
 };
 
 pub const Level = struct {
-    grid: [config.level_height][config.level_width]Tile, //TODO: do i want to have it always the same size?
-    //TODO: probably just make this a 1D array and just add some MATHS
+    //grid: [config.level_height][config.level_width]Tile, //TODO: do i want to have it always the same size?
+    grid: [config.level_width * config.level_height]Tile,
     //TODO: REMOVE
     tile_texture: c.Texture2D,
     allocator: std.mem.Allocator,
@@ -31,17 +31,17 @@ pub const Level = struct {
 
     pub fn init(allocator: std.mem.Allocator) !*Level {
         const level = try allocator.create(Level);
-        var grid: [config.level_height][config.level_width]Tile = undefined;
+        var grid: []*Tile = try allocator.alloc(*Tile, config.level_width * config.level_height);
 
-        for (&grid) |*row| {
-            for (row) |*tile| {
-                tile.* = Tile{
-                    .texture_id = 1,
-                    .tile_type = .floor,
-                    .solid = false,
-                };
-            }
+        //TODO: FINISH THIS
+        for (grid) |tile| {
+            tile.* = Tile{
+                .texture_id = 1,
+                .tile_type = .floor,
+                .solid = false,
+            };
         }
+
         //const tileTexture = c.LoadTexture("assets/base_tile.png");
 
         const texture_path = "/home/daniel/projects/classic_rpg/assets/base_tile.png";

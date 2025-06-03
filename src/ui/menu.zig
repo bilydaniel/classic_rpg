@@ -51,9 +51,9 @@ pub const Menu = struct {
             const button_label = "";
             button.initValues(rectangle, button_label, node, tileset.source, node.rect);
             try buttons.append(button);
-            rectangle.x += 128;
+            rectangle.x += 17;
             if (rectangle.x > 575) {
-                rectangle.y += 64;
+                rectangle.y += 17;
                 rectangle.x = 0;
             }
         }
