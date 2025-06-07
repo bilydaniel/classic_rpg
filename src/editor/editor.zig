@@ -33,13 +33,13 @@ pub const Editor = struct {
         var tileset = Tileset.Tileset.init(allocator);
         editor.assets = assets;
         try editor.assets.loadFromDir("assets");
-        try tileset.loadTileset("assets/my_tileset.png");
+        try tileset.loadTileset(Config.tileset_path);
         //std.debug.print("loaded_tileset: {}", .{editor.tileset.source});
         const assetMenu = try Menu.Menu.initAssetMenu(allocator, editor.assets);
         const tilesetMenu = try Menu.Menu.initTilesetMenu(allocator, tileset);
         editor.* = .{
             .allocator = allocator,
-            .world = try World.World.init(allocator),
+            .world = try World.World.init(allocator, tileset.source),
             .cameraManual = false,
             .cameraSpeed = 128,
             .deltaTime = 0,
@@ -113,6 +113,10 @@ pub const Editor = struct {
                 const tileCoords = Types.Vector2Int{ .x = @intFromFloat(world.x / 16), .y = @intFromFloat(world.y / 16) };
                 std.debug.print("rect: {}\n", .{tile});
                 std.debug.print("mouse: {}\n", .{tileCoords});
+
+                //TODO: add tile into level
+
+                this.world.currentLevel.SetTile(tileCoords, tile);
             }
         }
     }

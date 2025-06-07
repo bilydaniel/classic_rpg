@@ -8,3 +8,5 @@ pub const level_height: i32 = 25;
 
 pub const tile_width: i32 = 16;
 pub const tile_height: i32 = 16;
+
+pub const tileset_path: []const u8 = "assets/my_tileset.png";

@@ -28,14 +28,13 @@ pub const Level = struct {
     tile_texture: c.Texture2D,
     allocator: std.mem.Allocator,
     entities: std.ArrayList(*Entity),
+    tilesetTexture: c.Texture2D,
 
     pub fn init(allocator: std.mem.Allocator) !*Level {
         const level = try allocator.create(Level);
-        var grid: []*Tile = try allocator.alloc(*Tile, config.level_width * config.level_height);
 
-        //TODO: FINISH THIS
-        for (grid) |tile| {
-            tile.* = Tile{
+        for (0..level.grid.len) |i| {
+            level.grid[i] = Tile{
                 .texture_id = 1,
                 .tile_type = .floor,
                 .solid = false,
@@ -55,7 +54,7 @@ pub const Level = struct {
 
         const entities = std.ArrayList(*Entity).init(allocator);
         level.* = .{
-            .grid = grid,
+            .grid = level.grid,
             .tile_texture = tileTexture,
             .allocator = allocator,
             .entities = entities,
@@ -63,15 +62,23 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn Draw(this: @This()) void {
+    pub fn Draw(this: @This(), tileset: c.Texture2D) void {
         for (0..config.level_height) |i| {
             for (0..config.level_width) |j| {
                 c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * config.tile_width)), @as(c_int, @intCast(i * config.tile_height)), c.WHITE);
             }
+        }
+        for (this.grid) |tile| {
+            //TODO: finish this
+            //c.DrawTextureRec(tilest, tile., position: Vector2, tint: Color)
         }
     }
 
     pub fn Update(this: *Level) void {
         std.debug.print("level: {}\n", .{this.entities});
     }
+
+    pub fn SetTile(
+        this: *Level,
+    ) void {}
 };
