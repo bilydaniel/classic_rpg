@@ -20,6 +20,6 @@ const EntityEnemy = struct {
     health: i32,
 };
 
-const EntityItem = struct {
-    health: i32,
-};
+const EntityItem = struct {};
+
+const Common = struct {};

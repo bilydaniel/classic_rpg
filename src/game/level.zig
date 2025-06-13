@@ -1,5 +1,5 @@
 const std = @import("std");
-const config = @import("../common/config.zig");
+const Config = @import("../common/config.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -19,10 +19,10 @@ const Tile = struct {
     texture_id: i32,
     tile_type: TileType,
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
+    rect: c.Rectangle,
 };
 
 pub const Level = struct {
-    //grid: [config.level_height][config.level_width]Tile, //TODO: do i want to have it always the same size?
     grid: [config.level_width * config.level_height]Tile,
     //TODO: REMOVE
     tile_texture: c.Texture2D,
@@ -38,6 +38,11 @@ pub const Level = struct {
                 .texture_id = 1,
                 .tile_type = .floor,
                 .solid = false,
+                .rect = c.Rectangle{
+                    .x = i % Config.tile_width, 
+                    .y = i / Config.tile_width
+
+            },
             };
         }
 
@@ -70,7 +75,9 @@ pub const Level = struct {
         }
         for (this.grid) |tile| {
             //TODO: finish this
-            //c.DrawTextureRec(tilest, tile., position: Vector2, tint: Color)
+            
+            //c.DrawTextureRec(texture: Texture2D, source: Rectangle, position: Vector2, tint: Color)
+            c.DrawTextureRec(tilest, tile.rect, tile.rect, tint: Color)
         }
     }
 
