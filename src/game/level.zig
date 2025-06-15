@@ -23,7 +23,7 @@ const Tile = struct {
 };
 
 pub const Level = struct {
-    grid: [config.level_width * config.level_height]Tile,
+    grid: [Config.level_width * Config.level_height]Tile,
     //TODO: REMOVE
     tile_texture: c.Texture2D,
     allocator: std.mem.Allocator,
@@ -38,11 +38,7 @@ pub const Level = struct {
                 .texture_id = 1,
                 .tile_type = .floor,
                 .solid = false,
-                .rect = c.Rectangle{
-                    .x = i % Config.tile_width, 
-                    .y = i / Config.tile_width
-
-            },
+                .rect = c.Rectangle{ .x = i % Config.tile_width, .y = i / Config.tile_width },
             };
         }
 
@@ -67,17 +63,24 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn Draw(this: @This(), tileset: c.Texture2D) void {
-        for (0..config.level_height) |i| {
-            for (0..config.level_width) |j| {
-                c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * config.tile_width)), @as(c_int, @intCast(i * config.tile_height)), c.WHITE);
+    pub fn Draw(this: @This()) void {
+        for (0..Config.level_height) |i| {
+            for (0..Config.level_width) |j| {
+                c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * Config.tile_width)), @as(c_int, @intCast(i * Config.tile_height)), c.WHITE);
             }
         }
+
         for (this.grid) |tile| {
             //TODO: finish this
-            
+
             //c.DrawTextureRec(texture: Texture2D, source: Rectangle, position: Vector2, tint: Color)
-            c.DrawTextureRec(tilest, tile.rect, tile.rect, tint: Color)
+            const tile_source = c.Rectangle{
+                .x = tile.texture_id * Config.tile_width % this.tilesetTexture.width,
+                .y = tile.texture_id * Config.tile_height / this.tilesetTexture.width,
+                .width = Config.tile_width,
+                .height = Config.tile_height,
+            };
+            c.DrawTextureRec(this.tilesetTexture, tile_source, tile.rect, c.WHITE);
         }
     }
 
@@ -85,7 +88,7 @@ pub const Level = struct {
         std.debug.print("level: {}\n", .{this.entities});
     }
 
-    pub fn SetTile(
-        this: *Level,
-    ) void {}
+    //pub fn SetTile(
+    //this: *Level,
+    //) void {}
 };

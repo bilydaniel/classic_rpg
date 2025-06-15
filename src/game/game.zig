@@ -2,6 +2,7 @@ const std = @import("std");
 const World = @import("world.zig");
 const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
+const Tileset = @import("../game/tileset.zig");
 const Window = @import("../game/window.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
@@ -24,15 +25,18 @@ pub const Game = struct {
         const player = try Player.Player.init(allocator);
         const game = try allocator.create(Game);
         const camera = try allocator.create(c.Camera2D);
+        var tileset = Tileset.Tileset.init(allocator);
+        try tileset.loadTileset(Config.tileset_path);
         camera.* = .{
             .offset = c.Vector2{ .x = 0, .y = 0 },
             .target = c.Vector2{ .x = 0, .y = 0 },
             .rotation = 0.0,
             .zoom = 1.0,
         };
+
         game.* = .{
             .allocator = allocator,
-            .world = try World.World.init(allocator),
+            .world = try World.World.init(allocator, tileset.source),
             .player = player,
             .assets = Assets.Assets.init(allocator),
             .camera = camera,
