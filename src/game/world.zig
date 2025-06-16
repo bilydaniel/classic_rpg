@@ -22,7 +22,7 @@ pub const World = struct {
         const entities = std.ArrayList(*Entity.Entity).init(allocator);
 
         world.* = .{
-            .currentLevel = try level.Level.init(allocator),
+            .currentLevel = try level.Level.init(allocator, tileset),
             .allocator = allocator,
             .levels = levels,
             .entities = entities,

@@ -28,9 +28,9 @@ pub const Level = struct {
     tile_texture: c.Texture2D,
     allocator: std.mem.Allocator,
     entities: std.ArrayList(*Entity),
-    tilesetTexture: c.Texture2D,
+    tilesetTexture: ?*c.Texture2D,
 
-    pub fn init(allocator: std.mem.Allocator) !*Level {
+    pub fn init(allocator: std.mem.Allocator, tilesetTexture: ?*c.Texture2D) !*Level {
         const level = try allocator.create(Level);
 
         for (0..level.grid.len) |i| {
@@ -38,7 +38,7 @@ pub const Level = struct {
                 .texture_id = 1,
                 .tile_type = .floor,
                 .solid = false,
-                .rect = c.Rectangle{ .x = i % Config.tile_width, .y = i / Config.tile_width },
+                .rect = c.Rectangle{ .x = @floatFromInt(i % @as(usize, @intCast(Config.tile_width))), .y = @floatFromInt(i / @as(usize, @intCast(Config.tile_height))) },
             };
         }
 
@@ -59,6 +59,7 @@ pub const Level = struct {
             .tile_texture = tileTexture,
             .allocator = allocator,
             .entities = entities,
+            .tilesetTexture = tilesetTexture,
         };
         return level;
     }
@@ -70,17 +71,20 @@ pub const Level = struct {
             }
         }
 
-        for (this.grid) |tile| {
+        for (this.grid, 0..) |tile, index| {
             //TODO: finish this
 
             //c.DrawTextureRec(texture: Texture2D, source: Rectangle, position: Vector2, tint: Color)
-            const tile_source = c.Rectangle{
-                .x = tile.texture_id * Config.tile_width % this.tilesetTexture.width,
-                .y = tile.texture_id * Config.tile_height / this.tilesetTexture.width,
-                .width = Config.tile_width,
-                .height = Config.tile_height,
-            };
-            c.DrawTextureRec(this.tilesetTexture, tile_source, tile.rect, c.WHITE);
+
+            if (this.tilesetTexture) |tileset_texture| {
+                const tile_source = c.Rectangle{
+                    .x = @floatFromInt(@mod(tile.texture_id * Config.tile_width, tileset_texture.width)),
+                    .y = @floatFromInt(@divFloor(tile.texture_id * Config.tile_width, tileset_texture.width)),
+                    .width = Config.tile_width,
+                    .height = Config.tile_height,
+                };
+                c.DrawTextureRec(tileset_texture.*, tile_source, c.Vector2{ .x = @floatFromInt(index % Config.level_width), .y = @floatFromInt(@divFloor(index, Config.level_width)) }, c.WHITE);
+            }
         }
     }
 
