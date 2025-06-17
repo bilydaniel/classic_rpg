@@ -16,10 +16,12 @@ const TileType = enum {
 const Entity = struct {};
 
 const Tile = struct {
-    texture_id: i32,
+    texture_id: ?i32,
     tile_type: TileType,
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
     rect: c.Rectangle,
+    isAscii: bool,
+    ascii: ?[2]u8,
 };
 
 pub const Level = struct {
@@ -35,10 +37,15 @@ pub const Level = struct {
 
         for (0..level.grid.len) |i| {
             level.grid[i] = Tile{
-                .texture_id = 1,
+                .texture_id = null,
                 .tile_type = .floor,
                 .solid = false,
-                .rect = c.Rectangle{ .x = @floatFromInt(i % @as(usize, @intCast(Config.tile_width))), .y = @floatFromInt(i / @as(usize, @intCast(Config.tile_height))) },
+                .rect = c.Rectangle{
+                    .x = @floatFromInt(i % @as(usize, @intCast(Config.tile_width))),
+                    .y = @floatFromInt(i / @as(usize, @intCast(Config.tile_height))),
+                },
+                .isAscii = true,
+                .ascii = .{ '#', 0 },
             };
         }
 
@@ -65,26 +72,27 @@ pub const Level = struct {
     }
 
     pub fn Draw(this: @This()) void {
-        for (0..Config.level_height) |i| {
-            for (0..Config.level_width) |j| {
-                c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * Config.tile_width)), @as(c_int, @intCast(i * Config.tile_height)), c.WHITE);
-            }
-        }
+        //c.DrawTexture(this.tile_texture, @as(c_int, @intCast(j * Config.tile_width)), @as(c_int, @intCast(i * Config.tile_height)), c.WHITE);
 
         for (this.grid, 0..) |tile, index| {
-            //TODO: finish this
+            if (tile.isAscii) {
+                if (tile.ascii) |ascii| {
+                    const x = (index % Config.level_width) * Config.tile_width;
+                    const y = (@divFloor(index, Config.level_width)) * Config.tile_height;
+                    c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, c.WHITE);
+                }
+            }
 
             //c.DrawTextureRec(texture: Texture2D, source: Rectangle, position: Vector2, tint: Color)
-
-            if (this.tilesetTexture) |tileset_texture| {
-                const tile_source = c.Rectangle{
-                    .x = @floatFromInt(@mod(tile.texture_id * Config.tile_width, tileset_texture.width)),
-                    .y = @floatFromInt(@divFloor(tile.texture_id * Config.tile_width, tileset_texture.width)),
-                    .width = Config.tile_width,
-                    .height = Config.tile_height,
-                };
-                c.DrawTextureRec(tileset_texture.*, tile_source, c.Vector2{ .x = @floatFromInt(index % Config.level_width), .y = @floatFromInt(@divFloor(index, Config.level_width)) }, c.WHITE);
-            }
+            //            if (this.tilesetTexture) |tileset_texture| {
+            //                const tile_source = c.Rectangle{
+            //                    .x = @floatFromInt(@mod(tile.texture_id * Config.tile_width, tileset_texture.width)),
+            //                    .y = @floatFromInt(@divFloor(tile.texture_id * Config.tile_width, tileset_texture.width)),
+            //                    .width = Config.tile_width,
+            //                    .height = Config.tile_height,
+            //                };
+            //                c.DrawTextureRec(tileset_texture.*, tile_source, c.Vector2{ .x = @floatFromInt(index % Config.level_width), .y = @floatFromInt(@divFloor(index, Config.level_width)) }, c.WHITE);
+            //            }
         }
     }
 
