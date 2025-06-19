@@ -11,6 +11,8 @@ pub const Player = struct {
     y: i32,
     destination: ?Types.Vector2Int,
     speed: i32,
+    isAscii: bool,
+    ascii: ?[2]u8,
 
     pub fn init(allocator: std.mem.Allocator) !*Player {
         const player = try allocator.create(Player);
@@ -19,6 +21,8 @@ pub const Player = struct {
             .y = 2,
             .speed = 1,
             .destination = null,
+            .isAscii = true,
+            .ascii = .{ '@', 0 },
         };
         return player;
     }
@@ -41,6 +45,12 @@ pub const Player = struct {
     }
 
     pub fn Draw(this: *Player, assets: *const Assets.Assets) void {
-        c.DrawTexture(assets.playerTexture, @as(c_int, @intCast(this.x * Config.tile_width)), @as(c_int, @intCast(this.y * Config.tile_height)), c.WHITE);
+        //c.DrawTexture(assets.playerTexture, @as(c_int, @intCast(this.x * Config.tile_width)), @as(c_int, @intCast(this.y * Config.tile_height)), c.WHITE);
+        _ = assets;
+        if (this.isAscii) {
+            if (this.ascii) |ascii| {
+                c.DrawText(&ascii[0], @intCast(this.x * Config.tile_width), @intCast(this.y * Config.tile_height), 16, c.WHITE);
+            }
+        }
     }
 };
