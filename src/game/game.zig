@@ -1,5 +1,6 @@
 const std = @import("std");
 const World = @import("world.zig");
+const Systems = @import("Systems.zig");
 const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
 const Tileset = @import("../game/tileset.zig");
@@ -48,12 +49,14 @@ pub const Game = struct {
     }
 
     pub fn Update(this: *Game) void {
+        //TODO: decide on a game loop, look into the book
         Window.UpdateWindow();
         const delta = c.GetFrameTime();
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs
         //this.player.Update();
 
+        //TODO: change to look mode
         if (c.IsKeyDown(c.KEY_W)) {
             this.camera.target.y -= this.cameraSpeed * delta;
         }
@@ -67,25 +70,21 @@ pub const Game = struct {
             this.camera.target.x += this.cameraSpeed * delta;
         }
 
-        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-            //var destination: Types.Vector2Int = undefined;
-            //destination.x = c.GetMouseX(); //@divFloor(c.GetMouseX(), 16);
-            //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
-
-            const destination = c.GetMousePosition();
-            const renderDestination = Utils.screenToRenderTextureCoords(destination);
-            const world = c.GetScreenToWorld2D(renderDestination, this.camera.*);
-            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
-
-            this.player.destination = Utils.pixelToTile(world);
-        }
-
-        if (this.timeSinceTurn > 0.25) {
-            this.player.Update();
-            this.timeSinceTurn = 0;
-        }
+        //        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
+        //            //var destination: Types.Vector2Int = undefined;
+        //            //destination.x = c.GetMouseX(); //@divFloor(c.GetMouseX(), 16);
+        //            //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
+        //
+        //            const destination = c.GetMousePosition();
+        //            const renderDestination = Utils.screenToRenderTextureCoords(destination);
+        //            const world = c.GetScreenToWorld2D(renderDestination, this.camera.*);
+        //            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
+        //
+        //            this.player.destination = Utils.pixelToTile(world);
+        //        }
 
         this.world.Update();
+        Systems.updatePlayer(this.player, delta, this.world);
     }
 
     pub fn Draw(this: *Game) void {

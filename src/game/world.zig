@@ -1,4 +1,4 @@
-const level = @import("level.zig");
+const Level = @import("level.zig");
 const Entity = @import("entity.zig");
 const std = @import("std");
 const c = @cImport({
@@ -7,8 +7,8 @@ const c = @cImport({
 
 pub const World = struct {
     allocator: std.mem.Allocator,
-    currentLevel: *level.Level,
-    levels: std.ArrayList(*level.Level),
+    currentLevel: *Level.Level,
+    levels: std.ArrayList(*Level.Level),
     entities: std.ArrayList(*Entity.Entity),
     tileset: ?*c.Texture2D,
 
@@ -18,11 +18,11 @@ pub const World = struct {
 
     pub fn init(allocator: std.mem.Allocator, tileset: ?*c.Texture2D) !*World {
         const world = try allocator.create(World);
-        const levels = std.ArrayList(*level.Level).init(allocator);
+        const levels = std.ArrayList(*Level.Level).init(allocator);
         const entities = std.ArrayList(*Entity.Entity).init(allocator);
 
         world.* = .{
-            .currentLevel = try level.Level.init(allocator, tileset),
+            .currentLevel = try Level.Level.init(allocator, tileset),
             .allocator = allocator,
             .levels = levels,
             .entities = entities,

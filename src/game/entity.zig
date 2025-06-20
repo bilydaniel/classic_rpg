@@ -1,4 +1,5 @@
 const std = @import("std");
+const Player = @import("../entities/player.zig");
 
 const EntityType = enum {
     Player,
@@ -7,13 +8,9 @@ const EntityType = enum {
 };
 
 pub const Entity = union(EntityType) {
-    Player: EntityPlayer,
+    Player: Player.Player,
     Enemy: EntityEnemy,
     Item: EntityItem,
-};
-
-const EntityPlayer = struct {
-    health: i32,
 };
 
 const EntityEnemy = struct {

@@ -7,41 +7,24 @@ const c = @cImport({
 });
 
 pub const Player = struct {
-    x: i32,
-    y: i32,
-    destination: ?Types.Vector2Int,
+    pos: Types.Vector2Int,
     speed: i32,
     isAscii: bool,
     ascii: ?[2]u8,
+    movementCooldown: f32,
+    keyWasPressed: bool,
 
     pub fn init(allocator: std.mem.Allocator) !*Player {
         const player = try allocator.create(Player);
         player.* = .{
-            .x = 3,
-            .y = 2,
+            .pos = Types.Vector2Int.init(3, 2),
             .speed = 1,
-            .destination = null,
             .isAscii = true,
             .ascii = .{ '@', 0 },
+            .movementCooldown = 0,
+            .keyWasPressed = false,
         };
         return player;
-    }
-
-    pub fn Update(this: *Player) void {
-        if (this.destination) |dest| {
-            if (this.x < dest.x) {
-                this.x += this.speed;
-            }
-            if (this.x > dest.x) {
-                this.x -= this.speed;
-            }
-            if (this.y > dest.y) {
-                this.y -= this.speed;
-            }
-            if (this.y < dest.y) {
-                this.y += this.speed;
-            }
-        }
     }
 
     pub fn Draw(this: *Player, assets: *const Assets.Assets) void {
@@ -49,7 +32,8 @@ pub const Player = struct {
         _ = assets;
         if (this.isAscii) {
             if (this.ascii) |ascii| {
-                c.DrawText(&ascii[0], @intCast(this.x * Config.tile_width), @intCast(this.y * Config.tile_height), 16, c.WHITE);
+                c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, c.BLACK);
+                c.DrawText(&ascii[0], @intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), 16, c.WHITE);
             }
         }
     }
