@@ -112,8 +112,8 @@ pub const Level = struct {
                     var text_color = c.WHITE;
                     // Use different colors for different tile types for better visual distinction
                     switch (ascii[0]) {
-                        '#' => text_color = c.LIGHTGRAY, // Walls
-                        '.' => text_color = c.DARKGRAY, // Floors
+                        '#' => text_color = c.BLACK, // Walls
+                        '.' => text_color = c.WHITE, // Floors
                         '$' => text_color = c.YELLOW, // Treasures
                         '+' => text_color = c.DARKBROWN, // Doors
                         '~' => text_color = c.SKYBLUE, // Water
@@ -153,7 +153,7 @@ pub const Level = struct {
                 },
                 .isAscii = true,
                 .ascii = .{ '#', 0 },
-                .backgroundColor = c.DARKGRAY,
+                .backgroundColor = c.WHITE,
             };
         }
 
@@ -184,7 +184,7 @@ pub const Level = struct {
                             },
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BEIGE,
+                            .backgroundColor = c.BLACK,
                         };
                     }
                 }
@@ -221,7 +221,7 @@ pub const Level = struct {
                             },
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
-                            .backgroundColor = c.LIGHTGRAY,
+                            .backgroundColor = c.BLACK,
                         };
                     }
                 }
@@ -245,7 +245,7 @@ pub const Level = struct {
                             },
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
-                            .backgroundColor = c.LIGHTGRAY,
+                            .backgroundColor = c.BLACK,
                         };
                     }
                 }
@@ -376,7 +376,7 @@ pub const Level = struct {
                 },
                 .isAscii = true,
                 .ascii = .{ '#', 0 },
-                .backgroundColor = c.DARKGRAY,
+                .backgroundColor = c.WHITE,
             };
         }
 
@@ -413,7 +413,7 @@ pub const Level = struct {
                             },
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BEIGE,
+                            .backgroundColor = c.BLACK,
                         };
                     }
                 }
@@ -456,7 +456,7 @@ pub const Level = struct {
                             },
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
-                            .backgroundColor = c.LIGHTGRAY,
+                            .backgroundColor = c.BLACK,
                         };
                     }
                 }
@@ -480,7 +480,7 @@ pub const Level = struct {
                             },
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
-                            .backgroundColor = c.LIGHTGRAY,
+                            .backgroundColor = c.BLACK,
                         };
                     }
                 }
