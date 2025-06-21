@@ -31,6 +31,10 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) voi
             }
 
             if (moved and canMove(world.currentLevel.grid, new_pos)) {
+                if (isStaircase(world, new_pos)) {
+                    _ = getStaircaseDestination(world, new_pos);
+                    //TODO: finish level switching
+                }
                 player.pos = new_pos;
                 player.movementCooldown = 0;
                 player.keyWasPressed = true;
@@ -47,6 +51,24 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) voi
         }
     }
     player.movementCooldown += delta;
+}
+
+pub fn isStaircase(world: *World.World, pos: Types.Vector2Int) bool {
+    for (world.levelLinks.items) |levelLink| {
+        if (levelLink.from.level == world.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+pub fn getStaircaseDestination(world: *World.World, pos: Types.Vector2Int) ?Level.Location {
+    for (world.levelLinks.items) |levelLink| {
+        if (levelLink.from.level == world.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
+            return levelLink.to;
+        }
+    }
+    return null;
 }
 
 pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int) bool {

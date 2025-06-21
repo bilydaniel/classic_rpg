@@ -33,6 +33,8 @@ pub const Player = struct {
         if (this.isAscii) {
             if (this.ascii) |ascii| {
                 c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, c.BLACK);
+
+                //TODO: fix centering of player
                 c.DrawText(&ascii[0], @intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), 16, c.WHITE);
             }
         }

@@ -1,6 +1,7 @@
 const Level = @import("level.zig");
 const Entity = @import("entity.zig");
 const std = @import("std");
+const Types = @import("../common/types.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -9,6 +10,7 @@ pub const World = struct {
     allocator: std.mem.Allocator,
     currentLevel: *Level.Level,
     levels: std.ArrayList(*Level.Level),
+    levelLinks: std.ArrayList(Level.Link),
     entities: std.ArrayList(*Entity.Entity),
     tileset: ?*c.Texture2D,
 
@@ -18,15 +20,49 @@ pub const World = struct {
 
     pub fn init(allocator: std.mem.Allocator, tileset: ?*c.Texture2D) !*World {
         const world = try allocator.create(World);
-        const levels = std.ArrayList(*Level.Level).init(allocator);
+        var levels = std.ArrayList(*Level.Level).init(allocator);
         const entities = std.ArrayList(*Entity.Entity).init(allocator);
 
+        var level1 = try Level.Level.init(allocator, tileset, 0);
+        level1.generateInterestingLevel();
+        var level2 = try Level.Level.init(allocator, tileset, 1);
+        level2.generateInterestingLevel2();
+        try levels.append(level1);
+        try levels.append(level2);
+
+        var levelLinks = std.ArrayList(Level.Link).init(allocator);
+        const link1 = Level.Link{
+            .from = Level.Location{
+                .level = 0,
+                .pos = Types.Vector2Int.init(22, 18),
+            },
+            .to = Level.Location{
+                .level = 1,
+                .pos = Types.Vector2Int.init(3, 6),
+            },
+        };
+
+        const link2 = Level.Link{
+            .from = Level.Location{
+                .level = 1,
+                .pos = Types.Vector2Int.init(3, 6),
+            },
+            .to = Level.Location{
+                .level = 0,
+                .pos = Types.Vector2Int.init(22, 18),
+            },
+        };
+
+        try levelLinks.append(link1);
+        try levelLinks.append(link2);
+
         world.* = .{
-            .currentLevel = try Level.Level.init(allocator, tileset),
+            .currentLevel = level1,
             .allocator = allocator,
             .levels = levels,
             .entities = entities,
             .tileset = tileset,
+            .levelLinks = levelLinks,
         };
 
         return world;

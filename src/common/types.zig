@@ -9,3 +9,7 @@ pub const Vector2Int = struct {
         };
     }
 };
+
+pub fn vector2IntCompare(a: Vector2Int, b: Vector2Int) bool {
+    return a.x == b.x and a.y == b.y;
+}
