@@ -32,8 +32,11 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) voi
 
             if (moved and canMove(world.currentLevel.grid, new_pos)) {
                 if (isStaircase(world, new_pos)) {
-                    _ = getStaircaseDestination(world, new_pos);
-                    //TODO: finish level switching
+                    const levelLocation = getStaircaseDestination(world, new_pos);
+                    if (levelLocation) |lvllocation| {
+                        switchLevel(world, lvllocation.level);
+                        new_pos = lvllocation.pos;
+                    }
                 }
                 player.pos = new_pos;
                 player.movementCooldown = 0;
@@ -53,7 +56,16 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) voi
     player.movementCooldown += delta;
 }
 
+pub fn switchLevel(world: *World.World, levelID: u32) void {
+    for (world.levels.items) |level| {
+        if (level.id == levelID) {
+            world.currentLevel = level;
+        }
+    }
+}
+
 pub fn isStaircase(world: *World.World, pos: Types.Vector2Int) bool {
+    //TODO: probably should add a check for the tile type
     for (world.levelLinks.items) |levelLink| {
         if (levelLink.from.level == world.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
             return true;

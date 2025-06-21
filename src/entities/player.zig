@@ -7,6 +7,8 @@ const c = @cImport({
 });
 
 pub const Player = struct {
+    //TODO: player is gonna be a illusionist that can summon two other clones
+    //of himself, shared hp, resources, come up with some cool mechanics
     pos: Types.Vector2Int,
     speed: i32,
     isAscii: bool,

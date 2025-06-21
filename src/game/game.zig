@@ -56,8 +56,6 @@ pub const Game = struct {
         //TODO: make a state machine for inputs
         //this.player.Update();
 
-        this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half);
-        this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half);
         //TODO: change to look mode
         if (c.IsKeyDown(c.KEY_W)) {
             this.camera.target.y -= this.cameraSpeed * delta;
@@ -87,6 +85,8 @@ pub const Game = struct {
 
         this.world.Update();
         Systems.updatePlayer(this.player, delta, this.world);
+        this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half);
+        this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half);
     }
 
     pub fn Draw(this: *Game) void {

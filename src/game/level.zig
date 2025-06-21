@@ -364,7 +364,6 @@ pub const Level = struct {
         for (0..level.grid.len) |i| {
             const x = i % width;
             const y = @divFloor(i, width);
-
             level.grid[i] = Tile{
                 .texture_id = null,
                 .tile_type = .wall,
@@ -381,13 +380,19 @@ pub const Level = struct {
             };
         }
 
-        // Create some rooms
+        // Create larger rooms to fill the 80x25 space
         const rooms = [_]struct { x: usize, y: usize, w: usize, h: usize }{
-            .{ .x = 2, .y = 2, .w = 8, .h = 6 }, // Top-left room
-            .{ .x = 15, .y = 3, .w = 10, .h = 5 }, // Top-right room
-            .{ .x = 5, .y = 12, .w = 6, .h = 8 }, // Bottom-left room
-            .{ .x = 18, .y = 15, .w = 7, .h = 6 }, // Bottom-right room
-            .{ .x = 12, .y = 8, .w = 4, .h = 4 }, // Central small room
+            .{ .x = 2, .y = 2, .w = 15, .h = 8 }, // Large top-left room
+            .{ .x = 25, .y = 1, .w = 18, .h = 7 }, // Large top-center room
+            .{ .x = 52, .y = 3, .w = 25, .h = 6 }, // Large top-right room
+            .{ .x = 1, .y = 14, .w = 12, .h = 9 }, // Bottom-left room
+            .{ .x = 20, .y = 12, .w = 16, .h = 11 }, // Large bottom-center room
+            .{ .x = 45, .y = 15, .w = 14, .h = 8 }, // Bottom-center-right room
+            .{ .x = 65, .y = 12, .w = 13, .h = 11 }, // Bottom-right room
+            .{ .x = 45, .y = 1, .w = 6, .h = 5 }, // Small connector room
+            .{ .x = 15, .y = 8, .w = 8, .h = 5 }, // Small central room
+            .{ .x = 38, .y = 9, .w = 10, .h = 6 }, // Mid-center room
+            .{ .x = 60, .y = 8, .w = 8, .h = 5 }, // Small right-center room
         };
 
         // Carve out rooms
@@ -415,13 +420,19 @@ pub const Level = struct {
             }
         }
 
-        // Create corridors connecting rooms
+        // Create longer corridors connecting rooms
         const corridors = [_]struct { x1: usize, y1: usize, x2: usize, y2: usize }{
-            .{ .x1 = 10, .y1 = 5, .x2 = 15, .y2 = 5 }, // Connect room 1 to room 2
-            .{ .x1 = 6, .y1 = 8, .x2 = 6, .y2 = 12 }, // Connect room 1 to room 3
-            .{ .x1 = 11, .y1 = 16, .x2 = 18, .y2 = 16 }, // Connect room 3 to room 4
-            .{ .x1 = 14, .y1 = 8, .x2 = 14, .y2 = 12 }, // Connect central room down
-            .{ .x1 = 12, .y1 = 10, .x2 = 16, .y2 = 10 }, // Connect central room right
+            .{ .x1 = 17, .y1 = 6, .x2 = 25, .y2 = 6 }, // Connect top-left to top-center
+            .{ .x1 = 43, .y1 = 4, .x2 = 52, .y2 = 4 }, // Connect top-center to top-right
+            .{ .x1 = 10, .y1 = 10, .x2 = 10, .y2 = 14 }, // Connect top-left down
+            .{ .x1 = 13, .y1 = 18, .x2 = 20, .y2 = 18 }, // Connect bottom-left to bottom-center
+            .{ .x1 = 36, .y1 = 17, .x2 = 45, .y2 = 17 }, // Connect bottom-center to bottom-center-right
+            .{ .x1 = 59, .y1 = 19, .x2 = 65, .y2 = 19 }, // Connect to bottom-right
+            .{ .x1 = 23, .y1 = 8, .x2 = 23, .y2 = 12 }, // Connect top-center to bottom-center
+            .{ .x1 = 48, .y1 = 6, .x2 = 48, .y2 = 9 }, // Connect small connector down
+            .{ .x1 = 48, .y1 = 12, .x2 = 48, .y2 = 15 }, // Connect mid-center to bottom-center-right
+            .{ .x1 = 60, .y1 = 10, .x2 = 65, .y2 = 10 }, // Connect right-center to top-right
+            .{ .x1 = 68, .y1 = 9, .x2 = 68, .y2 = 12 }, // Connect top-right to bottom-right
         };
 
         // Carve out corridors
@@ -476,12 +487,17 @@ pub const Level = struct {
             }
         }
 
-        // Add some special tiles
-        // Treasure chests
+        // Add more treasure chests distributed across the larger level
         const treasures = [_]struct { x: usize, y: usize }{
-            .{ .x = 4, .y = 4 },
-            .{ .x = 20, .y = 17 },
-            .{ .x = 13, .y = 9 },
+            .{ .x = 5, .y = 5 }, // Top-left room
+            .{ .x = 30, .y = 4 }, // Top-center room
+            .{ .x = 70, .y = 6 }, // Top-right room
+            .{ .x = 7, .y = 18 }, // Bottom-left room
+            .{ .x = 28, .y = 20 }, // Bottom-center room
+            .{ .x = 50, .y = 18 }, // Bottom-center-right room
+            .{ .x = 72, .y = 16 }, // Bottom-right room
+            .{ .x = 47, .y = 3 }, // Small connector room
+            .{ .x = 42, .y = 12 }, // Mid-center room
         };
 
         for (treasures) |treasure| {
@@ -489,7 +505,7 @@ pub const Level = struct {
                 const idx = treasure.y * width + treasure.x;
                 level.grid[idx] = Tile{
                     .texture_id = null,
-                    .tile_type = .floor, // You might want to add a treasure tile type
+                    .tile_type = .floor,
                     .solid = false,
                     .rect = c.Rectangle{
                         .x = @floatFromInt(treasure.x * Config.tile_width),
@@ -504,12 +520,19 @@ pub const Level = struct {
             }
         }
 
-        // Add doors
+        // Add doors at strategic corridor entrances
         const doors = [_]struct { x: usize, y: usize }{
-            .{ .x = 10, .y = 6 }, // Room 1 exit
-            .{ .x = 15, .y = 6 }, // Room 2 entrance
-            .{ .x = 6, .y = 11 }, // Corridor junction
-            .{ .x = 17, .y = 16 }, // Room 4 entrance
+            .{ .x = 17, .y = 7 }, // Top-left room exit
+            .{ .x = 24, .y = 6 }, // Top-center room entrance
+            .{ .x = 44, .y = 4 }, // Top-center room exit
+            .{ .x = 51, .y = 4 }, // Top-right room entrance
+            .{ .x = 13, .y = 14 }, // Bottom-left to corridor
+            .{ .x = 19, .y = 18 }, // Bottom-left to bottom-center
+            .{ .x = 36, .y = 18 }, // Bottom-center to bottom-center-right
+            .{ .x = 59, .y = 20 }, // Bottom-center-right to bottom-right
+            .{ .x = 23, .y = 11 }, // Vertical corridor junction
+            .{ .x = 48, .y = 8 }, // Small connector to mid-center
+            .{ .x = 64, .y = 10 }, // Right-center to top-right
         };
 
         for (doors) |door| {
@@ -532,12 +555,21 @@ pub const Level = struct {
             }
         }
 
-        // Add some water/hazard tiles
+        // Add larger water/hazard areas
         const hazards = [_]struct { x: usize, y: usize }{
-            .{ .x = 7, .y = 15 },
-            .{ .x = 8, .y = 15 },
-            .{ .x = 7, .y = 16 },
-            .{ .x = 8, .y = 16 },
+            // Small lake in bottom-left
+            .{ .x = 3, .y = 16 },  .{ .x = 4, .y = 16 },  .{ .x = 5, .y = 16 },
+            .{ .x = 3, .y = 17 },  .{ .x = 4, .y = 17 },  .{ .x = 5, .y = 17 },
+            .{ .x = 4, .y = 18 },  .{ .x = 5, .y = 18 },
+            // Water feature in large bottom-center room
+             .{ .x = 26, .y = 15 },
+            .{ .x = 27, .y = 15 }, .{ .x = 28, .y = 15 }, .{ .x = 25, .y = 16 },
+            .{ .x = 26, .y = 16 }, .{ .x = 27, .y = 16 }, .{ .x = 28, .y = 16 },
+            .{ .x = 29, .y = 16 }, .{ .x = 26, .y = 17 }, .{ .x = 27, .y = 17 },
+            .{ .x = 28, .y = 17 },
+            // Small hazard in top-right
+            .{ .x = 65, .y = 5 },  .{ .x = 66, .y = 5 },
+            .{ .x = 65, .y = 6 },  .{ .x = 66, .y = 6 },
         };
 
         for (hazards) |hazard| {
@@ -545,7 +577,7 @@ pub const Level = struct {
                 const idx = hazard.y * width + hazard.x;
                 level.grid[idx] = Tile{
                     .texture_id = null,
-                    .tile_type = .floor, // You might want to add a water tile type
+                    .tile_type = .floor,
                     .solid = false,
                     .rect = c.Rectangle{
                         .x = @floatFromInt(hazard.x * Config.tile_width),
@@ -560,23 +592,29 @@ pub const Level = struct {
             }
         }
 
-        // Add a staircase
-        if (3 < width and 6 < height) {
-            const idx = 6 * width + 3;
-            level.grid[idx] = Tile{
-                .texture_id = null,
-                .tile_type = .staircase,
-                .solid = false,
-                .rect = c.Rectangle{
-                    .x = @floatFromInt(3 * Config.tile_width),
-                    .y = @floatFromInt(6 * Config.tile_height),
-                    .width = @floatFromInt(Config.tile_width),
-                    .height = @floatFromInt(Config.tile_height),
-                },
-                .isAscii = true,
-                .ascii = .{ '>', 0 },
-                .backgroundColor = c.PURPLE,
-            };
+        // Add multiple staircases for variety
+        const staircases = [_]struct { x: usize, y: usize }{
+            .{ .x = 3, .y = 6 }, // Top-left room
+        };
+
+        for (staircases) |stair| {
+            if (stair.x < width and stair.y < height) {
+                const idx = stair.y * width + stair.x;
+                level.grid[idx] = Tile{
+                    .texture_id = null,
+                    .tile_type = .staircase,
+                    .solid = false,
+                    .rect = c.Rectangle{
+                        .x = @floatFromInt(stair.x * Config.tile_width),
+                        .y = @floatFromInt(stair.y * Config.tile_height),
+                        .width = @floatFromInt(Config.tile_width),
+                        .height = @floatFromInt(Config.tile_height),
+                    },
+                    .isAscii = true,
+                    .ascii = .{ '>', 0 },
+                    .backgroundColor = c.PURPLE,
+                };
+            }
         }
     }
 };
