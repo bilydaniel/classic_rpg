@@ -45,6 +45,7 @@ pub const Game = struct {
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
         };
+        Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
         return game;
     }
 

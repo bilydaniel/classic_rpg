@@ -41,6 +41,7 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) voi
                 player.pos = new_pos;
                 player.movementCooldown = 0;
                 player.keyWasPressed = true;
+                calculateFOV(&world.currentLevel.grid, new_pos, 8);
             }
         }
 
@@ -54,6 +55,60 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) voi
         }
     }
     player.movementCooldown += delta;
+}
+
+pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize) void {
+    var idx: usize = 0;
+    while (idx < grid.len) : (idx += 1) {
+        grid.*[idx].visible = false;
+    }
+
+    const rays = radius * 8;
+    var i: i32 = 0;
+    while (i < rays) : (i += 1) {
+        const angle = @as(f32, @floatFromInt(i)) * (2.0 * std.math.pi) / @as(f32, @floatFromInt(rays));
+
+        const target = Types.Vector2Int{
+            .x = center.x + @as(i32, @intFromFloat(@cos(angle) * @as(f32, @floatFromInt(radius)))),
+            .y = center.y + @as(i32, @intFromFloat(@sin(angle) * @as(f32, @floatFromInt(radius)))),
+        };
+        castRay(grid, center, target);
+    }
+}
+
+pub fn castRay(grid: *[]Level.Tile, center: Types.Vector2Int, target: Types.Vector2Int) void {
+    const dx = @as(i32, @intCast(@abs(target.x - center.x)));
+    const dy = @as(i32, @intCast(@abs(target.y - center.y)));
+    var current_pos = center;
+
+    const x_inc: i32 = if (target.x > center.x) 1 else -1;
+    const y_inc: i32 = if (target.y > center.y) 1 else -1;
+    var err = dx - dy;
+
+    while (true) {
+        const tileIndex = posToIndex(current_pos);
+        grid.*[tileIndex].visible = true;
+        grid.*[tileIndex].seen = true;
+
+        if (grid.*[tileIndex].solid == true) {
+            break;
+        }
+
+        // Check if we've reached the end point
+        if (Types.vector2IntCompare(current_pos, target)) {
+            break;
+        }
+
+        const e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            current_pos.x += x_inc;
+        }
+        if (e2 < dx) {
+            err += dx;
+            current_pos.y += y_inc;
+        }
+    }
 }
 
 pub fn switchLevel(world: *World.World, levelID: u32) void {

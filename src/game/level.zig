@@ -24,6 +24,8 @@ pub const Tile = struct {
     isAscii: bool,
     ascii: ?[2]u8,
     backgroundColor: c.Color,
+    seen: bool,
+    visible: bool,
 };
 
 pub const Link = struct {
@@ -62,6 +64,8 @@ pub const Level = struct {
                 .isAscii = false,
                 .ascii = .{ '#', 0 },
                 .backgroundColor = c.DARKBLUE,
+                .seen = false,
+                .visible = false,
             };
         }
 
@@ -93,36 +97,43 @@ pub const Level = struct {
             const x = @as(c_int, @intCast((index % Config.level_width) * Config.tile_width));
             const y = @as(c_int, @intCast((@divFloor(index, Config.level_width)) * Config.tile_height));
 
-            if (tile.isAscii) {
-                if (tile.ascii) |ascii| {
-                    // Draw background rectangle
-                    c.DrawRectangle(x, y, Config.tile_width, Config.tile_height, tile.backgroundColor);
+            //TODO: finish
+            if (tile.seen) {
+                if (tile.isAscii) {
+                    if (tile.ascii) |ascii| {
 
-                    // Calculate text centering
-                    const font_size = @min(Config.tile_width - 4, Config.tile_height - 4); // Leave some padding
-                    const text_width = c.MeasureText(&ascii[0], font_size);
-                    const text_x = x + @divFloor(Config.tile_width - text_width, 2);
-                    const text_y = y + @divFloor(Config.tile_height - font_size, 2);
+                        // Draw background rectangle
+                        c.DrawRectangle(x, y, Config.tile_width, Config.tile_height, tile.backgroundColor);
 
-                    // Draw text with better contrast
-                    // First draw a shadow/outline for better readability
-                    c.DrawText(&ascii[0], text_x + 1, text_y + 1, font_size, c.BLACK);
+                        // Calculate text centering
+                        const font_size = @min(Config.tile_width - 4, Config.tile_height - 4); // Leave some padding
+                        const text_width = c.MeasureText(&ascii[0], font_size);
+                        const text_x = x + @divFloor(Config.tile_width - text_width, 2);
+                        const text_y = y + @divFloor(Config.tile_height - font_size, 2);
 
-                    // Then draw the main text
-                    var text_color = c.WHITE;
-                    // Use different colors for different tile types for better visual distinction
-                    switch (ascii[0]) {
-                        '#' => text_color = c.BLACK, // Walls
-                        '.' => text_color = c.WHITE, // Floors
-                        '$' => text_color = c.YELLOW, // Treasures
-                        '+' => text_color = c.DARKBROWN, // Doors
-                        '~' => text_color = c.SKYBLUE, // Water
-                        '>' => text_color = c.MAGENTA, // Stairs
-                        else => text_color = c.WHITE,
+                        // Draw text with better contrast
+                        // First draw a shadow/outline for better readability
+                        c.DrawText(&ascii[0], text_x + 1, text_y + 1, font_size, c.BLACK);
+
+                        // Then draw the main text
+                        var text_color = c.WHITE;
+                        // Use different colors for different tile types for better visual distinction
+                        switch (ascii[0]) {
+                            '#' => text_color = c.BLACK, // Walls
+                            '.' => text_color = c.WHITE, // Floors
+                            '$' => text_color = c.YELLOW, // Treasures
+                            '+' => text_color = c.DARKBROWN, // Doors
+                            '~' => text_color = c.SKYBLUE, // Water
+                            '>' => text_color = c.MAGENTA, // Stairs
+                            else => text_color = c.WHITE,
+                        }
+                        // Draw border for better definition
+                        //c.DrawRectangleLines(x, y, Config.tile_width, Config.tile_height, tile.backgroundColor);
+                        if (tile.visible) {
+                            text_color = c.RED;
+                        }
+                        c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
                     }
-                    // Draw border for better definition
-                    //c.DrawRectangleLines(x, y, Config.tile_width, Config.tile_height, tile.backgroundColor);
-                    c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
                 }
             }
         }
@@ -154,6 +165,8 @@ pub const Level = struct {
                 .isAscii = true,
                 .ascii = .{ '#', 0 },
                 .backgroundColor = c.WHITE,
+                .seen = false,
+                .visible = false,
             };
         }
 
@@ -185,6 +198,8 @@ pub const Level = struct {
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
                             .backgroundColor = c.BLACK,
+                            .seen = false,
+                            .visible = false,
                         };
                     }
                 }
@@ -222,6 +237,8 @@ pub const Level = struct {
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
                             .backgroundColor = c.BLACK,
+                            .seen = false,
+                            .visible = false,
                         };
                     }
                 }
@@ -246,6 +263,8 @@ pub const Level = struct {
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
                             .backgroundColor = c.BLACK,
+                            .seen = false,
+                            .visible = false,
                         };
                     }
                 }
@@ -276,6 +295,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '$', 0 },
                     .backgroundColor = c.GOLD,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
@@ -304,6 +325,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '+', 0 },
                     .backgroundColor = c.BROWN,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
@@ -332,6 +355,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '~', 0 },
                     .backgroundColor = c.BLUE,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
@@ -352,6 +377,8 @@ pub const Level = struct {
                 .isAscii = true,
                 .ascii = .{ '>', 0 },
                 .backgroundColor = c.PURPLE,
+                .seen = false,
+                .visible = false,
             };
         }
     }
@@ -377,6 +404,8 @@ pub const Level = struct {
                 .isAscii = true,
                 .ascii = .{ '#', 0 },
                 .backgroundColor = c.WHITE,
+                .seen = false,
+                .visible = false,
             };
         }
 
@@ -414,6 +443,8 @@ pub const Level = struct {
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
                             .backgroundColor = c.BLACK,
+                            .seen = false,
+                            .visible = false,
                         };
                     }
                 }
@@ -457,6 +488,8 @@ pub const Level = struct {
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
                             .backgroundColor = c.BLACK,
+                            .seen = false,
+                            .visible = false,
                         };
                     }
                 }
@@ -481,6 +514,8 @@ pub const Level = struct {
                             .isAscii = true,
                             .ascii = .{ '.', 0 },
                             .backgroundColor = c.BLACK,
+                            .seen = false,
+                            .visible = false,
                         };
                     }
                 }
@@ -516,6 +551,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '$', 0 },
                     .backgroundColor = c.GOLD,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
@@ -551,6 +588,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '+', 0 },
                     .backgroundColor = c.BROWN,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
@@ -588,6 +627,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '~', 0 },
                     .backgroundColor = c.BLUE,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
@@ -613,6 +654,8 @@ pub const Level = struct {
                     .isAscii = true,
                     .ascii = .{ '>', 0 },
                     .backgroundColor = c.PURPLE,
+                    .seen = false,
+                    .visible = false,
                 };
             }
         }
