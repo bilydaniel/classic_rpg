@@ -46,6 +46,8 @@ pub const Level = struct {
     allocator: std.mem.Allocator,
     entities: std.ArrayList(*Entity),
     tilesetTexture: ?*c.Texture2D,
+    //TODO: put somewhere else, just for now
+    font: c.Font,
 
     pub fn init(allocator: std.mem.Allocator, tilesetTexture: ?*c.Texture2D, id: u32) !*Level {
         const level = try allocator.create(Level);
@@ -80,6 +82,7 @@ pub const Level = struct {
             return error.TextureLoadFailed;
         }
 
+        const font = c.LoadFontEx("../../assets/dejavu10x10_gs_tc.png", 16, null, 0);
         const entities = std.ArrayList(*Entity).init(allocator);
         level.* = .{
             .id = id,
@@ -88,6 +91,7 @@ pub const Level = struct {
             .allocator = allocator,
             .entities = entities,
             .tilesetTexture = tilesetTexture,
+            .font = font,
         };
         return level;
     }
@@ -113,7 +117,8 @@ pub const Level = struct {
 
                         // Draw text with better contrast
                         // First draw a shadow/outline for better readability
-                        c.DrawText(&ascii[0], text_x + 1, text_y + 1, font_size, c.BLACK);
+                        //TODO: put shadow back
+                        //c.DrawText(&ascii[0], text_x + 1, text_y + 1, font_size, c.BLACK);
 
                         // Then draw the main text
                         var text_color = c.WHITE;
@@ -132,7 +137,8 @@ pub const Level = struct {
                         if (tile.visible) {
                             text_color = c.RED;
                         }
-                        c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
+                        //c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
+                        c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 2, c.DARKBLUE);
                     }
                 }
             }
