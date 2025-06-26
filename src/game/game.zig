@@ -71,21 +71,8 @@ pub const Game = struct {
             this.camera.target.x += this.cameraSpeed * delta;
         }
 
-        //        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-        //            //var destination: Types.Vector2Int = undefined;
-        //            //destination.x = c.GetMouseX(); //@divFloor(c.GetMouseX(), 16);
-        //            //destination.y = c.GetMouseY(); //@divFloor(c.GetMouseY(), 24);
-        //
-        //            const destination = c.GetMousePosition();
-        //            const renderDestination = Utils.screenToRenderTextureCoords(destination);
-        //            const world = c.GetScreenToWorld2D(renderDestination, this.camera.*);
-        //            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world.x, world.y });
-        //
-        //            this.player.destination = Utils.pixelToTile(world);
-        //        }
-
         this.world.Update();
-        Systems.updatePlayer(this.player, delta, this.world);
+        Systems.updatePlayer(this.player, delta, this.world, this.camera);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half);
         this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half);
     }
@@ -93,12 +80,19 @@ pub const Game = struct {
     pub fn Draw(this: *Game) void {
         //this.camera.target = c.Vector2{ .x = @as(f32, @floatFromInt(this.player.x * Config.tile_width)), .y = @as(f32, @floatFromInt(this.player.y * Config.tile_height)) };
 
-        c.BeginTextureMode(Window.screen);
+        //        c.BeginTextureMode(Window.screen);
+        //        c.BeginMode2D(this.camera.*);
+        //        c.ClearBackground(c.BLACK);
+        //        this.world.Draw();
+        //        this.player.Draw(&this.assets);
+        //        c.EndMode2D();
+        //        c.EndTextureMode();
+        c.BeginDrawing();
         c.BeginMode2D(this.camera.*);
         c.ClearBackground(c.BLACK);
         this.world.Draw();
         this.player.Draw(&this.assets);
         c.EndMode2D();
-        c.EndTextureMode();
+        c.EndDrawing();
     }
 };

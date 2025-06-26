@@ -1,5 +1,6 @@
 const Player = @import("../entities/player.zig");
 const Config = @import("../common/config.zig");
+const Utils = @import("../common/utils.zig");
 const World = @import("world.zig");
 const Level = @import("level.zig");
 const Types = @import("../common/types.zig");
@@ -7,54 +8,66 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("raylib.h");
 });
-pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World) void {
+pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, camera: *c.Camera2D) void {
     //TODO: make movement better, feeld a bit off
-    player.keyWasPressed = false;
 
-    if (player.movementCooldown > 0.1) {
-        var new_pos = player.pos;
-        var moved = false;
+    if (Config.mouse_mode) {
+        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
+            const destination = c.GetMousePosition();
+            const renderDestination = Utils.screenToRenderTextureCoords(destination);
+            const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
+            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world_pos.x, world_pos.y });
 
-        if (!player.keyWasPressed) {
-            if (c.IsKeyDown(c.KEY_H)) {
-                new_pos.x -= 1;
-                moved = true;
-            } else if (c.IsKeyDown(c.KEY_L)) {
-                new_pos.x += 1;
-                moved = true;
-            } else if (c.IsKeyDown(c.KEY_J)) {
-                new_pos.y += 1;
-                moved = true;
-            } else if (c.IsKeyDown(c.KEY_K)) {
-                new_pos.y -= 1;
-                moved = true;
-            }
+            //player.destination = Utils.pixelToTile(world);
+        }
+    } else {
+        player.keyWasPressed = false;
 
-            if (moved and canMove(world.currentLevel.grid, new_pos)) {
-                if (isStaircase(world, new_pos)) {
-                    const levelLocation = getStaircaseDestination(world, new_pos);
-                    if (levelLocation) |lvllocation| {
-                        switchLevel(world, lvllocation.level);
-                        new_pos = lvllocation.pos;
-                    }
+        if (player.movementCooldown > 0.1) {
+            var new_pos = player.pos;
+            var moved = false;
+
+            if (!player.keyWasPressed) {
+                if (c.IsKeyDown(c.KEY_H)) {
+                    new_pos.x -= 1;
+                    moved = true;
+                } else if (c.IsKeyDown(c.KEY_L)) {
+                    new_pos.x += 1;
+                    moved = true;
+                } else if (c.IsKeyDown(c.KEY_J)) {
+                    new_pos.y += 1;
+                    moved = true;
+                } else if (c.IsKeyDown(c.KEY_K)) {
+                    new_pos.y -= 1;
+                    moved = true;
                 }
-                player.pos = new_pos;
-                player.movementCooldown = 0;
-                player.keyWasPressed = true;
-                calculateFOV(&world.currentLevel.grid, new_pos, 8);
+
+                if (moved and canMove(world.currentLevel.grid, new_pos)) {
+                    if (isStaircase(world, new_pos)) {
+                        const levelLocation = getStaircaseDestination(world, new_pos);
+                        if (levelLocation) |lvllocation| {
+                            switchLevel(world, lvllocation.level);
+                            new_pos = lvllocation.pos;
+                        }
+                    }
+                    player.pos = new_pos;
+                    player.movementCooldown = 0;
+                    player.keyWasPressed = true;
+                    calculateFOV(&world.currentLevel.grid, new_pos, 8);
+                }
+            }
+
+            // Reset flag when keys are released
+            if (!c.IsKeyDown(c.KEY_H) and
+                !c.IsKeyDown(c.KEY_L) and
+                !c.IsKeyDown(c.KEY_J) and
+                !c.IsKeyDown(c.KEY_K))
+            {
+                player.keyWasPressed = false;
             }
         }
-
-        // Reset flag when keys are released
-        if (!c.IsKeyDown(c.KEY_H) and
-            !c.IsKeyDown(c.KEY_L) and
-            !c.IsKeyDown(c.KEY_J) and
-            !c.IsKeyDown(c.KEY_K))
-        {
-            player.keyWasPressed = false;
-        }
+        player.movementCooldown += delta;
     }
-    player.movementCooldown += delta;
 }
 
 pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize) void {

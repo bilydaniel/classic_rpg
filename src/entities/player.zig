@@ -7,8 +7,12 @@ const c = @cImport({
 });
 
 pub const Player = struct {
-    //TODO: player is gonna be a illusionist that can summon two other clones
-    //of himself, shared hp, resources, come up with some cool mechanics
+    //TODO: player is gonna be a puppetmaster, with his puppets as an army
+    //the player himself doesent find, can swap into a combat mode
+    //where puppets enter the level,
+    //puppetmaster will get a penalty for moving(puppets cant move this turn)
+    //finding new pieces of puppets, crafting gear for them etc.
+
     pos: Types.Vector2Int,
     speed: i32,
     isAscii: bool,

@@ -83,6 +83,7 @@ pub const Level = struct {
         }
 
         const font = c.LoadFontEx("../../assets/dejavu10x10_gs_tc.png", 16, null, 0);
+        c.SetTextureFilter(font.texture, c.TEXTURE_FILTER_POINT);
         const entities = std.ArrayList(*Entity).init(allocator);
         level.* = .{
             .id = id,
@@ -98,6 +99,11 @@ pub const Level = struct {
 
     pub fn Draw(this: @This()) void {
         for (this.grid, 0..) |tile, index| {
+            //const pos_x = your_position.x;
+            //const pos_y = your_position.y;
+            //if (pos_x != @round(pos_x) or pos_y != @round(pos_y)) {
+            //std.debug.print("Fractional position: {}, {}\n", .{ pos_x, pos_y });
+            //}
             const x = @as(c_int, @intCast((index % Config.level_width) * Config.tile_width));
             const y = @as(c_int, @intCast((@divFloor(index, Config.level_width)) * Config.tile_height));
 
@@ -137,8 +143,17 @@ pub const Level = struct {
                         if (tile.visible) {
                             text_color = c.RED;
                         }
-                        //c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
-                        c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 2, c.DARKBLUE);
+                        c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
+
+                        //c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, c.DARKBLUE);
+
+                        std.debug.print("text_x: {}\n", .{text_x});
+                        std.debug.print("text_y: {}\n", .{text_y});
+                        std.debug.print("x: {}\n", .{x});
+                        std.debug.print("y: {}\n", .{y});
+                        std.debug.print("*****************\n", .{});
+
+                        //c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, c.DARKBLUE);
                     }
                 }
             }
