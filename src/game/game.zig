@@ -32,7 +32,7 @@ pub const Game = struct {
             .offset = c.Vector2{ .x = 0, .y = 0 },
             .target = c.Vector2{ .x = 0, .y = 0 },
             .rotation = 0.0,
-            .zoom = 1.0,
+            .zoom = Config.camera_zoom,
         };
 
         game.* = .{
@@ -70,11 +70,21 @@ pub const Game = struct {
         if (c.IsKeyDown(c.KEY_D)) {
             this.camera.target.x += this.cameraSpeed * delta;
         }
+        if (c.IsKeyDown(c.KEY_DELETE)) {
+            if (this.camera.zoom < 3.0) {
+                this.camera.zoom += 0.25;
+            }
+        }
+        if (c.IsKeyDown(c.KEY_INSERT)) {
+            if (this.camera.zoom > 1.0) {
+                this.camera.zoom -= 0.25;
+            }
+        }
 
         this.world.Update();
         Systems.updatePlayer(this.player, delta, this.world, this.camera);
-        this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half);
-        this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half);
+        this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
+        this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
     }
 
     pub fn Draw(this: *Game) void {

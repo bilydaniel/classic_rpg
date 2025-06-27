@@ -14,6 +14,7 @@ pub const Player = struct {
     //finding new pieces of puppets, crafting gear for them etc.
 
     pos: Types.Vector2Int,
+    dest: ?Types.Vector2Int,
     speed: i32,
     isAscii: bool,
     ascii: ?[2]u8,
@@ -24,6 +25,7 @@ pub const Player = struct {
         const player = try allocator.create(Player);
         player.* = .{
             .pos = Types.Vector2Int.init(3, 2),
+            .dest = null,
             .speed = 1,
             .isAscii = true,
             .ascii = .{ '@', 0 },

@@ -18,7 +18,34 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
             const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
             std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world_pos.x, world_pos.y });
 
-            //player.destination = Utils.pixelToTile(world);
+            player.dest = Utils.pixelToTile(world_pos);
+        }
+
+        if (player.dest) |destination| {
+            if (player.movementCooldown > 0.1) {
+                const dest = Types.vector2IntConvert(destination);
+                const player_pos = Types.vector2IntConvert(player.pos);
+
+                const direction = Utils.vector2Subtract(Utils.vector2Scale(dest, 16), Utils.vector2Scale(player_pos, 16));
+                if (Utils.vector2Cmp(direction, .{ .x = 0, .y = 0 })) {
+                    player.dest = null;
+                }
+
+                const normalized = Utils.vector2Normalize(direction);
+                var movement = Utils.vector2Scale(normalized, @floatFromInt(player.speed));
+                if (movement.x > 0 and movement.x < 1) {
+                    movement.x = 1;
+                }
+
+                if (movement.y > 0 and movement.y < 1) {
+                    movement.y = 1;
+                }
+                std.debug.print("movement: {}\n", .{movement});
+                player.pos = Types.vector2Convert(Utils.vector2Add(player_pos, movement));
+                calculateFOV(&world.currentLevel.grid, player.pos, 8);
+                player.movementCooldown = 0;
+            }
+            player.movementCooldown += delta;
         }
     } else {
         player.keyWasPressed = false;

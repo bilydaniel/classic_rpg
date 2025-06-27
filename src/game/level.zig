@@ -143,17 +143,11 @@ pub const Level = struct {
                         if (tile.visible) {
                             text_color = c.RED;
                         }
-                        c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
+                        //c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
 
                         //c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, c.DARKBLUE);
 
-                        std.debug.print("text_x: {}\n", .{text_x});
-                        std.debug.print("text_y: {}\n", .{text_y});
-                        std.debug.print("x: {}\n", .{x});
-                        std.debug.print("y: {}\n", .{y});
-                        std.debug.print("*****************\n", .{});
-
-                        //c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, c.DARKBLUE);
+                        c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, text_color);
                     }
                 }
             }
