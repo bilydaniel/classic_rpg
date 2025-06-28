@@ -57,6 +57,13 @@ pub fn vector2Scale(a: c.Vector2, con: f32) c.Vector2 {
     };
 }
 
+pub fn vector2TileToPixel(a: c.Vector2) c.Vector2 {
+    return c.Vector2{
+        .x = a.x * Config.tile_width,
+        .y = a.y * Config.tile_height,
+    };
+}
+
 pub fn vector2Cmp(a: c.Vector2, b: c.Vector2) bool {
     return a.x == b.x and a.y == b.y;
 }

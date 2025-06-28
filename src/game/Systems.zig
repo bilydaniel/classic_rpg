@@ -5,28 +5,43 @@ const World = @import("world.zig");
 const Level = @import("level.zig");
 const Types = @import("../common/types.zig");
 const std = @import("std");
+const Pathfinder = @import("../game/pathfinder.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
 pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, camera: *c.Camera2D) void {
     //TODO: make movement better, feeld a bit off
+    const grid = world.currentLevel.grid;
 
     if (Config.mouse_mode) {
+        //HOVER:
+        const hover_win = c.GetMousePosition();
+        const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
+        //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
+        //anymore
+        const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
+        const hover_pos = Types.vector2ConvertWithPixels(hover_world);
+        std.debug.print("hover_pos: {}\n", .{hover_pos});
+        highlightTile(grid, hover_pos);
+
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
             const destination = c.GetMousePosition();
             const renderDestination = Utils.screenToRenderTextureCoords(destination);
             const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
-            std.debug.print("WORLD: x: {d}, y: {d}\n", .{ world_pos.x, world_pos.y });
 
-            player.dest = Utils.pixelToTile(world_pos);
+            std.debug.print("destination: {}\n", .{world_pos});
+            const player_dest = Utils.pixelToTile(world_pos);
+            player.dest = player_dest;
+            player.path = Pathfinder.Pathfinder.findPath();
         }
 
         if (player.dest) |destination| {
+            highlightTile(grid, destination);
             if (player.movementCooldown > 0.1) {
                 const dest = Types.vector2IntConvert(destination);
                 const player_pos = Types.vector2IntConvert(player.pos);
 
-                const direction = Utils.vector2Subtract(Utils.vector2Scale(dest, 16), Utils.vector2Scale(player_pos, 16));
+                const direction = Utils.vector2Subtract(Utils.vector2TileToPixel(dest), Utils.vector2TileToPixel(player_pos));
                 if (Utils.vector2Cmp(direction, .{ .x = 0, .y = 0 })) {
                     player.dest = null;
                 }
@@ -40,7 +55,6 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
                 if (movement.y > 0 and movement.y < 1) {
                     movement.y = 1;
                 }
-                std.debug.print("movement: {}\n", .{movement});
                 player.pos = Types.vector2Convert(Utils.vector2Add(player_pos, movement));
                 calculateFOV(&world.currentLevel.grid, player.pos, 8);
                 player.movementCooldown = 0;
@@ -127,26 +141,28 @@ pub fn castRay(grid: *[]Level.Tile, center: Types.Vector2Int, target: Types.Vect
 
     while (true) {
         const tileIndex = posToIndex(current_pos);
-        grid.*[tileIndex].visible = true;
-        grid.*[tileIndex].seen = true;
+        if (tileIndex) |tile_index| {
+            grid.*[tile_index].visible = true;
+            grid.*[tile_index].seen = true;
 
-        if (grid.*[tileIndex].solid == true) {
-            break;
-        }
+            if (grid.*[tile_index].solid == true) {
+                break;
+            }
 
-        // Check if we've reached the end point
-        if (Types.vector2IntCompare(current_pos, target)) {
-            break;
-        }
+            // Check if we've reached the end point
+            if (Types.vector2IntCompare(current_pos, target)) {
+                break;
+            }
 
-        const e2 = 2 * err;
-        if (e2 > -dy) {
-            err -= dy;
-            current_pos.x += x_inc;
-        }
-        if (e2 < dx) {
-            err += dx;
-            current_pos.y += y_inc;
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+                err -= dy;
+                current_pos.x += x_inc;
+            }
+            if (e2 < dx) {
+                err += dx;
+                current_pos.y += y_inc;
+            }
         }
     }
 }
@@ -155,6 +171,16 @@ pub fn switchLevel(world: *World.World, levelID: u32) void {
     for (world.levels.items) |level| {
         if (level.id == levelID) {
             world.currentLevel = level;
+        }
+    }
+}
+
+pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int) void {
+    const pos_index = posToIndex(pos);
+    if (pos_index) |index| {
+        if (index >= 0 and index < grid.len) {
+            var tile = &grid[index];
+            tile.tempBackground = c.GREEN;
         }
     }
 }
@@ -179,14 +205,19 @@ pub fn getStaircaseDestination(world: *World.World, pos: Types.Vector2Int) ?Leve
 }
 
 pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int) bool {
-    const index = posToIndex(pos);
-    if (index < grid.len) {
-        return !grid[index].solid;
+    const pos_index = posToIndex(pos);
+    if (pos_index) |index| {
+        if (index < grid.len) {
+            return !grid[index].solid;
+        }
     }
     return false;
 }
 
-pub fn posToIndex(pos: Types.Vector2Int) usize {
+pub fn posToIndex(pos: Types.Vector2Int) ?usize {
+    if (pos.x < 0 or pos.y < 0) {
+        return null;
+    }
     return @intCast(pos.y * Config.level_width + pos.x);
 }
 

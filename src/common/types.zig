@@ -1,4 +1,5 @@
 const std = @import("std");
+const Config = @import("../common/config.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -27,9 +28,15 @@ pub fn vector2IntConvert(a: Vector2Int) c.Vector2 {
 }
 
 pub fn vector2Convert(a: c.Vector2) Vector2Int {
-    std.debug.print("converting: {}\n", .{a});
     return Vector2Int{
         .x = @intFromFloat(a.x),
         .y = @intFromFloat(a.y),
+    };
+}
+
+pub fn vector2ConvertWithPixels(a: c.Vector2) Vector2Int {
+    return Vector2Int{
+        .x = @intFromFloat(a.x / Config.tile_width),
+        .y = @intFromFloat(a.y / Config.tile_height),
     };
 }

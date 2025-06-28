@@ -25,7 +25,6 @@ pub fn main() !void {
         game.Update();
 
         game.Draw();
-        //TODO: https://claude.ai/chat/91026e1b-d185-4b62-b01e-cd0d430a697f
 
         //        c.BeginDrawing();
         //        c.DrawTexturePro(

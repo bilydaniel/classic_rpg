@@ -1,5 +1,6 @@
 const std = @import("std");
 const Assets = @import("../game/assets.zig");
+const Pathfinder = @import("../game/pathfinder.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const c = @cImport({
@@ -15,6 +16,7 @@ pub const Player = struct {
 
     pos: Types.Vector2Int,
     dest: ?Types.Vector2Int,
+    path: ?Pathfinder.Path,
     speed: i32,
     isAscii: bool,
     ascii: ?[2]u8,

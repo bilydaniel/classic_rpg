@@ -24,6 +24,7 @@ pub const Tile = struct {
     isAscii: bool,
     ascii: ?[2]u8,
     backgroundColor: c.Color,
+    tempBackground: ?c.Color,
     seen: bool,
     visible: bool,
 };
@@ -68,6 +69,7 @@ pub const Level = struct {
                 .backgroundColor = c.DARKBLUE,
                 .seen = false,
                 .visible = false,
+                .tempBackground = null,
             };
         }
 
@@ -113,7 +115,12 @@ pub const Level = struct {
                     if (tile.ascii) |ascii| {
 
                         // Draw background rectangle
-                        c.DrawRectangle(x, y, Config.tile_width, Config.tile_height, tile.backgroundColor);
+                        var background_color = tile.backgroundColor;
+                        if (tile.tempBackground) |temp_color| {
+                            background_color = temp_color;
+                        }
+                        c.DrawRectangle(x, y, Config.tile_width, Config.tile_height, background_color);
+                        this.grid[index].tempBackground = null;
 
                         // Calculate text centering
                         const font_size = @min(Config.tile_width - 4, Config.tile_height - 4); // Leave some padding
@@ -182,6 +189,7 @@ pub const Level = struct {
                 .backgroundColor = c.WHITE,
                 .seen = false,
                 .visible = false,
+                .tempBackground = null,
             };
         }
 
@@ -215,6 +223,7 @@ pub const Level = struct {
                             .backgroundColor = c.BLACK,
                             .seen = false,
                             .visible = false,
+                            .tempBackground = null,
                         };
                     }
                 }
@@ -254,6 +263,7 @@ pub const Level = struct {
                             .backgroundColor = c.BLACK,
                             .seen = false,
                             .visible = false,
+                            .tempBackground = null,
                         };
                     }
                 }
@@ -280,6 +290,7 @@ pub const Level = struct {
                             .backgroundColor = c.BLACK,
                             .seen = false,
                             .visible = false,
+                            .tempBackground = null,
                         };
                     }
                 }
@@ -312,6 +323,7 @@ pub const Level = struct {
                     .backgroundColor = c.GOLD,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }
@@ -342,6 +354,7 @@ pub const Level = struct {
                     .backgroundColor = c.BROWN,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }
@@ -372,6 +385,7 @@ pub const Level = struct {
                     .backgroundColor = c.BLUE,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }
@@ -394,6 +408,7 @@ pub const Level = struct {
                 .backgroundColor = c.PURPLE,
                 .seen = false,
                 .visible = false,
+                .tempBackground = null,
             };
         }
     }
@@ -421,6 +436,7 @@ pub const Level = struct {
                 .backgroundColor = c.WHITE,
                 .seen = false,
                 .visible = false,
+                .tempBackground = null,
             };
         }
 
@@ -460,6 +476,7 @@ pub const Level = struct {
                             .backgroundColor = c.BLACK,
                             .seen = false,
                             .visible = false,
+                            .tempBackground = null,
                         };
                     }
                 }
@@ -505,6 +522,7 @@ pub const Level = struct {
                             .backgroundColor = c.BLACK,
                             .seen = false,
                             .visible = false,
+                            .tempBackground = null,
                         };
                     }
                 }
@@ -531,6 +549,7 @@ pub const Level = struct {
                             .backgroundColor = c.BLACK,
                             .seen = false,
                             .visible = false,
+                            .tempBackground = null,
                         };
                     }
                 }
@@ -568,6 +587,7 @@ pub const Level = struct {
                     .backgroundColor = c.GOLD,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }
@@ -605,6 +625,7 @@ pub const Level = struct {
                     .backgroundColor = c.BROWN,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }
@@ -644,6 +665,7 @@ pub const Level = struct {
                     .backgroundColor = c.BLUE,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }
@@ -671,6 +693,7 @@ pub const Level = struct {
                     .backgroundColor = c.PURPLE,
                     .seen = false,
                     .visible = false,
+                    .tempBackground = null,
                 };
             }
         }

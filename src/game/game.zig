@@ -28,6 +28,8 @@ pub const Game = struct {
         const camera = try allocator.create(c.Camera2D);
         var tileset = Tileset.Tileset.init(allocator);
         try tileset.loadTileset(Config.tileset_path);
+        //TODO: second camera is in window.zig
+        // fix it, have just one, cleanup
         camera.* = .{
             .offset = c.Vector2{ .x = 0, .y = 0 },
             .target = c.Vector2{ .x = 0, .y = 0 },
@@ -52,6 +54,7 @@ pub const Game = struct {
     pub fn Update(this: *Game) void {
         //TODO: decide on a game loop, look into the book
         Window.UpdateWindow();
+        //TODO: when i change the window size, clicking is not precise anymore
         const delta = c.GetFrameTime();
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs
@@ -98,8 +101,9 @@ pub const Game = struct {
         //        c.EndMode2D();
         //        c.EndTextureMode();
         c.BeginDrawing();
-        c.BeginMode2D(this.camera.*);
         c.ClearBackground(c.BLACK);
+        c.DrawFPS(0, 0);
+        c.BeginMode2D(this.camera.*);
         this.world.Draw();
         this.player.Draw(&this.assets);
         c.EndMode2D();
