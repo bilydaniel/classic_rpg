@@ -9,7 +9,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
-pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, camera: *c.Camera2D) void {
+pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder) void {
     //TODO: make movement better, feeld a bit off
     const grid = world.currentLevel.grid;
 
@@ -21,7 +21,6 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
         //anymore
         const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
         const hover_pos = Types.vector2ConvertWithPixels(hover_world);
-        std.debug.print("hover_pos: {}\n", .{hover_pos});
         highlightTile(grid, hover_pos);
 
         if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
@@ -29,10 +28,12 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
             const renderDestination = Utils.screenToRenderTextureCoords(destination);
             const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
 
-            std.debug.print("destination: {}\n", .{world_pos});
             const player_dest = Utils.pixelToTile(world_pos);
             player.dest = player_dest;
-            player.path = Pathfinder.Pathfinder.findPath();
+            if (player.dest) |dest| {
+                player.path = pathfinder.findPath(grid, player.pos, dest);
+                std.debug.print("player_path: {?}\n", .{player.path});
+            }
         }
 
         if (player.dest) |destination| {
@@ -58,6 +59,14 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
                 player.pos = Types.vector2Convert(Utils.vector2Add(player_pos, movement));
                 calculateFOV(&world.currentLevel.grid, player.pos, 8);
                 player.movementCooldown = 0;
+                if (isStaircase(world, player.pos)) {
+                    const levelLocation = getStaircaseDestination(world, player.pos);
+                    if (levelLocation) |lvllocation| {
+                        switchLevel(world, lvllocation.level);
+                        player.pos = lvllocation.pos;
+                        player.dest = null;
+                    }
+                }
             }
             player.movementCooldown += delta;
         }

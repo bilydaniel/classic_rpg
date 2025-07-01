@@ -11,24 +11,31 @@ pub const Node = struct {
 };
 
 pub const Path = struct {
-    nodes: std.ArrayList(Types.Vector2Int),
+    nodes: std.ArrayList(Node),
     currIndex: usize,
 };
 
 pub const Pathfinder = struct {
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) Pathfinder {
-        return Pathfinder{
+    pub fn init(allocator: std.mem.Allocator) !*Pathfinder {
+        const pathfinder = try allocator.create(Pathfinder);
+        pathfinder.* = .{
             .allocator = allocator,
         };
+        return pathfinder;
     }
 
-    pub fn findPath(
-        this: *Pathfinder,
-        grid: []Level.Tile,
-    ) ?Path {
+    pub fn findPath(this: *Pathfinder, grid: []Level.Tile, start: Types.Vector2Int, end: Types.Vector2Int) ?Path {
         _ = this;
         _ = grid;
+        _ = start;
+        _ = end;
+
+        open_list = std.ArrayList(Node).init(this.allocator);
+        closed_list = std.ArrayList(Node).init(this.allocator);
+
+        //TODO: finish
+        return null;
     }
 };

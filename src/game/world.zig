@@ -1,5 +1,4 @@
 const Level = @import("level.zig");
-const Pathfinder = @import("pathfinder.zig");
 const Entity = @import("entity.zig");
 const std = @import("std");
 const Types = @import("../common/types.zig");
@@ -14,7 +13,6 @@ pub const World = struct {
     levelLinks: std.ArrayList(Level.Link),
     entities: std.ArrayList(*Entity.Entity),
     tileset: ?*c.Texture2D,
-    pathfinder: Pathfinder.Pathfinder,
 
     //TODO: https://claude.ai/chat/8b0e4ed0-f114-4284-8f99-4b344afaedcb
     //https://chatgpt.com/c/68091cb1-4588-8004-afb8-f2154206753d
@@ -65,7 +63,6 @@ pub const World = struct {
             .entities = entities,
             .tileset = tileset,
             .levelLinks = levelLinks,
-            .pathfinder = Pathfinder.Pathfinder.init(allocator),
         };
 
         return world;

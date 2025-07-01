@@ -8,6 +8,7 @@ const Window = @import("../game/window.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
+const Pathfinder = @import("../game/pathfinder.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -21,6 +22,7 @@ pub const Game = struct {
     cameraManual: bool,
     cameraSpeed: f32,
     timeSinceTurn: f32,
+    pathfinder: *Pathfinder.Pathfinder,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         const player = try Player.Player.init(allocator);
@@ -28,6 +30,7 @@ pub const Game = struct {
         const camera = try allocator.create(c.Camera2D);
         var tileset = Tileset.Tileset.init(allocator);
         try tileset.loadTileset(Config.tileset_path);
+        const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         //TODO: second camera is in window.zig
         // fix it, have just one, cleanup
         camera.* = .{
@@ -46,6 +49,7 @@ pub const Game = struct {
             .cameraManual = false,
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
+            .pathfinder = pathfinder,
         };
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
         return game;
@@ -85,7 +89,7 @@ pub const Game = struct {
         }
 
         this.world.Update();
-        Systems.updatePlayer(this.player, delta, this.world, this.camera);
+        Systems.updatePlayer(this.player, delta, this.world, this.camera, this.pathfinder);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
         this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
     }

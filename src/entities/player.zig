@@ -9,10 +9,12 @@ const c = @cImport({
 
 pub const Player = struct {
     //TODO: player is gonna be a puppetmaster, with his puppets as an army
-    //the player himself doesent find, can swap into a combat mode
+    //the player himself doesent fight, can swap into a combat mode
     //where puppets enter the level,
     //puppetmaster will get a penalty for moving(puppets cant move this turn)
     //finding new pieces of puppets, crafting gear for them etc.
+    //butchering monsters + gathering resources from stuff like chairs, crafting parts for the
+    //puppets, maybe in the style of cogmind?
 
     pos: Types.Vector2Int,
     dest: ?Types.Vector2Int,
@@ -33,6 +35,7 @@ pub const Player = struct {
             .ascii = .{ '@', 0 },
             .movementCooldown = 0,
             .keyWasPressed = false,
+            .path = null,
         };
         return player;
     }
