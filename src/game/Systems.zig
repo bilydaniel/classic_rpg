@@ -9,6 +9,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
+
 pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder) void {
     //TODO: make movement better, feeld a bit off
     const grid = world.currentLevel.grid;
@@ -31,7 +32,7 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
             const player_dest = Utils.pixelToTile(world_pos);
             player.dest = player_dest;
             if (player.dest) |dest| {
-                player.path = pathfinder.findPath(grid, player.pos, dest);
+                player.path = pathfinder.findPath(grid, player.pos, dest) catch null;
                 std.debug.print("player_path: {?}\n", .{player.path});
             }
         }
@@ -240,4 +241,42 @@ pub fn indexToPixel(index: i32) c.Vector2 {
     const x = (index % Config.level_width) * Config.tile_width;
     const y = (@divFloor(index, Config.level_width)) * Config.tile_height;
     return c.Vector2{ .x = x, .y = y };
+}
+
+pub fn getTileIdx(grid: []Level.Tile, index: usize) ?Level.Tile {
+    if (index < 0) {
+        return null;
+    }
+
+    if (index >= grid.len) {
+        return null;
+    }
+    return grid[index];
+}
+
+pub fn getTilePos(grid: []Level.Tile, pos: Types.Vector2Int) ?Level.Tile {
+    const idx = posToIndex(pos);
+    if (idx) |index| {
+        return getTileIdx(grid, index);
+    }
+    return null;
+}
+
+pub fn gridNeighboursAll(grid: []Level.Tile, pos: Types.Vector2Int) [8]?Level.Tile {
+    var result: [8]?Level.Tile = undefined;
+
+    var count: usize = 0;
+    const sides = [_]i32{ -1, 0, 1 };
+    for (sides) |y_side| {
+        for (sides) |x_side| {
+            if (x_side == 0 and y_side == 0) {
+                continue;
+            }
+            const dif_pos = Types.Vector2Int.init(x_side, y_side);
+            const result_pos = Types.vector2IntAdd(pos, dif_pos);
+            result[count] = getTilePos(grid, result_pos);
+            count += 1;
+        }
+    }
+    return result;
 }

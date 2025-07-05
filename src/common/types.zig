@@ -20,6 +20,13 @@ pub fn vector2IntCompare(a: Vector2Int, b: Vector2Int) bool {
     return a.x == b.x and a.y == b.y;
 }
 
+pub fn vector2IntAdd(a: Vector2Int, b: Vector2Int) Vector2Int {
+    return Vector2Int{
+        .x = a.x + b.x,
+        .y = a.y + b.y,
+    };
+}
+
 pub fn vector2IntConvert(a: Vector2Int) c.Vector2 {
     return c.Vector2{
         .x = @floatFromInt(a.x),

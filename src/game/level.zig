@@ -17,6 +17,7 @@ const TileType = enum {
 const Entity = struct {};
 
 pub const Tile = struct {
+    //TODO: add movement cost? can be derived from tile_type
     texture_id: ?i32,
     tile_type: TileType,
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
