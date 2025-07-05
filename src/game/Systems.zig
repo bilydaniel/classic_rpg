@@ -262,8 +262,8 @@ pub fn getTilePos(grid: []Level.Tile, pos: Types.Vector2Int) ?Level.Tile {
     return null;
 }
 
-pub fn gridNeighboursAll(grid: []Level.Tile, pos: Types.Vector2Int) [8]?Level.Tile {
-    var result: [8]?Level.Tile = undefined;
+pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
+    var result: [8]?Types.Vector2Int = undefined;
 
     var count: usize = 0;
     const sides = [_]i32{ -1, 0, 1 };
@@ -274,7 +274,7 @@ pub fn gridNeighboursAll(grid: []Level.Tile, pos: Types.Vector2Int) [8]?Level.Ti
             }
             const dif_pos = Types.Vector2Int.init(x_side, y_side);
             const result_pos = Types.vector2IntAdd(pos, dif_pos);
-            result[count] = getTilePos(grid, result_pos);
+            result[count] = result_pos;
             count += 1;
         }
     }
