@@ -50,6 +50,7 @@ pub const Pathfinder = struct {
     }
 
     pub fn findPath(this: *Pathfinder, grid: []Level.Tile, start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
+        //TODO: make all arraylist, use the pointer from all
         var open_list = std.ArrayList(Node).init(this.allocator);
         defer open_list.deinit();
 
@@ -59,19 +60,20 @@ pub const Pathfinder = struct {
         try open_list.append(Node.init(start, null, 0, heuristic(start, end)));
 
         while (open_list.items.len > 0) {
-            const current_node = lowestF(open_list);
-            _ = open_list.swapRemove(current_node.index);
+            printList(open_list);
+            const curren_index = lowestF(open_list);
+            var current_node = open_list.swapRemove(curren_index);
 
-            try closed_list.append(current_node.node.*);
+            try closed_list.append(current_node);
 
-            if (Types.vector2IntCompare(current_node.node.pos, end)) {
-                const path = try this.reconstructPath(current_node.node);
+            if (Types.vector2IntCompare(current_node.pos, end)) {
+                const path = try this.reconstructPath(&current_node);
                 print_path(path);
                 //TODO: TEST
                 return path;
             }
 
-            const neighbours = Systems.neighboursAll(start);
+            const neighbours = Systems.neighboursAll(current_node.pos);
 
             for (neighbours) |neighbour| {
                 const neigh = neighbour orelse continue;
@@ -83,21 +85,18 @@ pub const Pathfinder = struct {
                     continue;
                 }
 
-                const new_g = current_node.node.g + 1.0; //TODO: add tile movement cost
-                _ = new_g;
+                const new_g = current_node.g + 1.0; //TODO: add tile movement cost
 
                 if (findNode(open_list, neigh)) |found_node| {
                     if (new_g < found_node.node.g) {
                         open_list.items[found_node.index].g = new_g;
                         open_list.items[found_node.index].f = new_g + found_node.node.h;
-                        open_list.items[found_node.index].parent = current_node;
+                        open_list.items[found_node.index].parent = &current_node;
                     }
-                } else {}
+                } else {
+                    try open_list.append(Node.init(neigh, &current_node, new_g, heuristic(neigh, end)));
+                }
             }
-
-            //getTilePos(grid, result_pos)
-
-            //try open_list.append(neighbours);
         }
 
         return null;
@@ -123,7 +122,7 @@ pub const Pathfinder = struct {
     }
 };
 
-pub fn lowestF(list: std.ArrayList(Node)) NodeIndex {
+pub fn lowestF(list: std.ArrayList(Node)) usize {
     var lowest = NodeIndex{ .index = 0, .node = &list.items[0] };
     for (list.items[0..], 0..) |*item, i| {
         if (lowest.node.f > item.f) {
@@ -131,7 +130,7 @@ pub fn lowestF(list: std.ArrayList(Node)) NodeIndex {
             lowest.index = i;
         }
     }
-    return lowest;
+    return lowest.index;
 }
 pub fn heuristic(start: Types.Vector2Int, end: Types.Vector2Int) f32 {
     return @floatFromInt(@abs(start.x - end.x) + @abs(start.y - end.y));
@@ -150,4 +149,11 @@ pub fn findNode(list: std.ArrayList(Node), pos: Types.Vector2Int) ?NodeIndex {
         }
     }
     return null;
+}
+
+pub fn printList(list: std.ArrayList(Node)) void {
+    for (list.items) |item| {
+        std.debug.print("\t{}\n", .{item.pos});
+    }
+    std.debug.print("*********************\n", .{});
 }
