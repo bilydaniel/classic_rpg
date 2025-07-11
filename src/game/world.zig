@@ -1,4 +1,5 @@
 const Level = @import("level.zig");
+const Pathfinder = @import("pathfinder.zig");
 const Entity = @import("entity.zig");
 const std = @import("std");
 const Types = @import("../common/types.zig");
@@ -11,7 +12,7 @@ pub const World = struct {
     currentLevel: *Level.Level,
     levels: std.ArrayList(*Level.Level),
     levelLinks: std.ArrayList(Level.Link),
-    entities: std.ArrayList(*Entity.Entity),
+    entities: std.ArrayList(Entity.Entity),
     tileset: ?*c.Texture2D,
 
     //TODO: https://claude.ai/chat/8b0e4ed0-f114-4284-8f99-4b344afaedcb
@@ -21,7 +22,14 @@ pub const World = struct {
     pub fn init(allocator: std.mem.Allocator, tileset: ?*c.Texture2D) !*World {
         const world = try allocator.create(World);
         var levels = std.ArrayList(*Level.Level).init(allocator);
-        const entities = std.ArrayList(*Entity.Entity).init(allocator);
+        var entities = std.ArrayList(Entity.Entity).init(allocator);
+
+        const pos = Types.Vector2Int{ .x = 5, .y = 5 };
+        const entity = try Entity.EntityEnemy.init(
+            allocator,
+            pos,
+        );
+        try entities.append(.{ .Enemy = entity.* });
 
         var level1 = try Level.Level.init(allocator, tileset, 0);
         level1.generateInterestingLevel();
@@ -69,7 +77,7 @@ pub const World = struct {
     }
 
     pub fn Draw(this: *World) void {
-        this.currentLevel.Draw();
+        this.currentLevel.Draw(this.entities);
     }
 
     pub fn Update(this: *World) void {

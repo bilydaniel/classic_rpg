@@ -1,4 +1,5 @@
 const std = @import("std");
+const Entity = @import("entity.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const c = @cImport({
@@ -12,9 +13,6 @@ const TileType = enum {
     water,
     staircase,
 };
-
-//TODO: put somewhere else
-const Entity = struct {};
 
 pub const Tile = struct {
     //TODO: add movement cost? can be derived from tile_type
@@ -100,7 +98,7 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn Draw(this: @This()) void {
+    pub fn Draw(this: @This(), entities: std.ArrayList(Entity.Entity)) void {
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
             //const pos_y = your_position.y;
@@ -157,6 +155,15 @@ pub const Level = struct {
 
                         c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, text_color);
                     }
+                }
+            }
+        }
+
+        for (entities.items) |ent| {
+            const entity = ent.Enemy;
+            if (entity.isAscii) {
+                if (entity.ascii) |ascii| {
+                    c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(entity.pos.x), .y = @floatFromInt(entity.pos.y) }, 16, 1, c.BLUE);
                 }
             }
         }

@@ -30,11 +30,24 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
             const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
 
             const player_dest = Utils.pixelToTile(world_pos);
-            player.dest = player_dest;
-            if (player.dest) |dest| {
-                player.path = pathfinder.findPath(grid, player.pos, dest) catch null;
-                std.debug.print("player_path: {?}\n", .{player.path});
+            //player.dest = player_dest;
+            //TODO: check for wron player_dest
+            player.path = pathfinder.findPath(grid, player.pos, player_dest) catch null;
+        }
+
+        if (player.path) |path| {
+            if (path.currIndex < path.nodes.items.len) {
+                //TODO: add player movement speed
+                if (player.movementCooldown > Config.turn_speed) {
+                    player.pos = path.nodes.items[path.currIndex];
+                    player.path.?.currIndex += 1;
+                    player.movementCooldown = 0;
+                }
+            } else {
+                player.path.?.deinit();
+                player.path = null;
             }
+            player.movementCooldown += delta;
         }
 
         if (player.dest) |destination| {

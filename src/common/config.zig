@@ -18,3 +18,4 @@ pub const tile_height: i32 = 24;
 pub const tileset_path: []const u8 = "assets/my_tileset.png";
 
 pub const mouse_mode: bool = true;
+pub const turn_speed: f32 = 0.1;

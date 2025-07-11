@@ -10,12 +10,12 @@ pub const NodeIndex = struct {
 
 pub const Node = struct {
     pos: Types.Vector2Int,
-    parent: ?*Node,
+    parent: ?usize,
     f: f32,
     g: f32,
     h: f32,
 
-    pub fn init(pos: Types.Vector2Int, parent: ?*Node, g: f32, h: f32) Node {
+    pub fn init(pos: Types.Vector2Int, parent: ?usize, g: f32, h: f32) Node {
         return Node{
             .pos = pos,
             .parent = parent,
@@ -35,6 +35,10 @@ pub const Path = struct {
             .nodes = std.ArrayList(Types.Vector2Int).init(allocator),
             .currIndex = 0,
         };
+    }
+
+    pub fn deinit(this: *Path) void {
+        this.nodes.deinit();
     }
 };
 
@@ -61,13 +65,16 @@ pub const Pathfinder = struct {
 
         while (open_list.items.len > 0) {
             printList(open_list);
-            const curren_index = lowestF(open_list);
-            var current_node = open_list.swapRemove(curren_index);
+            const current_index = lowestF(open_list);
+            const current_open_node = open_list.swapRemove(current_index);
 
-            try closed_list.append(current_node);
+            try closed_list.append(current_open_node);
+            var current_node = closed_list.getLast();
+            const current_node_index = closed_list.items.len - 1;
 
             if (Types.vector2IntCompare(current_node.pos, end)) {
-                const path = try this.reconstructPath(&current_node);
+                std.debug.print("RECONSTRUCT...\n", .{});
+                const path = try this.reconstructPath(closed_list, &current_node);
                 print_path(path);
                 //TODO: TEST
                 return path;
@@ -91,10 +98,10 @@ pub const Pathfinder = struct {
                     if (new_g < found_node.node.g) {
                         open_list.items[found_node.index].g = new_g;
                         open_list.items[found_node.index].f = new_g + found_node.node.h;
-                        open_list.items[found_node.index].parent = &current_node;
+                        open_list.items[found_node.index].parent = current_node_index;
                     }
                 } else {
-                    try open_list.append(Node.init(neigh, &current_node, new_g, heuristic(neigh, end)));
+                    try open_list.append(Node.init(neigh, current_node_index, new_g, heuristic(neigh, end)));
                 }
             }
         }
@@ -102,7 +109,7 @@ pub const Pathfinder = struct {
         return null;
     }
 
-    pub fn reconstructPath(this: *Pathfinder, node: *Node) !Path {
+    pub fn reconstructPath(this: *Pathfinder, closed_list: std.ArrayList(Node), node: *Node) !Path {
         var path = Path.init(this.allocator);
         var temp_path = Path.init(this.allocator);
         defer temp_path.nodes.deinit();
@@ -110,13 +117,19 @@ pub const Pathfinder = struct {
         var current: ?*Node = node;
         while (current) |current_node| {
             try temp_path.nodes.append(current_node.pos);
-            current = current_node.parent;
+            const parentIndex = current_node.parent;
+
+            if (parentIndex) |parent_index| {
+                current = &closed_list.items[parent_index];
+            } else {
+                current = null;
+            }
         }
 
-        var i = temp_path.nodes.items.len - 1;
-        while (i >= 0) {
-            try path.nodes.append(temp_path.nodes.items[i]);
+        var i = temp_path.nodes.items.len;
+        while (i > 0) {
             i -= 1;
+            try path.nodes.append(temp_path.nodes.items[i]);
         }
         return path;
     }
