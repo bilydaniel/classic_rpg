@@ -25,11 +25,17 @@ pub const World = struct {
         var entities = std.ArrayList(Entity.Entity).init(allocator);
 
         const pos = Types.Vector2Int{ .x = 5, .y = 5 };
-        const entity = try Entity.EntityEnemy.init(
-            allocator,
-            pos,
-        );
-        try entities.append(.{ .Enemy = entity.* });
+        const entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "$");
+
+        const pos2 = Types.Vector2Int{ .x = 6, .y = 6 };
+        const entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "&");
+
+        const pos3 = Types.Vector2Int{ .x = 7, .y = 7 };
+        const entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "%");
+
+        try entities.append(entity.*);
+        try entities.append(entity2.*);
+        try entities.append(entity3.*);
 
         var level1 = try Level.Level.init(allocator, tileset, 0);
         level1.generateInterestingLevel();

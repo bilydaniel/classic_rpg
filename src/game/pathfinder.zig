@@ -64,7 +64,6 @@ pub const Pathfinder = struct {
         try open_list.append(Node.init(start, null, 0, heuristic(start, end)));
 
         while (open_list.items.len > 0) {
-            printList(open_list);
             const current_index = lowestF(open_list);
             const current_open_node = open_list.swapRemove(current_index);
 
@@ -73,10 +72,7 @@ pub const Pathfinder = struct {
             const current_node_index = closed_list.items.len - 1;
 
             if (Types.vector2IntCompare(current_node.pos, end)) {
-                std.debug.print("RECONSTRUCT...\n", .{});
                 const path = try this.reconstructPath(closed_list, &current_node);
-                print_path(path);
-                //TODO: TEST
                 return path;
             }
 

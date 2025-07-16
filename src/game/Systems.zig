@@ -1,7 +1,7 @@
-const Player = @import("../entities/player.zig");
 const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
 const World = @import("world.zig");
+const Entity = @import("entity.zig");
 const Level = @import("level.zig");
 const Types = @import("../common/types.zig");
 const std = @import("std");
@@ -10,7 +10,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder) void {
+pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(Entity.Entity)) void {
     //TODO: make movement better, feeld a bit off
     const grid = world.currentLevel.grid;
 
@@ -49,85 +49,39 @@ pub fn updatePlayer(player: *Player.Player, delta: f32, world: *World.World, cam
             }
             player.movementCooldown += delta;
         }
-
-        if (player.dest) |destination| {
-            highlightTile(grid, destination);
-            if (player.movementCooldown > 0.1) {
-                const dest = Types.vector2IntConvert(destination);
-                const player_pos = Types.vector2IntConvert(player.pos);
-
-                const direction = Utils.vector2Subtract(Utils.vector2TileToPixel(dest), Utils.vector2TileToPixel(player_pos));
-                if (Utils.vector2Cmp(direction, .{ .x = 0, .y = 0 })) {
-                    player.dest = null;
-                }
-
-                const normalized = Utils.vector2Normalize(direction);
-                var movement = Utils.vector2Scale(normalized, @floatFromInt(player.speed));
-                if (movement.x > 0 and movement.x < 1) {
-                    movement.x = 1;
-                }
-
-                if (movement.y > 0 and movement.y < 1) {
-                    movement.y = 1;
-                }
-                player.pos = Types.vector2Convert(Utils.vector2Add(player_pos, movement));
-                calculateFOV(&world.currentLevel.grid, player.pos, 8);
-                player.movementCooldown = 0;
-                if (isStaircase(world, player.pos)) {
-                    const levelLocation = getStaircaseDestination(world, player.pos);
-                    if (levelLocation) |lvllocation| {
-                        switchLevel(world, lvllocation.level);
-                        player.pos = lvllocation.pos;
-                        player.dest = null;
-                    }
-                }
-            }
-            player.movementCooldown += delta;
-        }
     } else {
-        player.keyWasPressed = false;
+        //TODO: change this shit, change the input system to something better
 
         if (player.movementCooldown > 0.1) {
             var new_pos = player.pos;
             var moved = false;
 
-            if (!player.keyWasPressed) {
-                if (c.IsKeyDown(c.KEY_H)) {
-                    new_pos.x -= 1;
-                    moved = true;
-                } else if (c.IsKeyDown(c.KEY_L)) {
-                    new_pos.x += 1;
-                    moved = true;
-                } else if (c.IsKeyDown(c.KEY_J)) {
-                    new_pos.y += 1;
-                    moved = true;
-                } else if (c.IsKeyDown(c.KEY_K)) {
-                    new_pos.y -= 1;
-                    moved = true;
-                }
-
-                if (moved and canMove(world.currentLevel.grid, new_pos)) {
-                    if (isStaircase(world, new_pos)) {
-                        const levelLocation = getStaircaseDestination(world, new_pos);
-                        if (levelLocation) |lvllocation| {
-                            switchLevel(world, lvllocation.level);
-                            new_pos = lvllocation.pos;
-                        }
-                    }
-                    player.pos = new_pos;
-                    player.movementCooldown = 0;
-                    player.keyWasPressed = true;
-                    calculateFOV(&world.currentLevel.grid, new_pos, 8);
-                }
+            if (c.IsKeyDown(c.KEY_H)) {
+                new_pos.x -= 1;
+                moved = true;
+            } else if (c.IsKeyDown(c.KEY_L)) {
+                new_pos.x += 1;
+                moved = true;
+            } else if (c.IsKeyDown(c.KEY_J)) {
+                new_pos.y += 1;
+                moved = true;
+            } else if (c.IsKeyDown(c.KEY_K)) {
+                new_pos.y -= 1;
+                moved = true;
             }
 
-            // Reset flag when keys are released
-            if (!c.IsKeyDown(c.KEY_H) and
-                !c.IsKeyDown(c.KEY_L) and
-                !c.IsKeyDown(c.KEY_J) and
-                !c.IsKeyDown(c.KEY_K))
-            {
-                player.keyWasPressed = false;
+            if (moved and canMove(world.currentLevel.grid, new_pos)) {
+                if (isStaircase(world, new_pos)) {
+                    const levelLocation = getStaircaseDestination(world, new_pos);
+                    if (levelLocation) |lvllocation| {
+                        switchLevel(world, lvllocation.level);
+                        new_pos = lvllocation.pos;
+                    }
+                }
+                player.pos = new_pos;
+                player.movementCooldown = 0;
+                calculateFOV(&world.currentLevel.grid, new_pos, 8);
+                _ = checkCombatStart(player, entities);
             }
         }
         player.movementCooldown += delta;
@@ -292,4 +246,15 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
         }
     }
     return result;
+}
+
+pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(Entity.Entity)) bool {
+    for (entities.items) |entity| {
+        const distance = Types.vector2Distance(player.pos, entity.pos);
+        if (distance < 3) {
+            //TODO: force combat
+            std.debug.print("COMBAT {?s}\n", .{entity.ascii});
+        }
+    }
+    return false;
 }

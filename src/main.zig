@@ -1,6 +1,5 @@
 const std = @import("std");
 const Game = @import("game/game.zig");
-const Player = @import("entities/player.zig");
 const Config = @import("common/config.zig");
 const Window = @import("game/window.zig");
 const c = @cImport({
@@ -9,7 +8,7 @@ const c = @cImport({
 
 pub fn main() !void {
     c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE);
-    c.InitWindow(Config.window_width, Config.window_height, "RPG");
+    c.InitWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
     defer c.CloseWindow();
 
     c.SetTextureFilter(Window.screen.texture, c.TEXTURE_FILTER_POINT);

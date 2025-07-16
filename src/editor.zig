@@ -1,6 +1,5 @@
 const std = @import("std");
 const Editor = @import("editor/editor.zig");
-const Player = @import("entities/player.zig");
 const Config = @import("common/config.zig");
 const Window = @import("game/window.zig");
 const c = @cImport({

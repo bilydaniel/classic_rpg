@@ -1,7 +1,7 @@
 const std = @import("std");
 const World = @import("world.zig");
 const Systems = @import("Systems.zig");
-const Player = @import("../entities/player.zig");
+const Entity = @import("entity.zig");
 const Assets = @import("../game/assets.zig");
 const Tileset = @import("../game/tileset.zig");
 const Window = @import("../game/window.zig");
@@ -16,7 +16,7 @@ const c = @cImport({
 pub const Game = struct {
     allocator: std.mem.Allocator,
     world: *World.World,
-    player: *Player.Player,
+    player: *Entity.Entity,
     assets: Assets.Assets,
     camera: *c.Camera2D,
     cameraManual: bool,
@@ -25,7 +25,15 @@ pub const Game = struct {
     pathfinder: *Pathfinder.Pathfinder,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
-        const player = try Player.Player.init(allocator);
+        const player = try Entity.Entity.init(
+            allocator,
+            Types.Vector2Int{ .x = 3, .y = 2 },
+            1,
+            Entity.EntityData{
+                .player = .{ .asd = true },
+            },
+            "@",
+        );
         const game = try allocator.create(Game);
         const camera = try allocator.create(c.Camera2D);
         var tileset = Tileset.Tileset.init(allocator);
@@ -88,10 +96,10 @@ pub const Game = struct {
             }
         }
 
-        this.world.Update();
-        Systems.updatePlayer(this.player, delta, this.world, this.camera, this.pathfinder);
+        Systems.updatePlayer(this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
         this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
+        this.world.Update();
     }
 
     pub fn Draw(this: *Game) void {
@@ -109,7 +117,7 @@ pub const Game = struct {
         c.DrawFPS(0, 0);
         c.BeginMode2D(this.camera.*);
         this.world.Draw();
-        this.player.Draw(&this.assets);
+        this.player.Draw();
         c.EndMode2D();
         c.EndDrawing();
     }

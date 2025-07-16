@@ -1,6 +1,5 @@
 const std = @import("std");
 const Game = @import("game.zig");
-const Player = @import("../entities/player.zig");
 const Config = @import("../common/config.zig");
 const c = @cImport({
     @cInclude("raylib.h");

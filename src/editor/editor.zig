@@ -1,6 +1,5 @@
 const std = @import("std");
 const World = @import("../game/world.zig");
-const Player = @import("../entities/player.zig");
 const Assets = @import("../game/assets.zig");
 const Tileset = @import("../game/tileset.zig");
 const Config = @import("../common/config.zig");

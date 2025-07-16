@@ -121,11 +121,12 @@ pub const Level = struct {
                         c.DrawRectangle(x, y, Config.tile_width, Config.tile_height, background_color);
                         this.grid[index].tempBackground = null;
 
-                        // Calculate text centering
-                        const font_size = @min(Config.tile_width - 4, Config.tile_height - 4); // Leave some padding
+                        const font_size = 16;
                         const text_width = c.MeasureText(&ascii[0], font_size);
-                        const text_x = x + @divFloor(Config.tile_width - text_width, 2);
-                        const text_y = y + @divFloor(Config.tile_height - font_size, 2);
+                        const text_height = font_size;
+
+                        const text_x = (x + @divFloor((Config.tile_width - text_width), 2));
+                        const text_y = (y + @divFloor((Config.tile_height - text_height), 2));
 
                         // Draw text with better contrast
                         // First draw a shadow/outline for better readability
@@ -159,13 +160,8 @@ pub const Level = struct {
             }
         }
 
-        for (entities.items) |ent| {
-            const entity = ent.Enemy;
-            if (entity.isAscii) {
-                if (entity.ascii) |ascii| {
-                    c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(entity.pos.x), .y = @floatFromInt(entity.pos.y) }, 16, 1, c.BLUE);
-                }
-            }
+        for (entities.items) |*entity| {
+            entity.Draw();
         }
     }
 
