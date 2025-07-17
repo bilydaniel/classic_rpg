@@ -11,81 +11,92 @@ const c = @cImport({
 });
 
 pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(Entity.Entity)) void {
-    //TODO: make movement better, feeld a bit off
-    const grid = world.currentLevel.grid;
+    if (!player.data.player.inCombat) {
+        //TODO: make movement better, feeld a bit off
+        const grid = world.currentLevel.grid;
 
-    if (Config.mouse_mode) {
-        //HOVER:
-        const hover_win = c.GetMousePosition();
-        const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
-        //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
-        //anymore
-        const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
-        const hover_pos = Types.vector2ConvertWithPixels(hover_world);
-        highlightTile(grid, hover_pos);
+        if (Config.mouse_mode) {
+            //HOVER:
+            const hover_win = c.GetMousePosition();
+            const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
+            //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
+            //anymore
+            const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
+            const hover_pos = Types.vector2ConvertWithPixels(hover_world);
+            highlightTile(grid, hover_pos);
 
-        if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-            const destination = c.GetMousePosition();
-            const renderDestination = Utils.screenToRenderTextureCoords(destination);
-            const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
+            if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
+                const destination = c.GetMousePosition();
+                const renderDestination = Utils.screenToRenderTextureCoords(destination);
+                const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
 
-            const player_dest = Utils.pixelToTile(world_pos);
-            //player.dest = player_dest;
-            //TODO: check for wron player_dest
-            player.path = pathfinder.findPath(grid, player.pos, player_dest) catch null;
-        }
+                const player_dest = Utils.pixelToTile(world_pos);
+                //player.dest = player_dest;
+                //TODO: check for wron player_dest
+                player.path = pathfinder.findPath(grid, player.pos, player_dest) catch null;
+            }
 
-        if (player.path) |path| {
-            if (path.currIndex < path.nodes.items.len) {
-                //TODO: add player movement speed
-                if (player.movementCooldown > Config.turn_speed) {
-                    player.pos = path.nodes.items[path.currIndex];
-                    player.path.?.currIndex += 1;
-                    player.movementCooldown = 0;
+            if (player.path) |path| {
+                if (path.currIndex < path.nodes.items.len) {
+                    //TODO: add player movement speed
+                    if (player.movementCooldown > Config.turn_speed) {
+                        player.pos = path.nodes.items[path.currIndex];
+                        player.path.?.currIndex += 1;
+                        player.movementCooldown = 0;
+                    }
+                } else {
+                    player.path.?.deinit();
+                    player.path = null;
                 }
-            } else {
-                player.path.?.deinit();
-                player.path = null;
+                player.movementCooldown += delta;
+            }
+        } else {
+            //TODO: change this shit, change the input system to something better
+
+            if (player.movementCooldown > 0.1) {
+                var new_pos = player.pos;
+                var moved = false;
+
+                if (c.IsKeyDown(c.KEY_H)) {
+                    new_pos.x -= 1;
+                    moved = true;
+                } else if (c.IsKeyDown(c.KEY_L)) {
+                    new_pos.x += 1;
+                    moved = true;
+                } else if (c.IsKeyDown(c.KEY_J)) {
+                    new_pos.y += 1;
+                    moved = true;
+                } else if (c.IsKeyDown(c.KEY_K)) {
+                    new_pos.y -= 1;
+                    moved = true;
+                }
+
+                if (c.IsKeyDown(c.KEY_F)) {
+                    player.data.player.startCombat();
+                }
+
+                if (moved and canMove(world.currentLevel.grid, new_pos)) {
+                    if (isStaircase(world, new_pos)) {
+                        const levelLocation = getStaircaseDestination(world, new_pos);
+                        if (levelLocation) |lvllocation| {
+                            switchLevel(world, lvllocation.level);
+                            new_pos = lvllocation.pos;
+                        }
+                    }
+                    player.pos = new_pos;
+                    player.movementCooldown = 0;
+                    calculateFOV(&world.currentLevel.grid, new_pos, 8);
+                    const combat = checkCombatStart(player, entities);
+                    if (combat and !player.data.player.inCombat) {
+                        player.startCombat(entities);
+                    }
+                }
             }
             player.movementCooldown += delta;
         }
-    } else {
-        //TODO: change this shit, change the input system to something better
-
-        if (player.movementCooldown > 0.1) {
-            var new_pos = player.pos;
-            var moved = false;
-
-            if (c.IsKeyDown(c.KEY_H)) {
-                new_pos.x -= 1;
-                moved = true;
-            } else if (c.IsKeyDown(c.KEY_L)) {
-                new_pos.x += 1;
-                moved = true;
-            } else if (c.IsKeyDown(c.KEY_J)) {
-                new_pos.y += 1;
-                moved = true;
-            } else if (c.IsKeyDown(c.KEY_K)) {
-                new_pos.y -= 1;
-                moved = true;
-            }
-
-            if (moved and canMove(world.currentLevel.grid, new_pos)) {
-                if (isStaircase(world, new_pos)) {
-                    const levelLocation = getStaircaseDestination(world, new_pos);
-                    if (levelLocation) |lvllocation| {
-                        switchLevel(world, lvllocation.level);
-                        new_pos = lvllocation.pos;
-                    }
-                }
-                player.pos = new_pos;
-                player.movementCooldown = 0;
-                calculateFOV(&world.currentLevel.grid, new_pos, 8);
-                _ = checkCombatStart(player, entities);
-            }
-        }
-        player.movementCooldown += delta;
     }
+
+    if (player.data.player.inCombat) {}
 }
 
 pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize) void {
@@ -252,9 +263,14 @@ pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(Entity.
     for (entities.items) |entity| {
         const distance = Types.vector2Distance(player.pos, entity.pos);
         if (distance < 3) {
-            //TODO: force combat
-            std.debug.print("COMBAT {?s}\n", .{entity.ascii});
+            return true;
         }
     }
     return false;
+}
+
+pub fn deployPuppets(puppets: ?[]*Entity) void {
+    for (puppets) |*value| {
+        _ = value;
+    }
 }

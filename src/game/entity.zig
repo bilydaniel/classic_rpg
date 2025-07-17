@@ -2,6 +2,7 @@ const std = @import("std");
 const Config = @import("../common/config.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const Types = @import("../common/types.zig");
+const Systems = @import("Systems.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -79,6 +80,17 @@ pub const Entity = struct {
             }
         }
     }
+
+    pub fn startCombat(this: *Entity, entities: *std.ArrayList(Entity)) void {
+        if (this.data == .player) {
+            this.data.player.inCombat = true;
+            //TODO: filter out entities that are supposed to be in the combat
+            // could be some mechanic around attention/stealth
+            // smarter entities shout at other to help etc...
+            this.data.player.inCombatWith = entities;
+            Systems.deployPuppets(this.data.player.puppets, entities);
+        }
+    }
 };
 
 pub const PlayerData = struct {
@@ -90,7 +102,9 @@ pub const PlayerData = struct {
     //butchering monsters + gathering resources from stuff like chairs, crafting parts for the
     //puppets, maybe in the style of cogmind?
 
-    asd: bool,
+    inCombat: bool,
+    inCombatWith: ?[]*Entity,
+    puppets: ?[]*Entity, //TODO: you can actually loose a puppet
 };
 pub const EnemyData = struct {
     qwe: bool,

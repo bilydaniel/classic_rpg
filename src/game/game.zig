@@ -30,7 +30,7 @@ pub const Game = struct {
             Types.Vector2Int{ .x = 3, .y = 2 },
             1,
             Entity.EntityData{
-                .player = .{ .asd = true },
+                .player = .{ .inCombat = false, .inCombatWith = null, .puppets = null },
             },
             "@",
         );
