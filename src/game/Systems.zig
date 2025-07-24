@@ -10,7 +10,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(Entity.Entity)) void {
+pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(Entity.Entity)) !void {
     if (!player.data.player.inCombat) {
         //TODO: make movement better, feeld a bit off
         const grid = world.currentLevel.grid;
@@ -72,7 +72,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                 }
 
                 if (c.IsKeyDown(c.KEY_F)) {
-                    player.data.player.startCombat();
+                    try player.startCombat(entities);
                 }
 
                 if (moved and canMove(world.currentLevel.grid, new_pos)) {
@@ -88,7 +88,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                     calculateFOV(&world.currentLevel.grid, new_pos, 8);
                     const combat = checkCombatStart(player, entities);
                     if (combat and !player.data.player.inCombat) {
-                        player.startCombat(entities);
+                        try player.startCombat(entities);
                     }
                 }
             }
@@ -96,7 +96,13 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
         }
     }
 
-    if (player.data.player.inCombat) {}
+    if (player.data.player.inCombat) {
+        if (c.IsKeyDown(c.KEY_F)) {
+            if (canEndCombat(player, entities)) {
+                player.endCombat(entities);
+            }
+        }
+    }
 }
 
 pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize) void {
@@ -269,8 +275,32 @@ pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(Entity.
     return false;
 }
 
-pub fn deployPuppets(puppets: ?[]*Entity) void {
-    for (puppets) |*value| {
-        _ = value;
+pub fn canEndCombat(player: *Entity.Entity, entities: *std.ArrayList(Entity.Entity)) bool {
+    _ = player;
+    _ = entities;
+    //TODO: end of combat rules
+    return true;
+}
+
+pub fn deployPuppets(puppets: ?*std.ArrayList(Entity.Entity), entities: *std.ArrayList(Entity.Entity)) !void {
+    if (puppets) |pups| {
+        for (pups.items) |entity| {
+            try entities.append(entity);
+        }
+    }
+}
+
+pub fn returnPuppets(player: *Entity.Entity, entities: *std.ArrayList(Entity.Entity)) !void {
+    findEntitiesType(entities, player.data.player.puppets, Entity.EntityType.puppet, true);
+}
+
+pub fn findEntitiesType(entities: *std.ArrayList(Entity.Entity), result: *std.ArrayList(Entity.Entity), entityType: Entity.EntityType, remove: bool) void {
+    var i = entities.items.len - 1;
+    while (i >= 0) : (i -= 1) {
+        if (entities.items[i].data == entityType) {
+            std.debug.print("FOUND \n", .{});
+        }
+        if (remove) {}
+        _ = result;
     }
 }

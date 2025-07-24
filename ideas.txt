@@ -1,0 +1,17 @@
+player is gonna be a puppetmaster, with his puppets as an army
+the player himself doesent fight, can swap into a combat mode
+where puppets enter the level,
+
+puppetmaster will get a penalty for moving(puppets cant move this turn)
+finding new puppets and  new pieces of puppets, crafting gear for them etc.
+butchering monsters + gathering resources from stuff like chairs, crafting parts for the
+puppets, maybe in the style of cogmind?
+
+Puppetmaster is gonna be a combination of engineer and a necromancer
+Butchering enemies, destroying stuff like chairs and crafting
+dark magic like fear to protect the puppetmaster from enemies
+
+If a puppet dies you loose it permanently
+
+Getting a puppet should be certain (like each level) + some rare chance of getting extra one
+from loot or something

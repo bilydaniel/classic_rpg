@@ -63,7 +63,7 @@ pub const Game = struct {
         return game;
     }
 
-    pub fn Update(this: *Game) void {
+    pub fn Update(this: *Game) !void {
         //TODO: decide on a game loop, look into the book
         Window.UpdateWindow();
         //TODO: when i change the window size, clicking is not precise anymore
@@ -96,7 +96,7 @@ pub const Game = struct {
             }
         }
 
-        Systems.updatePlayer(this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
+        try Systems.updatePlayer(this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
         this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
         this.world.Update();

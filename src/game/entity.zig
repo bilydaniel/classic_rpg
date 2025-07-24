@@ -7,7 +7,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-const EntityType = enum {
+pub const EntityType = enum {
     player, // there could be an enemy puppet master
     puppet, // there could be an enemy puppet, would be cool loot(parts for the puppets, may be the way to optain head, torso)
     enemy,
@@ -75,20 +75,28 @@ pub const Entity = struct {
                 const x = (this.pos.x * Config.tile_width + @divFloor((Config.tile_width - text_width), 2));
                 const y = (this.pos.y * Config.tile_height + @divFloor((Config.tile_height - text_height), 2));
 
-                //TODO: fix centering
                 c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
             }
         }
     }
 
-    pub fn startCombat(this: *Entity, entities: *std.ArrayList(Entity)) void {
+    pub fn startCombat(this: *Entity, entities: *std.ArrayList(Entity)) !void {
         if (this.data == .player) {
-            this.data.player.inCombat = true;
             //TODO: filter out entities that are supposed to be in the combat
             // could be some mechanic around attention/stealth
             // smarter entities shout at other to help etc...
+
+            this.data.player.inCombat = true;
             this.data.player.inCombatWith = entities;
-            Systems.deployPuppets(this.data.player.puppets, entities);
+            try Systems.deployPuppets(this.data.player.puppets, entities);
+        }
+    }
+
+    pub fn endCombat(this: *Entity, entities: *std.ArrayList(Entity)) void {
+        if (this.data == .player) {
+            this.data.player.inCombat = false;
+            this.data.player.inCombatWith = null;
+            try Systems.returnPuppets(this, entities);
         }
     }
 };
@@ -101,10 +109,14 @@ pub const PlayerData = struct {
     //finding new pieces of puppets, crafting gear for them etc.
     //butchering monsters + gathering resources from stuff like chairs, crafting parts for the
     //puppets, maybe in the style of cogmind?
+    //
+    //Puppetmaster is gonna be a combination of engineer and a necromancer
+    //Butchering enemies, destroying stuff like chairs and crafting
+    // dark magic like fear to protect the puppetmaster from enemies
 
     inCombat: bool,
-    inCombatWith: ?[]*Entity,
-    puppets: ?[]*Entity, //TODO: you can actually loose a puppet
+    inCombatWith: *std.ArrayList(Entity),
+    puppets: *std.ArrayList(Entity), //TODO: you can actually loose a puppet
 };
 pub const EnemyData = struct {
     qwe: bool,
