@@ -98,7 +98,7 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn Draw(this: @This(), entities: std.ArrayList(Entity.Entity)) void {
+    pub fn Draw(this: @This(), entities: std.ArrayList(*Entity.Entity)) void {
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
             //const pos_y = your_position.y;
@@ -150,6 +150,7 @@ pub const Level = struct {
                         if (tile.visible) {
                             text_color = c.RED;
                         }
+
                         //c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
 
                         //c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, c.DARKBLUE);
@@ -160,7 +161,7 @@ pub const Level = struct {
             }
         }
 
-        for (entities.items) |*entity| {
+        for (entities.items) |entity| {
             entity.Draw();
         }
     }

@@ -15,3 +15,5 @@ If a puppet dies you loose it permanently
 
 Getting a puppet should be certain (like each level) + some rare chance of getting extra one
 from loot or something
+
+QTE like expedition-33 -> try to expand / change it up a little, make some nice shaders during the qte to keep it interesting

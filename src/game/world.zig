@@ -12,7 +12,7 @@ pub const World = struct {
     currentLevel: *Level.Level,
     levels: std.ArrayList(*Level.Level),
     levelLinks: std.ArrayList(Level.Link),
-    entities: std.ArrayList(Entity.Entity),
+    entities: std.ArrayList(*Entity.Entity),
     tileset: ?*c.Texture2D,
 
     //TODO: https://claude.ai/chat/8b0e4ed0-f114-4284-8f99-4b344afaedcb
@@ -22,20 +22,20 @@ pub const World = struct {
     pub fn init(allocator: std.mem.Allocator, tileset: ?*c.Texture2D) !*World {
         const world = try allocator.create(World);
         var levels = std.ArrayList(*Level.Level).init(allocator);
-        var entities = std.ArrayList(Entity.Entity).init(allocator);
+        var entities = std.ArrayList(*Entity.Entity).init(allocator);
 
         const pos = Types.Vector2Int{ .x = 5, .y = 5 };
-        const entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "$");
+        const entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "r");
 
         const pos2 = Types.Vector2Int{ .x = 6, .y = 6 };
-        const entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "&");
+        const entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "r");
 
         const pos3 = Types.Vector2Int{ .x = 7, .y = 7 };
-        const entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "%");
+        const entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "r");
 
-        try entities.append(entity.*);
-        try entities.append(entity2.*);
-        try entities.append(entity3.*);
+        try entities.append(entity);
+        try entities.append(entity2);
+        try entities.append(entity3);
 
         var level1 = try Level.Level.init(allocator, tileset, 0);
         level1.generateInterestingLevel();

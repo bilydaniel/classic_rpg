@@ -75,27 +75,34 @@ pub const Entity = struct {
                 const x = (this.pos.x * Config.tile_width + @divFloor((Config.tile_width - text_width), 2));
                 const y = (this.pos.y * Config.tile_height + @divFloor((Config.tile_height - text_height), 2));
 
+                if (this.data == .enemy) {
+                    //TODO: figure out colors for everything
+                    this.color = c.RED;
+                }
+
                 c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
             }
         }
     }
 
-    pub fn startCombat(this: *Entity, entities: *std.ArrayList(Entity)) !void {
+    pub fn startCombat(this: *Entity, entities: *std.ArrayList(*Entity)) !void {
         if (this.data == .player) {
             //TODO: filter out entities that are supposed to be in the combat
             // could be some mechanic around attention/stealth
             // smarter entities shout at other to help etc...
 
             this.data.player.inCombat = true;
-            this.data.player.inCombatWith = entities;
-            try Systems.deployPuppets(this.data.player.puppets, entities);
+            for (entities.items) |entity| {
+                try this.data.player.inCombatWith.append(entity);
+            }
+            try Systems.deployPuppets(&this.data.player.puppets, entities);
         }
     }
 
-    pub fn endCombat(this: *Entity, entities: *std.ArrayList(Entity)) void {
+    pub fn endCombat(this: *Entity, entities: *std.ArrayList(*Entity)) void {
         if (this.data == .player) {
             this.data.player.inCombat = false;
-            this.data.player.inCombatWith = null;
+            this.data.player.inCombatWith.clearRetainingCapacity();
             try Systems.returnPuppets(this, entities);
         }
     }
@@ -115,11 +122,13 @@ pub const PlayerData = struct {
     // dark magic like fear to protect the puppetmaster from enemies
 
     inCombat: bool,
-    inCombatWith: *std.ArrayList(Entity),
-    puppets: *std.ArrayList(Entity), //TODO: you can actually loose a puppet
+    inCombatWith: std.ArrayList(*Entity),
+    puppets: std.ArrayList(*Entity), //TODO: you can actually loose a puppet
 };
 pub const EnemyData = struct {
     qwe: bool,
 };
 pub const ItemData = struct {};
-pub const PuppetData = struct {};
+pub const PuppetData = struct {
+    qwe: bool,
+};
