@@ -3,6 +3,7 @@ const Config = @import("../common/config.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
+const Level = @import("level.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -85,7 +86,7 @@ pub const Entity = struct {
         }
     }
 
-    pub fn startCombat(this: *Entity, entities: *std.ArrayList(*Entity)) !void {
+    pub fn startCombat(this: *Entity, entities: *std.ArrayList(*Entity), grid: []Level.Tile) !void {
         if (this.data == .player) {
             //TODO: filter out entities that are supposed to be in the combat
             // could be some mechanic around attention/stealth
@@ -95,7 +96,7 @@ pub const Entity = struct {
             for (entities.items) |entity| {
                 try this.data.player.inCombatWith.append(entity);
             }
-            try Systems.deployPuppets(&this.data.player.puppets, entities);
+            try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
         }
     }
 

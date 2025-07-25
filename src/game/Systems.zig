@@ -72,7 +72,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                 }
 
                 if (c.IsKeyDown(c.KEY_F)) {
-                    try player.startCombat(entities);
+                    try player.startCombat(entities, grid);
                 }
 
                 if (moved and canMove(world.currentLevel.grid, new_pos)) {
@@ -88,7 +88,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                     calculateFOV(&world.currentLevel.grid, new_pos, 8);
                     const combat = checkCombatStart(player, entities);
                     if (combat and !player.data.player.inCombat) {
-                        try player.startCombat(entities);
+                        try player.startCombat(entities, grid);
                     }
                 }
             }
@@ -258,7 +258,9 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
             }
             const dif_pos = Types.Vector2Int.init(x_side, y_side);
             const result_pos = Types.vector2IntAdd(pos, dif_pos);
-            result[count] = result_pos;
+            if (result_pos.x >= 0 and result_pos.y >= 0 and result_pos.x < Config.level_width and result_pos.y < Config.level_height) {
+                result[count] = result_pos;
+            }
             count += 1;
         }
     }
@@ -282,10 +284,16 @@ pub fn canEndCombat(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Ent
     return true;
 }
 
-pub fn deployPuppets(puppets: *std.ArrayList(*Entity.Entity), entities: *std.ArrayList(*Entity.Entity)) !void {
-    for (puppets.items) |entity| {
+pub fn deployPuppets(puppets: *std.ArrayList(*Entity.Entity), entities: *std.ArrayList(*Entity.Entity), grid: []Level.Tile, pos: Types.Vector2Int) !void {
+    for (puppets.items) |*entity| {
+        const pup_pos = findEmptyCloseCell(grid, entities, pos);
         try entities.append(entity);
     }
+}
+
+pub fn findEmptyCloseCell(grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) Types.Vector2Int {
+    const neighbours = neighboursAll(pos);
+    for (neighbours) |neighbour| {}
 }
 
 pub fn returnPuppets(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) !void {
