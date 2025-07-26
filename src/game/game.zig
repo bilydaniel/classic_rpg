@@ -25,18 +25,13 @@ pub const Game = struct {
     pathfinder: *Pathfinder.Pathfinder,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
-        const inCombatWith = std.ArrayList(*Entity.Entity).init(allocator);
-        var puppets = std.ArrayList(*Entity.Entity).init(allocator);
-
-        const pup_pos = Types.Vector2Int{ .x = 5, .y = 5 };
-        const puppet = try Entity.Entity.init(allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .qwe = true } }, "&");
-        try puppets.append(puppet);
+        const playerData = try Entity.PlayerData.init(allocator);
         const player = try Entity.Entity.init(
             allocator,
             Types.Vector2Int{ .x = 3, .y = 2 },
             1,
             Entity.EntityData{
-                .player = .{ .inCombat = false, .inCombatWith = inCombatWith, .puppets = puppets },
+                .player = playerData,
             },
             "@",
         );

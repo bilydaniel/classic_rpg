@@ -33,6 +33,7 @@ pub const Entity = struct {
     ascii: ?[4]u8,
     color: c.Color,
     backgroundColor: c.Color,
+    visible: bool,
     data: EntityData,
 
     pub fn init(
@@ -58,6 +59,7 @@ pub const Entity = struct {
             .path = null,
             .color = c.WHITE,
             .backgroundColor = c.BLACK,
+            .visible = true,
             .data = entityData,
         };
         entity_id += 1;
@@ -65,23 +67,25 @@ pub const Entity = struct {
     }
 
     pub fn Draw(this: *Entity) void {
-        if (this.isAscii) {
-            if (this.ascii) |ascii| {
-                c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, this.backgroundColor);
+        if (this.visible) {
+            if (this.isAscii) {
+                if (this.ascii) |ascii| {
+                    c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, this.backgroundColor);
 
-                const font_size = 16;
-                const text_width = c.MeasureText(&ascii[0], font_size);
-                const text_height = font_size; // Approximate height
+                    const font_size = 16;
+                    const text_width = c.MeasureText(&ascii[0], font_size);
+                    const text_height = font_size; // Approximate height
 
-                const x = (this.pos.x * Config.tile_width + @divFloor((Config.tile_width - text_width), 2));
-                const y = (this.pos.y * Config.tile_height + @divFloor((Config.tile_height - text_height), 2));
+                    const x = (this.pos.x * Config.tile_width + @divFloor((Config.tile_width - text_width), 2));
+                    const y = (this.pos.y * Config.tile_height + @divFloor((Config.tile_height - text_height), 2));
 
-                if (this.data == .enemy) {
-                    //TODO: figure out colors for everything
-                    this.color = c.RED;
+                    if (this.data == .enemy) {
+                        //TODO: figure out colors for everything
+                        this.color = c.RED;
+                    }
+
+                    c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
                 }
-
-                c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
             }
         }
     }
@@ -96,7 +100,9 @@ pub const Entity = struct {
             for (entities.items) |entity| {
                 try this.data.player.inCombatWith.append(entity);
             }
-            try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
+            this.data.player.deployingPuppets = true;
+            _ = grid;
+            //try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
         }
     }
 
@@ -124,7 +130,27 @@ pub const PlayerData = struct {
 
     inCombat: bool,
     inCombatWith: std.ArrayList(*Entity),
+    deployingPuppets: bool,
+    deployingCursor: ?Types.Vector2Int,
+    deployableCells: ?[8]Types.Vector2Int,
     puppets: std.ArrayList(*Entity), //TODO: you can actually loose a puppet
+
+    pub fn init(allocator: std.mem.Allocator) !PlayerData {
+        const inCombatWith = std.ArrayList(*Entity).init(allocator);
+        var puppets = std.ArrayList(*Entity).init(allocator);
+
+        const pup_pos = Types.Vector2Int{ .x = 5, .y = 5 };
+        const puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .qwe = true } }, "&");
+        try puppets.append(puppet);
+        return PlayerData{
+            .inCombat = false,
+            .inCombatWith = inCombatWith,
+            .puppets = puppets,
+            .deployingPuppets = false,
+            .deployingCursor = null,
+            .deployableCells = null,
+        };
+    }
 };
 pub const EnemyData = struct {
     qwe: bool,

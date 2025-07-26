@@ -11,9 +11,9 @@ const c = @cImport({
 });
 
 pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
+    const grid = world.currentLevel.grid;
     if (!player.data.player.inCombat) {
         //TODO: make movement better, feeld a bit off
-        const grid = world.currentLevel.grid;
 
         if (Config.mouse_mode) {
             //HOVER:
@@ -23,7 +23,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
             //anymore
             const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
             const hover_pos = Types.vector2ConvertWithPixels(hover_world);
-            highlightTile(grid, hover_pos);
+            highlightTile(grid, hover_pos, c.GREEN);
 
             if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
                 const destination = c.GetMousePosition();
@@ -71,7 +71,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                     moved = true;
                 }
 
-                if (c.IsKeyDown(c.KEY_F)) {
+                if (c.IsKeyPressed(c.KEY_F)) {
                     try player.startCombat(entities, grid);
                 }
 
@@ -94,12 +94,36 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
             }
             player.movementCooldown += delta;
         }
-    }
-
-    if (player.data.player.inCombat) {
-        if (c.IsKeyDown(c.KEY_F)) {
+    } else {
+        if (player.data.player.deployingPuppets) {
+            const neighbours = neighboursAll(player.pos);
+            for (neighbours) |value| {
+                if (value) |val| {
+                    highlightTile(grid, val, c.BLUE);
+                    if (player.data.player.deployingCursor == null) {
+                        player.data.player.deployingCursor = player.pos;
+                    }
+                }
+            }
+        }
+        if (player.data.player.deployingCursor) |cursor| {
+            player.visible = false;
+            highlightTile(grid, cursor, c.YELLOW);
+            if (c.IsKeyPressed(c.KEY_H)) {
+                player.data.player.deployingCursor.?.x -= 1;
+            } else if (c.IsKeyPressed(c.KEY_L)) {
+                player.data.player.deployingCursor.?.x += 1;
+            } else if (c.IsKeyPressed(c.KEY_J)) {
+                player.data.player.deployingCursor.?.y += 1;
+            } else if (c.IsKeyPressed(c.KEY_K)) {
+                player.data.player.deployingCursor.?.y -= 1;
+            }
+        }
+        if (c.IsKeyPressed(c.KEY_F)) {
             if (canEndCombat(player, entities)) {
                 player.endCombat(entities);
+                player.visible = true;
+                player.data.player.deployingCursor = null;
             }
         }
     }
@@ -169,12 +193,13 @@ pub fn switchLevel(world: *World.World, levelID: u32) void {
     }
 }
 
-pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int) void {
+//TODO: finish highlighting tiles that you can deploy to
+pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) void {
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
         if (index >= 0 and index < grid.len) {
             var tile = &grid[index];
-            tile.tempBackground = c.GREEN;
+            tile.tempBackground = color;
         }
     }
 }
@@ -286,14 +311,18 @@ pub fn canEndCombat(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Ent
 
 pub fn deployPuppets(puppets: *std.ArrayList(*Entity.Entity), entities: *std.ArrayList(*Entity.Entity), grid: []Level.Tile, pos: Types.Vector2Int) !void {
     for (puppets.items) |*entity| {
-        const pup_pos = findEmptyCloseCell(grid, entities, pos);
+        //const pup_pos = findEmptyCloseCell(grid, entities, pos);
+        _ = grid;
+        _ = pos;
         try entities.append(entity);
     }
 }
 
 pub fn findEmptyCloseCell(grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) Types.Vector2Int {
     const neighbours = neighboursAll(pos);
-    for (neighbours) |neighbour| {}
+    _ = neighbours;
+    _ = grid;
+    _ = entities;
 }
 
 pub fn returnPuppets(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) !void {
