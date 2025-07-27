@@ -19,13 +19,87 @@ pub const Tile = struct {
     texture_id: ?i32,
     tile_type: TileType,
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
-    rect: c.Rectangle,
+    walkable: bool,
     isAscii: bool,
     ascii: ?[2]u8,
     backgroundColor: c.Color,
     tempBackground: ?c.Color,
     seen: bool,
     visible: bool,
+
+    pub fn initFloor() Tile {
+        return Tile{
+            .texture_id = null,
+            .tile_type = .floor,
+            .solid = false,
+            .walkable = true,
+            .isAscii = true,
+            .ascii = .{ '.', 0 },
+            .backgroundColor = c.BLACK,
+            .seen = false,
+            .visible = false,
+            .tempBackground = null,
+        };
+    }
+    pub fn initWall() Tile {
+        return Tile{
+            .texture_id = null,
+            .tile_type = .wall,
+            .solid = true,
+            .walkable = false,
+            .isAscii = true,
+            .ascii = .{ '#', 0 },
+            .backgroundColor = c.WHITE,
+            .seen = false,
+            .visible = false,
+            .tempBackground = null,
+        };
+    }
+
+    pub fn initDoor() Tile {
+        return Tile{
+            .texture_id = null,
+            .tile_type = .floor,
+            .solid = false,
+            .walkable = false,
+            .isAscii = true,
+            .ascii = .{ '+', 0 },
+            .backgroundColor = c.BROWN,
+            .seen = false,
+            .visible = false,
+            .tempBackground = null,
+        };
+    }
+
+    pub fn initWater() Tile {
+        return Tile{
+            .texture_id = null,
+            .tile_type = .water, // You might want to add a water tile type
+            .solid = false,
+            .walkable = false,
+            .isAscii = true,
+            .ascii = .{ '~', 0 },
+            .backgroundColor = c.BLUE,
+            .seen = false,
+            .visible = false,
+            .tempBackground = null,
+        };
+    }
+
+    pub fn initStaircase() Tile {
+        return Tile{
+            .texture_id = null,
+            .tile_type = .staircase,
+            .solid = false,
+            .walkable = true,
+            .isAscii = true,
+            .ascii = .{ '>', 0 },
+            .backgroundColor = c.PURPLE,
+            .seen = false,
+            .visible = false,
+            .tempBackground = null,
+        };
+    }
 };
 
 pub const Link = struct {
@@ -55,21 +129,7 @@ pub const Level = struct {
         const grid = try allocator.alloc(Tile, tileCount);
 
         for (0..grid.len) |i| {
-            grid[i] = Tile{
-                .texture_id = null,
-                .tile_type = .floor,
-                .solid = false,
-                .rect = c.Rectangle{
-                    .x = @floatFromInt(i % @as(usize, @intCast(Config.tile_width))),
-                    .y = @floatFromInt(i / @as(usize, @intCast(Config.tile_height))),
-                },
-                .isAscii = false,
-                .ascii = .{ '#', 0 },
-                .backgroundColor = c.DARKBLUE,
-                .seen = false,
-                .visible = false,
-                .tempBackground = null,
-            };
+            grid[i] = Tile.initFloor();
         }
 
         //const tileTexture = c.LoadTexture("assets/base_tile.png");
@@ -179,26 +239,7 @@ pub const Level = struct {
 
         // First, fill everything with walls
         for (0..level.grid.len) |i| {
-            const x = i % width;
-            const y = @divFloor(i, width);
-
-            level.grid[i] = Tile{
-                .texture_id = null,
-                .tile_type = .wall,
-                .solid = true,
-                .rect = c.Rectangle{
-                    .x = @floatFromInt(x * Config.tile_width),
-                    .y = @floatFromInt(y * Config.tile_height),
-                    .width = @floatFromInt(Config.tile_width),
-                    .height = @floatFromInt(Config.tile_height),
-                },
-                .isAscii = true,
-                .ascii = .{ '#', 0 },
-                .backgroundColor = c.WHITE,
-                .seen = false,
-                .visible = false,
-                .tempBackground = null,
-            };
+            level.grid[i] = Tile.initWall();
         }
 
         // Create some rooms
@@ -216,23 +257,7 @@ pub const Level = struct {
                 for (room.x..room.x + room.w) |x| {
                     if (x < width and y < height) {
                         const idx = y * width + x;
-                        level.grid[idx] = Tile{
-                            .texture_id = null,
-                            .tile_type = .floor,
-                            .solid = false,
-                            .rect = c.Rectangle{
-                                .x = @floatFromInt(x * Config.tile_width),
-                                .y = @floatFromInt(y * Config.tile_height),
-                                .width = @floatFromInt(Config.tile_width),
-                                .height = @floatFromInt(Config.tile_height),
-                            },
-                            .isAscii = true,
-                            .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BLACK,
-                            .seen = false,
-                            .visible = false,
-                            .tempBackground = null,
-                        };
+                        level.grid[idx] = Tile.initFloor();
                     }
                 }
             }
@@ -256,23 +281,7 @@ pub const Level = struct {
                 for (start_x..end_x + 1) |x| {
                     if (x < width and corridor.y1 < height) {
                         const idx = corridor.y1 * width + x;
-                        level.grid[idx] = Tile{
-                            .texture_id = null,
-                            .tile_type = .floor,
-                            .solid = false,
-                            .rect = c.Rectangle{
-                                .x = @floatFromInt(x * Config.tile_width),
-                                .y = @floatFromInt(corridor.y1 * Config.tile_height),
-                                .width = @floatFromInt(Config.tile_width),
-                                .height = @floatFromInt(Config.tile_height),
-                            },
-                            .isAscii = true,
-                            .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BLACK,
-                            .seen = false,
-                            .visible = false,
-                            .tempBackground = null,
-                        };
+                        level.grid[idx] = Tile.initFloor();
                     }
                 }
             }
@@ -283,23 +292,7 @@ pub const Level = struct {
                 for (start_y..end_y + 1) |y| {
                     if (corridor.x1 < width and y < height) {
                         const idx = y * width + corridor.x1;
-                        level.grid[idx] = Tile{
-                            .texture_id = null,
-                            .tile_type = .floor,
-                            .solid = false,
-                            .rect = c.Rectangle{
-                                .x = @floatFromInt(corridor.x1 * Config.tile_width),
-                                .y = @floatFromInt(y * Config.tile_height),
-                                .width = @floatFromInt(Config.tile_width),
-                                .height = @floatFromInt(Config.tile_height),
-                            },
-                            .isAscii = true,
-                            .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BLACK,
-                            .seen = false,
-                            .visible = false,
-                            .tempBackground = null,
-                        };
+                        level.grid[idx] = Tile.initFloor();
                     }
                 }
             }
@@ -316,23 +309,7 @@ pub const Level = struct {
         for (treasures) |treasure| {
             if (treasure.x < width and treasure.y < height) {
                 const idx = treasure.y * width + treasure.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .floor, // You might want to add a treasure tile type
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(treasure.x * Config.tile_width),
-                        .y = @floatFromInt(treasure.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '$', 0 },
-                    .backgroundColor = c.GOLD,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initFloor();
             }
         }
 
@@ -347,23 +324,7 @@ pub const Level = struct {
         for (doors) |door| {
             if (door.x < width and door.y < height) {
                 const idx = door.y * width + door.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .floor,
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(door.x * Config.tile_width),
-                        .y = @floatFromInt(door.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '+', 0 },
-                    .backgroundColor = c.BROWN,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initDoor();
             }
         }
 
@@ -378,46 +339,14 @@ pub const Level = struct {
         for (hazards) |hazard| {
             if (hazard.x < width and hazard.y < height) {
                 const idx = hazard.y * width + hazard.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .floor, // You might want to add a water tile type
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(hazard.x * Config.tile_width),
-                        .y = @floatFromInt(hazard.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '~', 0 },
-                    .backgroundColor = c.BLUE,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initWater();
             }
         }
 
         // Add a staircase
         if (22 < width and 18 < height) {
             const idx = 18 * width + 22;
-            level.grid[idx] = Tile{
-                .texture_id = null,
-                .tile_type = .staircase,
-                .solid = false,
-                .rect = c.Rectangle{
-                    .x = @floatFromInt(22 * Config.tile_width),
-                    .y = @floatFromInt(18 * Config.tile_height),
-                    .width = @floatFromInt(Config.tile_width),
-                    .height = @floatFromInt(Config.tile_height),
-                },
-                .isAscii = true,
-                .ascii = .{ '>', 0 },
-                .backgroundColor = c.PURPLE,
-                .seen = false,
-                .visible = false,
-                .tempBackground = null,
-            };
+            level.grid[idx] = Tile.initStaircase();
         }
     }
 
@@ -427,25 +356,7 @@ pub const Level = struct {
 
         // First, fill everything with walls
         for (0..level.grid.len) |i| {
-            const x = i % width;
-            const y = @divFloor(i, width);
-            level.grid[i] = Tile{
-                .texture_id = null,
-                .tile_type = .wall,
-                .solid = true,
-                .rect = c.Rectangle{
-                    .x = @floatFromInt(x * Config.tile_width),
-                    .y = @floatFromInt(y * Config.tile_height),
-                    .width = @floatFromInt(Config.tile_width),
-                    .height = @floatFromInt(Config.tile_height),
-                },
-                .isAscii = true,
-                .ascii = .{ '#', 0 },
-                .backgroundColor = c.WHITE,
-                .seen = false,
-                .visible = false,
-                .tempBackground = null,
-            };
+            level.grid[i] = Tile.initWall();
         }
 
         // Create larger rooms to fill the 80x25 space
@@ -469,23 +380,7 @@ pub const Level = struct {
                 for (room.x..room.x + room.w) |x| {
                     if (x < width and y < height) {
                         const idx = y * width + x;
-                        level.grid[idx] = Tile{
-                            .texture_id = null,
-                            .tile_type = .floor,
-                            .solid = false,
-                            .rect = c.Rectangle{
-                                .x = @floatFromInt(x * Config.tile_width),
-                                .y = @floatFromInt(y * Config.tile_height),
-                                .width = @floatFromInt(Config.tile_width),
-                                .height = @floatFromInt(Config.tile_height),
-                            },
-                            .isAscii = true,
-                            .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BLACK,
-                            .seen = false,
-                            .visible = false,
-                            .tempBackground = null,
-                        };
+                        level.grid[idx] = Tile.initFloor();
                     }
                 }
             }
@@ -515,23 +410,7 @@ pub const Level = struct {
                 for (start_x..end_x + 1) |x| {
                     if (x < width and corridor.y1 < height) {
                         const idx = corridor.y1 * width + x;
-                        level.grid[idx] = Tile{
-                            .texture_id = null,
-                            .tile_type = .floor,
-                            .solid = false,
-                            .rect = c.Rectangle{
-                                .x = @floatFromInt(x * Config.tile_width),
-                                .y = @floatFromInt(corridor.y1 * Config.tile_height),
-                                .width = @floatFromInt(Config.tile_width),
-                                .height = @floatFromInt(Config.tile_height),
-                            },
-                            .isAscii = true,
-                            .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BLACK,
-                            .seen = false,
-                            .visible = false,
-                            .tempBackground = null,
-                        };
+                        level.grid[idx] = Tile.initFloor();
                     }
                 }
             }
@@ -542,23 +421,7 @@ pub const Level = struct {
                 for (start_y..end_y + 1) |y| {
                     if (corridor.x1 < width and y < height) {
                         const idx = y * width + corridor.x1;
-                        level.grid[idx] = Tile{
-                            .texture_id = null,
-                            .tile_type = .floor,
-                            .solid = false,
-                            .rect = c.Rectangle{
-                                .x = @floatFromInt(corridor.x1 * Config.tile_width),
-                                .y = @floatFromInt(y * Config.tile_height),
-                                .width = @floatFromInt(Config.tile_width),
-                                .height = @floatFromInt(Config.tile_height),
-                            },
-                            .isAscii = true,
-                            .ascii = .{ '.', 0 },
-                            .backgroundColor = c.BLACK,
-                            .seen = false,
-                            .visible = false,
-                            .tempBackground = null,
-                        };
+                        level.grid[idx] = Tile.initFloor();
                     }
                 }
             }
@@ -580,23 +443,7 @@ pub const Level = struct {
         for (treasures) |treasure| {
             if (treasure.x < width and treasure.y < height) {
                 const idx = treasure.y * width + treasure.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .floor,
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(treasure.x * Config.tile_width),
-                        .y = @floatFromInt(treasure.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '$', 0 },
-                    .backgroundColor = c.GOLD,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initFloor();
             }
         }
 
@@ -618,23 +465,7 @@ pub const Level = struct {
         for (doors) |door| {
             if (door.x < width and door.y < height) {
                 const idx = door.y * width + door.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .floor,
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(door.x * Config.tile_width),
-                        .y = @floatFromInt(door.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '+', 0 },
-                    .backgroundColor = c.BROWN,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initFloor();
             }
         }
 
@@ -658,23 +489,7 @@ pub const Level = struct {
         for (hazards) |hazard| {
             if (hazard.x < width and hazard.y < height) {
                 const idx = hazard.y * width + hazard.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .floor,
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(hazard.x * Config.tile_width),
-                        .y = @floatFromInt(hazard.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '~', 0 },
-                    .backgroundColor = c.BLUE,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initWater();
             }
         }
 
@@ -686,23 +501,7 @@ pub const Level = struct {
         for (staircases) |stair| {
             if (stair.x < width and stair.y < height) {
                 const idx = stair.y * width + stair.x;
-                level.grid[idx] = Tile{
-                    .texture_id = null,
-                    .tile_type = .staircase,
-                    .solid = false,
-                    .rect = c.Rectangle{
-                        .x = @floatFromInt(stair.x * Config.tile_width),
-                        .y = @floatFromInt(stair.y * Config.tile_height),
-                        .width = @floatFromInt(Config.tile_width),
-                        .height = @floatFromInt(Config.tile_height),
-                    },
-                    .isAscii = true,
-                    .ascii = .{ '>', 0 },
-                    .backgroundColor = c.PURPLE,
-                    .seen = false,
-                    .visible = false,
-                    .tempBackground = null,
-                };
+                level.grid[idx] = Tile.initStaircase();
             }
         }
     }

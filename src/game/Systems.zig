@@ -99,7 +99,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
             const neighbours = neighboursAll(player.pos);
             for (neighbours) |value| {
                 if (value) |val| {
-                    highlightTile(grid, val, c.BLUE);
+                    highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
                     if (player.data.player.deployingCursor == null) {
                         player.data.player.deployingCursor = player.pos;
                     }
@@ -117,6 +117,11 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                 player.data.player.deployingCursor.?.y += 1;
             } else if (c.IsKeyPressed(c.KEY_K)) {
                 player.data.player.deployingCursor.?.y -= 1;
+            } else if (c.IsKeyPressed(c.KEY_D)) {
+                if (canDeploy(player, grid, entities)) {
+                    //deployPuppet(player, entities);
+                    std.debug.print("DEPLOY\n", .{});
+                }
             }
         }
         if (c.IsKeyPressed(c.KEY_F)) {
@@ -127,6 +132,45 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
             }
         }
     }
+}
+
+pub fn canDeploy(player: *Entity.Entity, grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity)) bool {
+    const deploy_pos = player.data.player.deployingCursor;
+    if (deploy_pos) |dep_pos| {
+        if (Types.vector2IntCompare(player.pos, dep_pos)) {
+            return false;
+        }
+
+        const entity = getEntityByPos(entities, dep_pos);
+        if (entity) |_| {
+            return false;
+        }
+        const index = posToIndex(dep_pos);
+        if (index) |idx| {
+            const deploy_tile = grid[idx];
+            if (deploy_tile.solid) {
+                return false;
+            }
+            if (!deploy_tile.walkable) {
+                return false;
+            }
+            if (player.data.player.deployableCells) |deployable_cells|{
+                //@FINISH
+                deployable_cells.
+            }
+                return true;
+        }
+    }
+    return false;
+}
+
+pub fn getEntityByPos(entities: *std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
+    for (entities.items) |entity| {
+        if (Types.vector2IntCompare(entity.pos, pos)) {
+            return entity;
+        }
+    }
+    return null;
 }
 
 pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize) void {
@@ -237,7 +281,11 @@ pub fn posToIndex(pos: Types.Vector2Int) ?usize {
     if (pos.x < 0 or pos.y < 0) {
         return null;
     }
-    return @intCast(pos.y * Config.level_width + pos.x);
+    const result: usize = @intCast(pos.y * Config.level_width + pos.x);
+    if (result >= Config.level_width * Config.level_height) {
+        return null;
+    }
+    return result;
 }
 
 pub fn indexToPos(index: i32) Types.Vector2Int {
