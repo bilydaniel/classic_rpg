@@ -90,13 +90,14 @@ pub const Entity = struct {
         }
     }
 
-    pub fn startCombat(this: *Entity, entities: *std.ArrayList(*Entity), grid: []Level.Tile) !void {
+    pub fn startCombatSetup(this: *Entity, entities: *std.ArrayList(*Entity), grid: []Level.Tile) !void {
         if (this.data == .player) {
             //TODO: filter out entities that are supposed to be in the combat
             // could be some mechanic around attention/stealth
             // smarter entities shout at other to help etc...
 
-            this.data.player.inCombat = true;
+            this.data.player.combatState = .setting_up;
+
             for (entities.items) |entity| {
                 try this.data.player.inCombatWith.append(entity);
             }
@@ -115,6 +116,12 @@ pub const Entity = struct {
     }
 };
 
+pub const combatStateEnum = enum {
+    out,
+    setting_up,
+    in,
+};
+
 pub const PlayerData = struct {
     //TODO: player is gonna be a puppetmaster, with his puppets as an army
     //the player himself doesent fight, can swap into a combat mode
@@ -128,11 +135,11 @@ pub const PlayerData = struct {
     //Butchering enemies, destroying stuff like chairs and crafting
     // dark magic like fear to protect the puppetmaster from enemies
 
-    inCombat: bool,
     inCombatWith: std.ArrayList(*Entity),
+    combatState: combatStateEnum,
     deployingPuppets: bool,
     deployingCursor: ?Types.Vector2Int,
-    deployableCells: ?[8]Types.Vector2Int,
+    deployableCells: ?[8]?Types.Vector2Int,
     puppets: std.ArrayList(*Entity), //TODO: you can actually loose a puppet
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
@@ -143,7 +150,7 @@ pub const PlayerData = struct {
         const puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .qwe = true } }, "&");
         try puppets.append(puppet);
         return PlayerData{
-            .inCombat = false,
+            .inCombat = .out,
             .inCombatWith = inCombatWith,
             .puppets = puppets,
             .deployingPuppets = false,

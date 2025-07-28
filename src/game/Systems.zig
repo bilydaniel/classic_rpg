@@ -72,7 +72,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                 }
 
                 if (c.IsKeyPressed(c.KEY_F)) {
-                    try player.startCombat(entities, grid);
+                    try player.startCombatSetup(entities, grid);
                 }
 
                 if (moved and canMove(world.currentLevel.grid, new_pos)) {
@@ -88,7 +88,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                     calculateFOV(&world.currentLevel.grid, new_pos, 8);
                     const combat = checkCombatStart(player, entities);
                     if (combat and !player.data.player.inCombat) {
-                        try player.startCombat(entities, grid);
+                        try player.startCombatSetup(entities, grid);
                     }
                 }
             }
@@ -97,6 +97,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
     } else {
         if (player.data.player.deployingPuppets) {
             const neighbours = neighboursAll(player.pos);
+            player.data.player.deployableCells = neighbours;
             for (neighbours) |value| {
                 if (value) |val| {
                     highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
@@ -119,8 +120,7 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                 player.data.player.deployingCursor.?.y -= 1;
             } else if (c.IsKeyPressed(c.KEY_D)) {
                 if (canDeploy(player, grid, entities)) {
-                    //deployPuppet(player, entities);
-                    std.debug.print("DEPLOY\n", .{});
+                    try deployPuppet(player, entities);
                 }
             }
         }
@@ -130,6 +130,18 @@ pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, cam
                 player.visible = true;
                 player.data.player.deployingCursor = null;
             }
+        }
+    }
+}
+
+pub fn deployPuppet(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) !void {
+    var puppets = &player.data.player.puppets;
+    std.debug.print("len: {}\n", .{puppets.items.len});
+    if (puppets.items.len > 0) {
+        const pup = puppets.swapRemove(puppets.items.len - 1);
+        if (player.data.player.deployingCursor) |curs| {
+            pup.pos = curs;
+            try entities.append(pup);
         }
     }
 }
@@ -154,11 +166,23 @@ pub fn canDeploy(player: *Entity.Entity, grid: []Level.Tile, entities: *std.Arra
             if (!deploy_tile.walkable) {
                 return false;
             }
-            if (player.data.player.deployableCells) |deployable_cells|{
-                //@FINISH
-                deployable_cells.
+            if (player.data.player.deployableCells) |deployable_cells| {
+                if (!isDeployable(dep_pos, &deployable_cells)) {
+                    return false;
+                }
             }
+            return true;
+        }
+    }
+    return false;
+}
+
+pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) bool {
+    for (cells) |cell| {
+        if (cell) |cell_| {
+            if (Types.vector2IntCompare(pos, cell_)) {
                 return true;
+            }
         }
     }
     return false;
@@ -355,15 +379,6 @@ pub fn canEndCombat(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Ent
     _ = entities;
     //TODO: end of combat rules
     return true;
-}
-
-pub fn deployPuppets(puppets: *std.ArrayList(*Entity.Entity), entities: *std.ArrayList(*Entity.Entity), grid: []Level.Tile, pos: Types.Vector2Int) !void {
-    for (puppets.items) |*entity| {
-        //const pup_pos = findEmptyCloseCell(grid, entities, pos);
-        _ = grid;
-        _ = pos;
-        try entities.append(entity);
-    }
 }
 
 pub fn findEmptyCloseCell(grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) Types.Vector2Int {
