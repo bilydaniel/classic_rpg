@@ -1,6 +1,7 @@
 const std = @import("std");
 const World = @import("world.zig");
 const Systems = @import("Systems.zig");
+const Gamestate = @import("gamestate.zig");
 const Entity = @import("entity.zig");
 const Assets = @import("../game/assets.zig");
 const Tileset = @import("../game/tileset.zig");
@@ -15,6 +16,7 @@ const c = @cImport({
 
 pub const Game = struct {
     allocator: std.mem.Allocator,
+    gameState: *Gamestate.gameState,
     world: *World.World,
     player: *Entity.Entity,
     assets: Assets.Assets,
@@ -25,6 +27,7 @@ pub const Game = struct {
     pathfinder: *Pathfinder.Pathfinder,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
+        const gamestate = try Gamestate.gameState.init(allocator);
         const playerData = try Entity.PlayerData.init(allocator);
         const player = try Entity.Entity.init(
             allocator,
@@ -51,6 +54,7 @@ pub const Game = struct {
 
         game.* = .{
             .allocator = allocator,
+            .gameState = gamestate,
             .world = try World.World.init(allocator, tileset.source),
             .player = player,
             .assets = Assets.Assets.init(allocator),
@@ -71,7 +75,6 @@ pub const Game = struct {
         const delta = c.GetFrameTime();
         this.timeSinceTurn += delta;
         //TODO: make a state machine for inputs
-        //this.player.Update();
 
         //TODO: change to look mode
         if (c.IsKeyDown(c.KEY_W)) {
@@ -97,7 +100,7 @@ pub const Game = struct {
             }
         }
 
-        try Systems.updatePlayer(this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
+        try Systems.updatePlayer(this.gameState, this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
         this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
         this.world.Update();

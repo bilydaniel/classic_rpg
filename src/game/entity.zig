@@ -33,7 +33,9 @@ pub const Entity = struct {
     ascii: ?[4]u8,
     color: c.Color,
     backgroundColor: c.Color,
+    tempBackground: ?c.Color,
     visible: bool,
+    turnTaken: bool,
     data: EntityData,
 
     pub fn init(
@@ -59,7 +61,9 @@ pub const Entity = struct {
             .path = null,
             .color = c.WHITE,
             .backgroundColor = c.BLACK,
+            .tempBackground = null,
             .visible = true,
+            .turnTaken = false,
             .data = entityData,
         };
         entity_id += 1;
@@ -70,7 +74,10 @@ pub const Entity = struct {
         if (this.visible) {
             if (this.isAscii) {
                 if (this.ascii) |ascii| {
-                    c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, this.backgroundColor);
+                    var background_color = this.backgroundColor;
+                    if (this.tempBackground) |temp_color| {
+                        background_color = temp_color;
+                    }
 
                     const font_size = 16;
                     const text_width = c.MeasureText(&ascii[0], font_size);
@@ -78,6 +85,8 @@ pub const Entity = struct {
 
                     const x = (this.pos.x * Config.tile_width + @divFloor((Config.tile_width - text_width), 2));
                     const y = (this.pos.y * Config.tile_height + @divFloor((Config.tile_height - text_height), 2));
+
+                    c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, background_color);
 
                     if (this.data == .enemy) {
                         //TODO: figure out colors for everything
@@ -96,12 +105,11 @@ pub const Entity = struct {
             // could be some mechanic around attention/stealth
             // smarter entities shout at other to help etc...
 
-            this.data.player.combatState = .setting_up;
+            this.data.player.state = .deploying_puppets;
 
             for (entities.items) |entity| {
                 try this.data.player.inCombatWith.append(entity);
             }
-            this.data.player.deployingPuppets = true;
             _ = grid;
             //try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
         }
@@ -109,17 +117,28 @@ pub const Entity = struct {
 
     pub fn endCombat(this: *Entity, entities: *std.ArrayList(*Entity)) void {
         if (this.data == .player) {
-            this.data.player.inCombat = false;
+            this.data.player.state = .walking;
             this.data.player.inCombatWith.clearRetainingCapacity();
             try Systems.returnPuppets(this, entities);
         }
     }
+
+    pub fn allPupsTurnTaken(this: *Entity) bool {
+        if (this.data == .player) {
+            for (this.data.player.puppets.items) |pup| {
+                if (pup.turnTaken == false) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 };
 
-pub const combatStateEnum = enum {
-    out,
-    setting_up,
-    in,
+pub const playerStateEnum = enum {
+    walking,
+    deploying_puppets,
+    in_combat,
 };
 
 pub const PlayerData = struct {
@@ -136,10 +155,7 @@ pub const PlayerData = struct {
     // dark magic like fear to protect the puppetmaster from enemies
 
     inCombatWith: std.ArrayList(*Entity),
-    combatState: combatStateEnum,
-    deployingPuppets: bool,
-    deployingCursor: ?Types.Vector2Int,
-    deployableCells: ?[8]?Types.Vector2Int,
+    state: playerStateEnum,
     puppets: std.ArrayList(*Entity), //TODO: you can actually loose a puppet
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
@@ -148,14 +164,13 @@ pub const PlayerData = struct {
 
         const pup_pos = Types.Vector2Int{ .x = 5, .y = 5 };
         const puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .qwe = true } }, "&");
+        const puppet2 = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .qwe = true } }, "%");
         try puppets.append(puppet);
+        try puppets.append(puppet2);
         return PlayerData{
-            .inCombat = .out,
+            .state = .walking,
             .inCombatWith = inCombatWith,
             .puppets = puppets,
-            .deployingPuppets = false,
-            .deployingCursor = null,
-            .deployableCells = null,
         };
     }
 };

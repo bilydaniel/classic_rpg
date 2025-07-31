@@ -22,18 +22,6 @@ pub fn main() !void {
     const running = true;
     while (!c.WindowShouldClose() and running) {
         try game.Update();
-
         game.Draw();
-
-        //        c.BeginDrawing();
-        //        c.DrawTexturePro(
-        //            Window.screen.texture,
-        //            c.Rectangle{ .x = 0, .y = 0, .width = @as(f32, Config.game_width), .height = @as(f32, -Config.game_height) },
-        //            c.Rectangle{ .x = @as(f32, @floatFromInt(Window.offsetx)), .y = @as(f32, @floatFromInt(Window.offsety)), .width = @as(f32, @floatFromInt(Window.scaledWidth)), .height = @as(f32, @floatFromInt(Window.scaledHeight)) },
-        //            c.Vector2{ .x = 0, .y = 0 },
-        //            0.0,
-        //            c.WHITE,
-        //        );
-        //        c.EndDrawing();
     }
 }

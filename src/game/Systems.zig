@@ -2,6 +2,7 @@ const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
 const World = @import("world.zig");
 const Entity = @import("entity.zig");
+const Gamestate = @import("gamestate.zig");
 const Level = @import("level.zig");
 const Types = @import("../common/types.zig");
 const std = @import("std");
@@ -10,144 +11,215 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub fn updatePlayer(player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
-    const grid = world.currentLevel.grid;
-    if (!player.data.player.inCombat) {
-        //TODO: make movement better, feeld a bit off
+pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
+    const grid = world.currentLevel.grid; // for easier access
+    switch (player.data.player.state) {
+        .walking => {
+            //TODO: make movement better, feels a bit off
+            if (Config.mouse_mode) {
+                //HOVER:
+                const hover_win = c.GetMousePosition();
+                const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
+                //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
+                //anymore
+                const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
+                const hover_pos = Types.vector2ConvertWithPixels(hover_world);
+                highlightTile(grid, hover_pos, c.GREEN);
 
-        if (Config.mouse_mode) {
-            //HOVER:
-            const hover_win = c.GetMousePosition();
-            const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
-            //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
-            //anymore
-            const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
-            const hover_pos = Types.vector2ConvertWithPixels(hover_world);
-            highlightTile(grid, hover_pos, c.GREEN);
+                if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
+                    const destination = c.GetMousePosition();
+                    const renderDestination = Utils.screenToRenderTextureCoords(destination);
+                    const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
 
-            if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-                const destination = c.GetMousePosition();
-                const renderDestination = Utils.screenToRenderTextureCoords(destination);
-                const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
+                    const player_dest = Utils.pixelToTile(world_pos);
+                    //player.dest = player_dest;
+                    //TODO: check for wron player_dest
+                    player.path = pathfinder.findPath(grid, player.pos, player_dest) catch null;
+                }
 
-                const player_dest = Utils.pixelToTile(world_pos);
-                //player.dest = player_dest;
-                //TODO: check for wron player_dest
-                player.path = pathfinder.findPath(grid, player.pos, player_dest) catch null;
-            }
-
-            if (player.path) |path| {
-                if (path.currIndex < path.nodes.items.len) {
-                    //TODO: add player movement speed
-                    if (player.movementCooldown > Config.turn_speed) {
-                        player.pos = path.nodes.items[path.currIndex];
-                        player.path.?.currIndex += 1;
-                        player.movementCooldown = 0;
+                if (player.path) |path| {
+                    if (path.currIndex < path.nodes.items.len) {
+                        //TODO: add player movement speed
+                        if (player.movementCooldown > Config.turn_speed) {
+                            player.pos = path.nodes.items[path.currIndex];
+                            player.path.?.currIndex += 1;
+                            player.movementCooldown = 0;
+                        }
+                    } else {
+                        player.path.?.deinit();
+                        player.path = null;
                     }
-                } else {
-                    player.path.?.deinit();
-                    player.path = null;
+                    player.movementCooldown += delta;
+                }
+            } else {
+                //TODO: change this shit, change the input system to something better
+
+                if (player.movementCooldown > 0.1) {
+                    var new_pos = player.pos;
+                    var moved = false;
+
+                    if (c.IsKeyDown(c.KEY_H)) {
+                        new_pos.x -= 1;
+                        moved = true;
+                    } else if (c.IsKeyDown(c.KEY_L)) {
+                        new_pos.x += 1;
+                        moved = true;
+                    } else if (c.IsKeyDown(c.KEY_J)) {
+                        new_pos.y += 1;
+                        moved = true;
+                    } else if (c.IsKeyDown(c.KEY_K)) {
+                        new_pos.y -= 1;
+                        moved = true;
+                    }
+
+                    if (c.IsKeyPressed(c.KEY_F)) {
+                        try player.startCombatSetup(entities, grid);
+                    }
+
+                    if (moved and canMove(world.currentLevel.grid, new_pos)) {
+                        if (isStaircase(world, new_pos)) {
+                            const levelLocation = getStaircaseDestination(world, new_pos);
+                            if (levelLocation) |lvllocation| {
+                                switchLevel(world, lvllocation.level);
+                                new_pos = lvllocation.pos;
+                            }
+                        }
+                        player.pos = new_pos;
+                        player.movementCooldown = 0;
+                        calculateFOV(&world.currentLevel.grid, new_pos, 8);
+                        const combat = checkCombatStart(player, entities);
+                        if (combat and player.data.player.state != .in_combat) {
+                            try player.startCombatSetup(entities, grid);
+                        }
+                    }
                 }
                 player.movementCooldown += delta;
             }
-        } else {
-            //TODO: change this shit, change the input system to something better
-
-            if (player.movementCooldown > 0.1) {
-                var new_pos = player.pos;
-                var moved = false;
-
-                if (c.IsKeyDown(c.KEY_H)) {
-                    new_pos.x -= 1;
-                    moved = true;
-                } else if (c.IsKeyDown(c.KEY_L)) {
-                    new_pos.x += 1;
-                    moved = true;
-                } else if (c.IsKeyDown(c.KEY_J)) {
-                    new_pos.y += 1;
-                    moved = true;
-                } else if (c.IsKeyDown(c.KEY_K)) {
-                    new_pos.y -= 1;
-                    moved = true;
-                }
-
-                if (c.IsKeyPressed(c.KEY_F)) {
-                    try player.startCombatSetup(entities, grid);
-                }
-
-                if (moved and canMove(world.currentLevel.grid, new_pos)) {
-                    if (isStaircase(world, new_pos)) {
-                        const levelLocation = getStaircaseDestination(world, new_pos);
-                        if (levelLocation) |lvllocation| {
-                            switchLevel(world, lvllocation.level);
-                            new_pos = lvllocation.pos;
+        },
+        .deploying_puppets => {
+            if (gamestate.deployableCells == null) {
+                const neighbours = neighboursAll(player.pos);
+                gamestate.deployableCells = neighbours;
+            }
+            if (gamestate.deployableCells) |cells| {
+                for (cells) |value| {
+                    if (value) |val| {
+                        highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
+                        if (gamestate.cursor == null) {
+                            gamestate.cursor = player.pos;
                         }
                     }
-                    player.pos = new_pos;
-                    player.movementCooldown = 0;
-                    calculateFOV(&world.currentLevel.grid, new_pos, 8);
-                    const combat = checkCombatStart(player, entities);
-                    if (combat and !player.data.player.inCombat) {
-                        try player.startCombatSetup(entities, grid);
+                }
+            }
+
+            if (gamestate.cursor) |cursor| {
+                player.visible = false;
+                highlightTile(grid, cursor, c.YELLOW);
+                if (c.IsKeyPressed(c.KEY_H)) {
+                    gamestate.cursor.?.x -= 1;
+                } else if (c.IsKeyPressed(c.KEY_L)) {
+                    gamestate.cursor.?.x += 1;
+                } else if (c.IsKeyPressed(c.KEY_J)) {
+                    gamestate.cursor.?.y += 1;
+                } else if (c.IsKeyPressed(c.KEY_K)) {
+                    gamestate.cursor.?.y -= 1;
+                } else if (c.IsKeyPressed(c.KEY_D)) {
+                    if (canDeploy(player, gamestate, grid, entities)) {
+                        try deployPuppet(player, gamestate, entities);
+                        //TODO: fix deploying puppets
                     }
                 }
             }
-            player.movementCooldown += delta;
-        }
-    } else {
-        if (player.data.player.deployingPuppets) {
-            const neighbours = neighboursAll(player.pos);
-            player.data.player.deployableCells = neighbours;
-            for (neighbours) |value| {
-                if (value) |val| {
-                    highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
-                    if (player.data.player.deployingCursor == null) {
-                        player.data.player.deployingCursor = player.pos;
-                    }
-                }
-            }
-        }
-        if (player.data.player.deployingCursor) |cursor| {
-            player.visible = false;
-            highlightTile(grid, cursor, c.YELLOW);
-            if (c.IsKeyPressed(c.KEY_H)) {
-                player.data.player.deployingCursor.?.x -= 1;
-            } else if (c.IsKeyPressed(c.KEY_L)) {
-                player.data.player.deployingCursor.?.x += 1;
-            } else if (c.IsKeyPressed(c.KEY_J)) {
-                player.data.player.deployingCursor.?.y += 1;
-            } else if (c.IsKeyPressed(c.KEY_K)) {
-                player.data.player.deployingCursor.?.y -= 1;
-            } else if (c.IsKeyPressed(c.KEY_D)) {
-                if (canDeploy(player, grid, entities)) {
-                    try deployPuppet(player, entities);
-                }
-            }
-        }
-        if (c.IsKeyPressed(c.KEY_F)) {
-            if (canEndCombat(player, entities)) {
-                player.endCombat(entities);
+            //all puppets deployed
+            if (player.data.player.puppets.items.len == 0) {
+                player.data.player.state = .in_combat;
                 player.visible = true;
-                player.data.player.deployingCursor = null;
             }
-        }
+            if (c.IsKeyPressed(c.KEY_F)) {
+                if (canEndCombat(player, entities)) {
+                    player.endCombat(entities);
+                    player.visible = true;
+                    gamestate.cursor = null;
+                }
+            }
+        },
+        .in_combat => {
+            switch (gamestate.currentTurn) {
+                .none => {
+                    gamestate.currentTurn = .player; //player always starts, for now
+                },
+                .player => {
+                    // take input, pick who you want to move => move/attack
+                    // after you moved all pices, end
+                    // you can either player master or all puppets
+                    if (c.IsKeyPressed(c.KEY_KP_1)) {
+                        std.debug.print("1\n", .{});
+                        gamestate.selectedEntity = player;
+                    } else if (c.IsKeyPressed(c.KEY_KP_2)) {
+                        if (player.data.player.puppets.items.len > 0) {
+                            gamestate.selectedEntity = player.data.player.puppets.items[0];
+                        }
+                    } else if (c.IsKeyPressed(c.KEY_KP_3)) {
+                        if (player.data.player.puppets.items.len > 1) {
+                            gamestate.selectedEntity = player.data.player.puppets.items[1];
+                        }
+                    } else if (c.IsKeyPressed(c.KEY_KP_4)) {
+                        if (player.data.player.puppets.items.len > 2) {
+                            gamestate.selectedEntity = player.data.player.puppets.items[2];
+                        }
+                    } else if (c.IsKeyPressed(c.KEY_KP_5)) {
+                        if (player.data.player.puppets.items.len > 3) {
+                            gamestate.selectedEntity = player.data.player.puppets.items[3];
+                        }
+                    }
+
+                    if (gamestate.selectedEntity) |entity| {
+                        std.debug.print("high\n", .{});
+                        highlightEntity(entity, c.YELLOW);
+                    }
+
+                    if (gamestate.cursor != null) {
+                        if (c.IsKeyPressed(c.KEY_H)) {
+                            gamestate.cursor.?.x -= 1;
+                        } else if (c.IsKeyPressed(c.KEY_L)) {
+                            gamestate.cursor.?.x += 1;
+                        } else if (c.IsKeyPressed(c.KEY_J)) {
+                            gamestate.cursor.?.y += 1;
+                        } else if (c.IsKeyPressed(c.KEY_K)) {
+                            gamestate.cursor.?.y -= 1;
+                        }
+                    }
+
+                    if (player.data.player.inCombatWith.items.len == 0) {
+                        // everyone is dead
+                        gamestate.currentTurn = .none;
+                        player.data.player.state = .walking;
+                    } else {
+                        if (player.turnTaken or player.allPupsTurnTaken()) {
+                            // finished turn
+                            gamestate.currentTurn = .enemy;
+                        }
+                    }
+                },
+                .enemy => {},
+            }
+        },
     }
 }
 
-pub fn deployPuppet(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) !void {
+pub fn deployPuppet(player: *Entity.Entity, gamestate: *Gamestate.gameState, entities: *std.ArrayList(*Entity.Entity)) !void {
     var puppets = &player.data.player.puppets;
-    std.debug.print("len: {}\n", .{puppets.items.len});
     if (puppets.items.len > 0) {
         const pup = puppets.swapRemove(puppets.items.len - 1);
-        if (player.data.player.deployingCursor) |curs| {
+        if (gamestate.cursor) |curs| {
             pup.pos = curs;
             try entities.append(pup);
         }
     }
 }
 
-pub fn canDeploy(player: *Entity.Entity, grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity)) bool {
-    const deploy_pos = player.data.player.deployingCursor;
+pub fn canDeploy(player: *Entity.Entity, gamestate: *Gamestate.gameState, grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity)) bool {
+    const deploy_pos = gamestate.cursor;
     if (deploy_pos) |dep_pos| {
         if (Types.vector2IntCompare(player.pos, dep_pos)) {
             return false;
@@ -166,7 +238,7 @@ pub fn canDeploy(player: *Entity.Entity, grid: []Level.Tile, entities: *std.Arra
             if (!deploy_tile.walkable) {
                 return false;
             }
-            if (player.data.player.deployableCells) |deployable_cells| {
+            if (gamestate.deployableCells) |deployable_cells| {
                 if (!isDeployable(dep_pos, &deployable_cells)) {
                     return false;
                 }
@@ -270,6 +342,10 @@ pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) 
             tile.tempBackground = color;
         }
     }
+}
+
+pub fn highlightEntity(entity: *Entity.Entity, color: c.Color) void {
+    entity.tempBackground = color;
 }
 
 pub fn isStaircase(world: *World.World, pos: Types.Vector2Int) bool {
