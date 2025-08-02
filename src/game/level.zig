@@ -1,5 +1,6 @@
 const std = @import("std");
 const Entity = @import("entity.zig");
+const TilesetManager = @import("tilesetManager.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const c = @cImport({
@@ -21,6 +22,7 @@ pub const Tile = struct {
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
     walkable: bool,
     isAscii: bool,
+    sourceRect: ?c.Rectangle,
     ascii: ?[2]u8,
     backgroundColor: c.Color,
     tempBackground: ?c.Color,
@@ -158,7 +160,7 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn Draw(this: @This(), entities: std.ArrayList(*Entity.Entity)) void {
+    pub fn Draw(this: @This(), entities: std.ArrayList(*Entity.Entity), tilesetManager: TilesetManager) void {
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
             //const pos_y = your_position.y;
@@ -220,6 +222,8 @@ pub const Level = struct {
 
                         c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, text_color);
                     }
+                }else {
+                    c.DrawTextureRec(tilesetManager.tileset, source: Rectangle, position: Vector2, tint: Color)
                 }
             }
         }

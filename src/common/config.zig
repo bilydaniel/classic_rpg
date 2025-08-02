@@ -15,7 +15,8 @@ pub const level_height: i32 = 25;
 pub const tile_width: i32 = 16;
 pub const tile_height: i32 = 24;
 
-pub const tileset_path: []const u8 = "assets/my_tileset.png";
-
 pub const mouse_mode: bool = false;
 pub const turn_speed: f32 = 0.1;
+
+pub var ascii_mode: bool = true;
+//TODO: make switching

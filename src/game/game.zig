@@ -1,6 +1,7 @@
 const std = @import("std");
 const World = @import("world.zig");
 const Systems = @import("Systems.zig");
+const TilesetManager = @import("tilesetManager.zig");
 const Gamestate = @import("gamestate.zig");
 const Entity = @import("entity.zig");
 const Assets = @import("../game/assets.zig");
@@ -25,6 +26,7 @@ pub const Game = struct {
     cameraSpeed: f32,
     timeSinceTurn: f32,
     pathfinder: *Pathfinder.Pathfinder,
+    tilesetManager: TilesetManager.TilesetManager,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         const gamestate = try Gamestate.gameState.init(allocator);
@@ -42,6 +44,7 @@ pub const Game = struct {
         const camera = try allocator.create(c.Camera2D);
         var tileset = Tileset.Tileset.init(allocator);
         try tileset.loadTileset(Config.tileset_path);
+        const tilesetmanager = TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         //TODO: second camera is in window.zig
         // fix it, have just one, cleanup
@@ -63,6 +66,7 @@ pub const Game = struct {
             .cameraSpeed = 128,
             .timeSinceTurn = 0,
             .pathfinder = pathfinder,
+            .tilesetManager = tilesetmanager,
         };
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
         return game;
@@ -99,7 +103,9 @@ pub const Game = struct {
                 this.camera.zoom -= 0.25;
             }
         }
-
+        if (c.IsKeyDown(c.KEY_Z)) {
+            Config.ascii_mode = !Config.ascii_mode;
+        }
         try Systems.updatePlayer(this.gameState, this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
         this.camera.target.y = @floor(@as(f32, @floatFromInt(this.player.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
@@ -120,8 +126,8 @@ pub const Game = struct {
         c.ClearBackground(c.BLACK);
         c.DrawFPS(0, 0);
         c.BeginMode2D(this.camera.*);
-        this.world.Draw();
-        this.player.Draw();
+        this.world.Draw(this.tilesetManager);
+        this.player.Draw(this.tilesetManager);
         c.EndMode2D();
         c.EndDrawing();
     }

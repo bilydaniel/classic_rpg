@@ -1,6 +1,7 @@
 const Level = @import("level.zig");
 const Pathfinder = @import("pathfinder.zig");
 const Entity = @import("entity.zig");
+const TilesetManager = @import("tilesetManager.zig");
 const std = @import("std");
 const Types = @import("../common/types.zig");
 const c = @cImport({
@@ -82,8 +83,8 @@ pub const World = struct {
         return world;
     }
 
-    pub fn Draw(this: *World) void {
-        this.currentLevel.Draw(this.entities);
+    pub fn Draw(this: *World, tilesetManager: *TilesetManager.TilesetManager) void {
+        this.currentLevel.Draw(this.entities, tilesetManager);
     }
 
     pub fn Update(this: *World) void {
