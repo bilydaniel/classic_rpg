@@ -1,4 +1,5 @@
 const std = @import("std");
+const Utils = @import("../common/utils.zig");
 const Entity = @import("entity.zig");
 const TilesetManager = @import("tilesetManager.zig");
 const Config = @import("../common/config.zig");
@@ -17,12 +18,12 @@ const TileType = enum {
 
 pub const Tile = struct {
     //TODO: add movement cost? can be derived from tile_type
-    texture_id: ?i32,
+    textureID: ?i32,
+    sourceRect: ?c.Rectangle,
     tile_type: TileType,
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
     walkable: bool,
     isAscii: bool,
-    sourceRect: ?c.Rectangle,
     ascii: ?[2]u8,
     backgroundColor: c.Color,
     tempBackground: ?c.Color,
@@ -30,12 +31,21 @@ pub const Tile = struct {
     visible: bool,
 
     pub fn initFloor() Tile {
+        var texture_id: ?i32 = null;
+        var source_rect: ?c.Rectangle = null;
+        if (!Config.ascii_mode) {
+            texture_id = 100; // try: 1, 100
+            if (texture_id) |text_id| {
+                source_rect = Utils.makeSourceRect(text_id);
+            }
+        }
         return Tile{
-            .texture_id = null,
+            .textureID = texture_id,
+            .sourceRect = source_rect,
             .tile_type = .floor,
             .solid = false,
             .walkable = true,
-            .isAscii = true,
+            .isAscii = Config.ascii_mode,
             .ascii = .{ '.', 0 },
             .backgroundColor = c.BLACK,
             .seen = false,
@@ -44,12 +54,21 @@ pub const Tile = struct {
         };
     }
     pub fn initWall() Tile {
+        var texture_id: ?i32 = null;
+        var source_rect: ?c.Rectangle = null;
+        if (!Config.ascii_mode) {
+            texture_id = 1; //try: 2,3,4
+            if (texture_id) |text_id| {
+                source_rect = Utils.makeSourceRect(text_id);
+            }
+        }
         return Tile{
-            .texture_id = null,
+            .textureID = texture_id,
+            .sourceRect = source_rect,
             .tile_type = .wall,
             .solid = true,
             .walkable = false,
-            .isAscii = true,
+            .isAscii = Config.ascii_mode,
             .ascii = .{ '#', 0 },
             .backgroundColor = c.WHITE,
             .seen = false,
@@ -59,12 +78,21 @@ pub const Tile = struct {
     }
 
     pub fn initDoor() Tile {
+        var texture_id: ?i32 = null;
+        var source_rect: ?c.Rectangle = null;
+        if (!Config.ascii_mode) {
+            texture_id = 25; //26 for open
+            if (texture_id) |text_id| {
+                source_rect = Utils.makeSourceRect(text_id);
+            }
+        }
         return Tile{
-            .texture_id = null,
+            .textureID = texture_id,
+            .sourceRect = source_rect,
             .tile_type = .floor,
             .solid = false,
             .walkable = false,
-            .isAscii = true,
+            .isAscii = Config.ascii_mode,
             .ascii = .{ '+', 0 },
             .backgroundColor = c.BROWN,
             .seen = false,
@@ -74,12 +102,21 @@ pub const Tile = struct {
     }
 
     pub fn initWater() Tile {
+        var texture_id: ?i32 = null;
+        var source_rect: ?c.Rectangle = null;
+        if (!Config.ascii_mode) {
+            texture_id = 119;
+            if (texture_id) |text_id| {
+                source_rect = Utils.makeSourceRect(text_id);
+            }
+        }
         return Tile{
-            .texture_id = null,
+            .textureID = texture_id,
+            .sourceRect = source_rect,
             .tile_type = .water, // You might want to add a water tile type
             .solid = false,
             .walkable = false,
-            .isAscii = true,
+            .isAscii = Config.ascii_mode,
             .ascii = .{ '~', 0 },
             .backgroundColor = c.BLUE,
             .seen = false,
@@ -89,12 +126,21 @@ pub const Tile = struct {
     }
 
     pub fn initStaircase() Tile {
+        var texture_id: ?i32 = null;
+        var source_rect: ?c.Rectangle = null;
+        if (!Config.ascii_mode) {
+            texture_id = 17; //18 for up
+            if (texture_id) |text_id| {
+                source_rect = Utils.makeSourceRect(text_id);
+            }
+        }
         return Tile{
-            .texture_id = null,
+            .textureID = texture_id,
+            .sourceRect = source_rect,
             .tile_type = .staircase,
             .solid = false,
             .walkable = true,
-            .isAscii = true,
+            .isAscii = Config.ascii_mode,
             .ascii = .{ '>', 0 },
             .backgroundColor = c.PURPLE,
             .seen = false,
@@ -121,11 +167,10 @@ pub const Level = struct {
     tile_texture: c.Texture2D,
     allocator: std.mem.Allocator,
     entities: std.ArrayList(*Entity),
-    tilesetTexture: ?*c.Texture2D,
     //TODO: put somewhere else, just for now
     font: c.Font,
 
-    pub fn init(allocator: std.mem.Allocator, tilesetTexture: ?*c.Texture2D, id: u32) !*Level {
+    pub fn init(allocator: std.mem.Allocator, id: u32) !*Level {
         const level = try allocator.create(Level);
         const tileCount = Config.level_height * Config.level_width;
         const grid = try allocator.alloc(Tile, tileCount);
@@ -154,13 +199,12 @@ pub const Level = struct {
             .tile_texture = tileTexture,
             .allocator = allocator,
             .entities = entities,
-            .tilesetTexture = tilesetTexture,
             .font = font,
         };
         return level;
     }
 
-    pub fn Draw(this: @This(), entities: std.ArrayList(*Entity.Entity), tilesetManager: TilesetManager) void {
+    pub fn Draw(this: @This(), entities: std.ArrayList(*Entity.Entity), tilesetManager: *TilesetManager.TilesetManager) void {
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
             //const pos_y = your_position.y;
@@ -222,14 +266,21 @@ pub const Level = struct {
 
                         c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, text_color);
                     }
-                }else {
-                    c.DrawTextureRec(tilesetManager.tileset, source: Rectangle, position: Vector2, tint: Color)
+                } else {
+                    if (tile.sourceRect) |source_rect| {
+                        const pos = c.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+                        var background = c.WHITE;
+                        if (tile.tempBackground) |back| {
+                            background = back;
+                        }
+                        c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, background);
+                    }
                 }
             }
         }
 
         for (entities.items) |entity| {
-            entity.Draw();
+            entity.Draw(tilesetManager);
         }
     }
 

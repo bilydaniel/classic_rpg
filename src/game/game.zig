@@ -26,12 +26,12 @@ pub const Game = struct {
     cameraSpeed: f32,
     timeSinceTurn: f32,
     pathfinder: *Pathfinder.Pathfinder,
-    tilesetManager: TilesetManager.TilesetManager,
+    tilesetManager: *TilesetManager.TilesetManager,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         const gamestate = try Gamestate.gameState.init(allocator);
         const playerData = try Entity.PlayerData.init(allocator);
-        const player = try Entity.Entity.init(
+        var player = try Entity.Entity.init(
             allocator,
             Types.Vector2Int{ .x = 3, .y = 2 },
             1,
@@ -40,11 +40,16 @@ pub const Game = struct {
             },
             "@",
         );
+        player.textureID = 76;
+        if (player.textureID) |text_id| {
+            player.sourceRect = Utils.makeSourceRect(text_id);
+        }
+
         const game = try allocator.create(Game);
         const camera = try allocator.create(c.Camera2D);
-        var tileset = Tileset.Tileset.init(allocator);
-        try tileset.loadTileset(Config.tileset_path);
-        const tilesetmanager = TilesetManager.TilesetManager.init(allocator);
+        //var tileset = Tileset.Tileset.init(allocator);
+        //try tileset.loadTileset(Config.tileset_path);
+        const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         //TODO: second camera is in window.zig
         // fix it, have just one, cleanup
@@ -58,7 +63,7 @@ pub const Game = struct {
         game.* = .{
             .allocator = allocator,
             .gameState = gamestate,
-            .world = try World.World.init(allocator, tileset.source),
+            .world = try World.World.init(allocator),
             .player = player,
             .assets = Assets.Assets.init(allocator),
             .camera = camera,
@@ -102,9 +107,6 @@ pub const Game = struct {
             if (this.camera.zoom > 1.0) {
                 this.camera.zoom -= 0.25;
             }
-        }
-        if (c.IsKeyDown(c.KEY_Z)) {
-            Config.ascii_mode = !Config.ascii_mode;
         }
         try Systems.updatePlayer(this.gameState, this.player, delta, this.world, this.camera, this.pathfinder, &this.world.entities);
         this.camera.target.x = @floor(@as(f32, @floatFromInt(this.player.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);

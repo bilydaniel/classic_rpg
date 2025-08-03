@@ -67,3 +67,14 @@ pub fn vector2TileToPixel(a: c.Vector2) c.Vector2 {
 pub fn vector2Cmp(a: c.Vector2, b: c.Vector2) bool {
     return a.x == b.x and a.y == b.y;
 }
+
+pub fn makeSourceRect(id: i32) c.Rectangle {
+    const x: f32 = @floatFromInt(@mod((id * Config.tile_width), (Config.tileset_width * Config.tile_width)));
+    const y: f32 = @floatFromInt(@divFloor((id * Config.tile_width), (Config.tileset_width)));
+    return c.Rectangle{
+        .x = x,
+        .y = y,
+        .width = Config.tile_width,
+        .height = Config.tile_height,
+    };
+}

@@ -1,4 +1,5 @@
 const std = @import("std");
+const TilesetManager = @import("tilesetManager.zig");
 const Config = @import("../common/config.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const Types = @import("../common/types.zig");
@@ -31,6 +32,8 @@ pub const Entity = struct {
     movementCooldown: f32, //TODO: probably do a different way
     isAscii: bool,
     ascii: ?[4]u8,
+    textureID: ?i32,
+    sourceRect: ?c.Rectangle,
     color: c.Color,
     backgroundColor: c.Color,
     tempBackground: ?c.Color,
@@ -54,8 +57,10 @@ pub const Entity = struct {
         entity.* = .{
             .id = entity_id,
             .pos = pos,
-            .isAscii = true, //TODO: finish later, figure out tile versio
+            .isAscii = Config.ascii_mode,
             .ascii = ascii_array,
+            .textureID = null,
+            .sourceRect = null,
             .movementCooldown = 0,
             .speed = speed,
             .path = null,
@@ -70,7 +75,7 @@ pub const Entity = struct {
         return entity;
     }
 
-    pub fn Draw(this: *Entity) void {
+    pub fn Draw(this: *Entity, tilesetManager: *TilesetManager.TilesetManager) void {
         if (this.visible) {
             if (this.isAscii) {
                 if (this.ascii) |ascii| {
@@ -94,6 +99,14 @@ pub const Entity = struct {
                     }
 
                     c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
+                }
+            } else {
+                if (this.sourceRect) |source_rect| {
+                    const x: f32 = @floatFromInt(this.pos.x * Config.tile_width);
+                    const y: f32 = @floatFromInt(this.pos.y * Config.tile_height);
+                    const pos = c.Vector2{ .x = x, .y = y };
+
+                    c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, c.RED);
                 }
             }
         }

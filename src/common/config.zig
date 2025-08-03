@@ -12,11 +12,12 @@ pub const camera_zoom: f32 = 2;
 pub const level_width: i32 = 80;
 pub const level_height: i32 = 25;
 
-pub const tile_width: i32 = 16;
-pub const tile_height: i32 = 24;
-
 pub const mouse_mode: bool = false;
 pub const turn_speed: f32 = 0.1;
 
-pub var ascii_mode: bool = true;
-//TODO: make switching
+pub const ascii_mode: bool = false;
+
+pub const tile_width: i32 = if (!ascii_mode) 12 else 16;
+pub const tile_height: i32 = if (!ascii_mode) 12 else 24;
+
+pub const tileset_width = 25;
