@@ -17,19 +17,33 @@ pub const currentTurnEnum = enum {
     enemy,
 };
 
+pub const highlightTypeEnum = enum {
+    cursor,
+    pup_deploy,
+};
+
+pub const highlight = struct {
+    pos: Types.Vector2Int,
+    type: highlightTypeEnum,
+    color: c.Color,
+};
+
 pub const gameState = struct {
     cursor: ?Types.Vector2Int,
     deployableCells: ?[8]?Types.Vector2Int,
     currentTurn: currentTurnEnum,
     selectedEntity: ?*Entity.Entity,
+    highlightedTiles: std.ArrayList(highlight),
 
     pub fn init(allocator: std.mem.Allocator) !*gameState {
+        const highlighted_tiles = std.ArrayList(highlight).init(allocator);
         const gamestate = try allocator.create(gameState);
         gamestate.* = .{
             .cursor = null,
             .deployableCells = null,
             .currentTurn = .none,
             .selectedEntity = null,
+            .highlightedTiles = highlighted_tiles,
         };
         return gamestate;
     }

@@ -105,6 +105,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                 for (cells) |value| {
                     if (value) |val| {
                         highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
+                        try highlightTile2(gamestate, val);
                         if (gamestate.cursor == null) {
                             gamestate.cursor = player.pos;
                         }
@@ -113,16 +114,24 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
             }
 
             if (gamestate.cursor) |cursor| {
-                player.visible = false;
+                //player.visible = false;
                 highlightTile(grid, cursor, c.YELLOW);
                 if (c.IsKeyPressed(c.KEY_H)) {
-                    gamestate.cursor.?.x -= 1;
+                    if (cursor.x > 0) {
+                        gamestate.cursor.?.x -= 1;
+                    }
                 } else if (c.IsKeyPressed(c.KEY_L)) {
-                    gamestate.cursor.?.x += 1;
+                    if (cursor.x < Config.level_width) {
+                        gamestate.cursor.?.x += 1;
+                    }
                 } else if (c.IsKeyPressed(c.KEY_J)) {
-                    gamestate.cursor.?.y += 1;
+                    if (cursor.y < Config.level_height) {
+                        gamestate.cursor.?.y += 1;
+                    }
                 } else if (c.IsKeyPressed(c.KEY_K)) {
-                    gamestate.cursor.?.y -= 1;
+                    if (cursor.y > 0) {
+                        gamestate.cursor.?.y -= 1;
+                    }
                 } else if (c.IsKeyPressed(c.KEY_D)) {
                     if (canDeploy(player, gamestate, grid, entities)) {
                         try deployPuppet(player, gamestate, entities);
@@ -133,12 +142,12 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
             //all puppets deployed
             if (player.data.player.puppets.items.len == 0) {
                 player.data.player.state = .in_combat;
-                player.visible = true;
+                //player.visible = true;
             }
             if (c.IsKeyPressed(c.KEY_F)) {
                 if (canEndCombat(player, entities)) {
                     player.endCombat(entities);
-                    player.visible = true;
+                    //player.visible = true;
                     gamestate.cursor = null;
                 }
             }
@@ -341,6 +350,37 @@ pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) 
             var tile = &grid[index];
             tile.tempBackground = color;
         }
+    }
+}
+
+pub fn highlightTile2(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !void {
+    try gamestate.highlightedTiles.append(Gamestate.highlight{
+        .pos = pos,
+        .color = c.YELLOW,
+        .type = .pup_deploy,
+    });
+}
+
+pub fn drawCursor(gridLen: usize, pos: Types.Vector2Int) void {
+    const pos_index = posToIndex(pos);
+    if (pos_index) |index| {
+        if (index >= 0 and index < gridLen) {
+            //TODO: debug why the box doesent fit
+            //c.DrawRectangleLines(pos.x * Config.tile_width + 1, pos.y * Config.tile_height + 1, Config.tile_width, Config.tile_height, c.YELLOW);
+        }
+    }
+}
+
+pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level) void {
+    _ = currentLevel;
+    if (gamestate.highlightedTiles.items.len > 0) {
+        for (gamestate.highlightedTiles.items) |highlight| {
+            c.DrawRectangleLines(highlight.pos.x * Config.tile_width, highlight.pos.y * Config.tile_height, Config.tile_width, Config.tile_height, c.BLUE);
+        }
+    }
+
+    if (gamestate.cursor) |cur| {
+        c.DrawRectangleLines(cur.x * Config.tile_width, cur.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
     }
 }
 

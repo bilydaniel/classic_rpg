@@ -99,7 +99,7 @@ pub const Game = struct {
             this.camera.target.x += this.cameraSpeed * delta;
         }
         if (c.IsKeyDown(c.KEY_DELETE)) {
-            if (this.camera.zoom < 3.0) {
+            if (this.camera.zoom < 4.0) {
                 this.camera.zoom += 0.25;
             }
         }
@@ -130,6 +130,10 @@ pub const Game = struct {
         c.BeginMode2D(this.camera.*);
         this.world.Draw(this.tilesetManager);
         this.player.Draw(this.tilesetManager);
+        if (this.gameState.cursor) |cur| {
+            Systems.drawCursor(this.world.currentLevel.grid.len, cur);
+            Systems.drawGameState(this.gameState, this.world.currentLevel);
+        }
         c.EndMode2D();
         c.EndDrawing();
     }
