@@ -256,10 +256,6 @@ pub const Level = struct {
                         //TODO: add conditional
                         //c.DrawRectangleLines(x, y, Config.tile_width, Config.tile_height, c.BLACK);
 
-                        if (tile.visible) {
-                            text_color = c.RED;
-                        }
-
                         //c.DrawText(&ascii[0], text_x, text_y, font_size, text_color);
 
                         //c.DrawTextEx(this.font, &ascii[0], .{ .x = @floatFromInt(text_x), .y = @floatFromInt(text_y) }, 16, 1, c.DARKBLUE);

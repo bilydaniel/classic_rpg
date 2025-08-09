@@ -20,6 +20,8 @@ pub const currentTurnEnum = enum {
 pub const highlightTypeEnum = enum {
     cursor,
     pup_deploy,
+    square,
+    circle,
 };
 
 pub const highlight = struct {
@@ -34,6 +36,7 @@ pub const gameState = struct {
     currentTurn: currentTurnEnum,
     selectedEntity: ?*Entity.Entity,
     highlightedTiles: std.ArrayList(highlight),
+    highlightedEntity: ?highlight,
 
     pub fn init(allocator: std.mem.Allocator) !*gameState {
         const highlighted_tiles = std.ArrayList(highlight).init(allocator);
@@ -44,7 +47,14 @@ pub const gameState = struct {
             .currentTurn = .none,
             .selectedEntity = null,
             .highlightedTiles = highlighted_tiles,
+            .highlightedEntity = null,
         };
         return gamestate;
+    }
+
+    pub fn resetDeploy(this: *gameState) void {
+        this.cursor = null;
+        this.highlightedTiles.clearRetainingCapacity();
+        this.deployableCells = null;
     }
 };

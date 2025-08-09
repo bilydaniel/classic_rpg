@@ -1,6 +1,7 @@
 const std = @import("std");
 const TilesetManager = @import("tilesetManager.zig");
 const Config = @import("../common/config.zig");
+const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
@@ -95,7 +96,7 @@ pub const Entity = struct {
 
                     if (this.data == .enemy) {
                         //TODO: figure out colors for everything
-                        this.color = c.RED;
+                        //this.color = c.RED;
                     }
 
                     c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
@@ -106,7 +107,7 @@ pub const Entity = struct {
                     const y: f32 = @floatFromInt(this.pos.y * Config.tile_height);
                     const pos = c.Vector2{ .x = x, .y = y };
 
-                    c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, c.RED);
+                    c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, c.WHITE);
                 }
             }
         }
@@ -132,7 +133,7 @@ pub const Entity = struct {
         if (this.data == .player) {
             this.data.player.state = .walking;
             this.data.player.inCombatWith.clearRetainingCapacity();
-            try Systems.returnPuppets(this, entities);
+            try Systems.returnPuppets(entities);
         }
     }
 
@@ -145,6 +146,11 @@ pub const Entity = struct {
             }
         }
         return true;
+    }
+
+    pub fn setTextureID(this: *Entity, id: i32) void {
+        this.textureID = id;
+        this.sourceRect = Utils.makeSourceRect(id);
     }
 };
 
@@ -176,8 +182,12 @@ pub const PlayerData = struct {
         var puppets = std.ArrayList(*Entity).init(allocator);
 
         const pup_pos = Types.Vector2Int{ .x = 5, .y = 5 };
-        const puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .qwe = true } }, "&");
-        const puppet2 = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .qwe = true } }, "%");
+        const puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
+        const puppet2 = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+
+        puppet.setTextureID(50);
+        puppet2.setTextureID(51);
+
         try puppets.append(puppet);
         try puppets.append(puppet2);
         return PlayerData{
@@ -186,11 +196,20 @@ pub const PlayerData = struct {
             .puppets = puppets,
         };
     }
+
+    pub fn allPupsDeployed(this: *PlayerData) bool {
+        for (this.puppets.items) |pup| {
+            if (!pup.data.puppet.deployed) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 pub const EnemyData = struct {
     qwe: bool,
 };
 pub const ItemData = struct {};
 pub const PuppetData = struct {
-    qwe: bool,
+    deployed: bool,
 };

@@ -130,10 +130,7 @@ pub const Game = struct {
         c.BeginMode2D(this.camera.*);
         this.world.Draw(this.tilesetManager);
         this.player.Draw(this.tilesetManager);
-        if (this.gameState.cursor) |cur| {
-            Systems.drawCursor(this.world.currentLevel.grid.len, cur);
-            Systems.drawGameState(this.gameState, this.world.currentLevel);
-        }
+        Systems.drawGameState(this.gameState, this.world.currentLevel);
         c.EndMode2D();
         c.EndDrawing();
     }

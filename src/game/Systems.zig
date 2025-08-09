@@ -104,7 +104,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
             if (gamestate.deployableCells) |cells| {
                 for (cells) |value| {
                     if (value) |val| {
-                        highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
+                        //highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
                         try highlightTile2(gamestate, val);
                         if (gamestate.cursor == null) {
                             gamestate.cursor = player.pos;
@@ -135,20 +135,19 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                 } else if (c.IsKeyPressed(c.KEY_D)) {
                     if (canDeploy(player, gamestate, grid, entities)) {
                         try deployPuppet(player, gamestate, entities);
-                        //TODO: fix deploying puppets
                     }
                 }
             }
+
             //all puppets deployed
-            if (player.data.player.puppets.items.len == 0) {
+            if (player.data.player.allPupsDeployed()) {
+                gamestate.resetDeploy();
                 player.data.player.state = .in_combat;
-                //player.visible = true;
             }
             if (c.IsKeyPressed(c.KEY_F)) {
                 if (canEndCombat(player, entities)) {
+                    gamestate.resetDeploy();
                     player.endCombat(entities);
-                    //player.visible = true;
-                    gamestate.cursor = null;
                 }
             }
         },
@@ -158,33 +157,40 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                     gamestate.currentTurn = .player; //player always starts, for now
                 },
                 .player => {
+
                     // take input, pick who you want to move => move/attack
                     // after you moved all pices, end
                     // you can either player master or all puppets
-                    if (c.IsKeyPressed(c.KEY_KP_1)) {
+                    std.debug.print("taking_input\n", .{});
+                    if (c.IsKeyPressed(c.KEY_ONE)) {
                         std.debug.print("1\n", .{});
                         gamestate.selectedEntity = player;
-                    } else if (c.IsKeyPressed(c.KEY_KP_2)) {
+                    } else if (c.IsKeyPressed(c.KEY_TWO)) {
                         if (player.data.player.puppets.items.len > 0) {
                             gamestate.selectedEntity = player.data.player.puppets.items[0];
                         }
-                    } else if (c.IsKeyPressed(c.KEY_KP_3)) {
+                    } else if (c.IsKeyPressed(c.KEY_THREE)) {
                         if (player.data.player.puppets.items.len > 1) {
                             gamestate.selectedEntity = player.data.player.puppets.items[1];
                         }
-                    } else if (c.IsKeyPressed(c.KEY_KP_4)) {
+                    } else if (c.IsKeyPressed(c.KEY_FOUR)) {
                         if (player.data.player.puppets.items.len > 2) {
                             gamestate.selectedEntity = player.data.player.puppets.items[2];
                         }
-                    } else if (c.IsKeyPressed(c.KEY_KP_5)) {
+                    } else if (c.IsKeyPressed(c.KEY_FIVE)) {
                         if (player.data.player.puppets.items.len > 3) {
                             gamestate.selectedEntity = player.data.player.puppets.items[3];
                         }
                     }
 
                     if (gamestate.selectedEntity) |entity| {
-                        std.debug.print("high\n", .{});
-                        highlightEntity(entity, c.YELLOW);
+                        std.debug.print("selected: {}\n", .{entity});
+                        //TODO: move camera to the selected entity,
+                        //how do I highlight the selected entity?
+                        //probaly should try a blink, give a duration to highlight
+                        //could try to do a circle highlight
+
+                        highlightEntity(gamestate, entity.pos);
                     }
 
                     if (gamestate.cursor != null) {
@@ -198,6 +204,13 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                             gamestate.cursor.?.y -= 1;
                         }
                     }
+                    if (c.IsKeyPressed(c.KEY_F)) {
+                        // forcing end of combat for testing, REMOVE
+                        player.endCombat(entities);
+                        player.data.player.state = .walking;
+                        std.debug.print("F\n", .{});
+                        return;
+                    }
 
                     if (player.data.player.inCombatWith.items.len == 0) {
                         // everyone is dead
@@ -207,6 +220,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                         if (player.turnTaken or player.allPupsTurnTaken()) {
                             // finished turn
                             gamestate.currentTurn = .enemy;
+                            std.debug.print("turn_done\n", .{});
                         }
                     }
                 },
@@ -217,12 +231,15 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
 }
 
 pub fn deployPuppet(player: *Entity.Entity, gamestate: *Gamestate.gameState, entities: *std.ArrayList(*Entity.Entity)) !void {
-    var puppets = &player.data.player.puppets;
-    if (puppets.items.len > 0) {
-        const pup = puppets.swapRemove(puppets.items.len - 1);
-        if (gamestate.cursor) |curs| {
-            pup.pos = curs;
-            try entities.append(pup);
+    const puppets = &player.data.player.puppets;
+    for (puppets.items) |pup| {
+        if (!pup.data.puppet.deployed) {
+            if (gamestate.cursor) |curs| {
+                pup.pos = curs;
+                pup.data.puppet.deployed = true;
+                try entities.append(pup);
+                return;
+            }
         }
     }
 }
@@ -379,13 +396,25 @@ pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level
         }
     }
 
+    if (gamestate.highlightedEntity) |highlight| {
+        if (highlight.type == .circle) {
+            c.DrawCircleLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, highlight.color);
+            c.DrawEllipseLines(j, centerY: c_int, radiusH: f32, radiusV: f32, color: Color)
+            //TODO: change to elipse
+        }
+    }
+
     if (gamestate.cursor) |cur| {
         c.DrawRectangleLines(cur.x * Config.tile_width, cur.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
     }
 }
 
-pub fn highlightEntity(entity: *Entity.Entity, color: c.Color) void {
-    entity.tempBackground = color;
+pub fn highlightEntity(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) void {
+    gamestate.highlightedEntity = Gamestate.highlight{
+        .pos = pos,
+        .color = c.YELLOW,
+        .type = .circle,
+    };
 }
 
 pub fn isStaircase(world: *World.World, pos: Types.Vector2Int) bool {
@@ -504,18 +533,19 @@ pub fn findEmptyCloseCell(grid: []Level.Tile, entities: *std.ArrayList(*Entity.E
     _ = entities;
 }
 
-pub fn returnPuppets(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) !void {
-    findEntitiesType(entities, &player.data.player.puppets, Entity.EntityType.puppet, true);
+pub fn returnPuppets(entities: *std.ArrayList(*Entity.Entity)) !void {
+    removeEntitiesType(entities, Entity.EntityType.puppet);
 }
 
-pub fn findEntitiesType(entities: *std.ArrayList(*Entity.Entity), result: *std.ArrayList(*Entity.Entity), entityType: Entity.EntityType, remove: bool) void {
+pub fn removeEntitiesType(entities: *std.ArrayList(*Entity.Entity), entityType: Entity.EntityType) void {
     var i = entities.items.len;
     while (i > 0) {
         i -= 1;
         if (entities.items[i].data == entityType) {
-            std.debug.print("FOUND \n", .{});
+            if (entityType == .puppet) {
+                entities.items[i].data.puppet.deployed = false;
+            }
+            _ = entities.swapRemove(i);
         }
-        if (remove) {}
-        _ = result;
     }
 }
