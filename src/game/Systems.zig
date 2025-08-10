@@ -161,9 +161,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                     // take input, pick who you want to move => move/attack
                     // after you moved all pices, end
                     // you can either player master or all puppets
-                    std.debug.print("taking_input\n", .{});
                     if (c.IsKeyPressed(c.KEY_ONE)) {
-                        std.debug.print("1\n", .{});
                         gamestate.selectedEntity = player;
                     } else if (c.IsKeyPressed(c.KEY_TWO)) {
                         if (player.data.player.puppets.items.len > 0) {
@@ -184,13 +182,25 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                     }
 
                     if (gamestate.selectedEntity) |entity| {
-                        std.debug.print("selected: {}\n", .{entity});
                         //TODO: move camera to the selected entity,
                         //how do I highlight the selected entity?
                         //probaly should try a blink, give a duration to highlight
                         //could try to do a circle highlight
 
                         highlightEntity(gamestate, entity.pos);
+
+                        if (c.IsKeyPressed(c.KEY_Q)) {
+                            gamestate.selectedEntityMode = .moving;
+                        } else if (c.IsKeyPressed(c.KEY_W)) {
+                            gamestate.selectedEntityMode = .attacking;
+                        }
+
+                        if (gamestate.selectedEntityMode == .moving) {
+                            std.debug.print("moving...\n", .{});
+                            try neighboursDistance(entity.pos, 2, &gamestate.movableTiles);
+                        } else if (gamestate.selectedEntityMode == .attacking) {
+                            std.debug.print("attacking...\n", .{});
+                        }
                     }
 
                     if (gamestate.cursor != null) {
@@ -399,8 +409,8 @@ pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level
     if (gamestate.highlightedEntity) |highlight| {
         if (highlight.type == .circle) {
             c.DrawCircleLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, highlight.color);
-            c.DrawEllipseLines(j, centerY: c_int, radiusH: f32, radiusV: f32, color: Color)
-            //TODO: change to elipse
+            //c.DrawEllipseLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height, Config.tile_width / 2, Config.tile_height / 3, highlight.color);
+            //TODO: figure out the elipse, circle for now
         }
     }
 
@@ -507,6 +517,19 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
         }
     }
     return result;
+}
+
+pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.ArrayList(Types.Vector2Int)) !void {
+    _ = result;
+    _ = pos;
+    const n = 2 * distance + 1;
+    _ = n;
+
+    var i: i32 = 1;
+    while (i <= distance) : (i += 1) {
+        const start = Types.vector2IntSub(pos, Types.Vector2Int{ .x = i, .y = i });
+        //@finish: NxN square append to result
+    }
 }
 
 pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) bool {

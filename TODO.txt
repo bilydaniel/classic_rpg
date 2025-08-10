@@ -1,2 +1,9 @@
-1. Editor => AssetTree
-2. 
+figure out how to work with assets(tiles) better
+random generation world + entities
+how to work with enemies, types, how to instantiate, spawn etc
+figure out some better input system (event system + queue?)
+fix entities position(level + pos)
+better way of connecting levels, kinda wierd right now
+
+General refactor, alot of stuff that needs fixing or looking at
+

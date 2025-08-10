@@ -27,6 +27,9 @@ pub const EntityData = union(EntityType) {
 
 pub const Entity = struct {
     id: u32,
+    health: i32,
+    mana: i32,
+    tp: i32,
     pos: Types.Vector2Int,
     path: ?Pathfinder.Path,
     speed: f32,
@@ -40,6 +43,8 @@ pub const Entity = struct {
     tempBackground: ?c.Color,
     visible: bool,
     turnTaken: bool,
+    hasMoved: bool,
+    hasAttacked: bool,
     data: EntityData,
 
     pub fn init(
@@ -57,6 +62,9 @@ pub const Entity = struct {
         }
         entity.* = .{
             .id = entity_id,
+            .health = 10,
+            .mana = 10,
+            .tp = 0,
             .pos = pos,
             .isAscii = Config.ascii_mode,
             .ascii = ascii_array,
@@ -70,6 +78,8 @@ pub const Entity = struct {
             .tempBackground = null,
             .visible = true,
             .turnTaken = false,
+            .hasMoved = false,
+            .hasAttacked = false,
             .data = entityData,
         };
         entity_id += 1;
@@ -107,7 +117,11 @@ pub const Entity = struct {
                     const y: f32 = @floatFromInt(this.pos.y * Config.tile_height);
                     const pos = c.Vector2{ .x = x, .y = y };
 
-                    c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, c.WHITE);
+                    var color = c.WHITE;
+                    if (this.data == .enemy) {
+                        color = c.RED;
+                    }
+                    c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, color);
                 }
             }
         }
