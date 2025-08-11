@@ -44,6 +44,8 @@ pub const gameState = struct {
     selectedEntity: ?*Entity.Entity,
     selectedEntityMode: EntityModeEnum,
     highlightedTiles: std.ArrayList(highlight),
+    deployHighlighted: bool,
+    movementHighlighted: bool,
     highlightedEntity: ?highlight,
 
     pub fn init(allocator: std.mem.Allocator) !*gameState {
@@ -60,6 +62,8 @@ pub const gameState = struct {
             .selectedEntityMode = .none,
             .highlightedTiles = highlighted_tiles,
             .highlightedEntity = null,
+            .deployHighlighted = false,
+            .movementHighlighted = false,
         };
 
         return gamestate;

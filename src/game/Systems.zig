@@ -102,10 +102,13 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                 gamestate.deployableCells = neighbours;
             }
             if (gamestate.deployableCells) |cells| {
-                for (cells) |value| {
-                    if (value) |val| {
-                        //highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
-                        try highlightTile2(gamestate, val);
+                if (!gamestate.deployHighlighted) {
+                    for (cells) |value| {
+                        if (value) |val| {
+                            //highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
+                            try highlightTile2(gamestate, val);
+                            gamestate.deployHighlighted = true;
+                        }
                         if (gamestate.cursor == null) {
                             gamestate.cursor = player.pos;
                         }
@@ -196,14 +199,32 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                         }
 
                         if (gamestate.selectedEntityMode == .moving) {
-                            std.debug.print("moving...\n", .{});
-                            try neighboursDistance(entity.pos, 2, &gamestate.movableTiles);
+                            if (gamestate.movableTiles.items.len == 0) {
+                                try neighboursDistance(entity.pos, 2, &gamestate.movableTiles);
+                            }
+                            if (gamestate.movableTiles.items.len > 0) {
+                                if (!gamestate.movementHighlighted) {
+                                    for (gamestate.movableTiles.items) |item| {
+                                        //TODO: highlight only valid tiles
+                                        try highlightTile2(gamestate, item);
+                                        gamestate.cursor = player.pos;
+                                        //TODO: make a spawn and remove cursor func
+                                    }
+
+                                    std.debug.print("high {}\n", .{gamestate.highlightedTiles.items.len});
+                                }
+                                gamestate.movementHighlighted = true;
+                            }
+
+                            //std.debug.print("movable_tiles_len: {}\n", .{gamestate.movableTiles.items.len});
+                            //std.debug.print("movable_tiles: {any}\n", .{gamestate.movableTiles.items});
                         } else if (gamestate.selectedEntityMode == .attacking) {
                             std.debug.print("attacking...\n", .{});
                         }
                     }
 
                     if (gamestate.cursor != null) {
+                        //TODO: make this code general, just spawn and use the value from cursor where you need
                         if (c.IsKeyPressed(c.KEY_H)) {
                             gamestate.cursor.?.x -= 1;
                         } else if (c.IsKeyPressed(c.KEY_L)) {
@@ -520,15 +541,20 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
 }
 
 pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.ArrayList(Types.Vector2Int)) !void {
-    _ = result;
-    _ = pos;
     const n = 2 * distance + 1;
-    _ = n;
+    const start = Types.vector2IntSub(pos, Types.Vector2Int{ .x = @intCast(distance), .y = @intCast(distance) });
+    var x: i32 = 0;
+    var y: i32 = 0;
 
-    var i: i32 = 1;
-    while (i <= distance) : (i += 1) {
-        const start = Types.vector2IntSub(pos, Types.Vector2Int{ .x = i, .y = i });
-        //@finish: NxN square append to result
+    while (y < n) : (y += 1) {
+        while (x < n) : (x += 1) {
+            if (x == distance and y == distance) {
+                continue;
+            }
+            const newPos = Types.vector2IntAdd(start, Types.Vector2Int{ .x = x, .y = y });
+            try result.append(newPos);
+        }
+        x = 0;
     }
 }
 
