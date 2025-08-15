@@ -209,15 +209,24 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                                         try highlightTile2(gamestate, item);
                                         gamestate.cursor = player.pos;
                                         //TODO: make a spawn and remove cursor func
+                                        //make an update function for cursor, probably for the whole game state struct
                                     }
 
                                     std.debug.print("high {}\n", .{gamestate.highlightedTiles.items.len});
                                 }
                                 gamestate.movementHighlighted = true;
                             }
+                            if (c.IsKeyPressed(c.KEY_A)) {
+                                //TODO: move to cursor
+                                //TODO: add checks to valid places
 
-                            //std.debug.print("movable_tiles_len: {}\n", .{gamestate.movableTiles.items.len});
-                            //std.debug.print("movable_tiles: {any}\n", .{gamestate.movableTiles.items});
+                                if (gamestate.cursor) |cur| {
+                                    player.path = try pathfinder.findPath(grid, player.pos, cur);
+                                }
+                            }
+                            if (player.path) |_| {
+                                player.makeCombatStep(delta, entities);
+                            }
                         } else if (gamestate.selectedEntityMode == .attacking) {
                             std.debug.print("attacking...\n", .{});
                         }

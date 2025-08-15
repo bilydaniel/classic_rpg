@@ -54,6 +54,8 @@ pub const Pathfinder = struct {
     }
 
     pub fn findPath(this: *Pathfinder, grid: []Level.Tile, start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
+        //TODO: take entities into account
+        //TODO: only return new nodes and index = 0, dont create a new std.arraylist every time
         //TODO: make all arraylist, use the pointer from all
         var open_list = std.ArrayList(Node).init(this.allocator);
         defer open_list.deinit();

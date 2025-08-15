@@ -45,6 +45,7 @@ pub const Entity = struct {
     turnTaken: bool,
     hasMoved: bool,
     hasAttacked: bool,
+    movementAnimationCooldown: f32,
     data: EntityData,
 
     pub fn init(
@@ -80,6 +81,7 @@ pub const Entity = struct {
             .turnTaken = false,
             .hasMoved = false,
             .hasAttacked = false,
+            .movementAnimationCooldown = 0,
             .data = entityData,
         };
         entity_id += 1;
@@ -165,6 +167,27 @@ pub const Entity = struct {
     pub fn setTextureID(this: *Entity, id: i32) void {
         this.textureID = id;
         this.sourceRect = Utils.makeSourceRect(id);
+    }
+
+    pub fn makeCombatStep(this: *Entity, delta: f32, entities: *std.ArrayList(*Entity)) void {
+        //TODO: take entities into account
+        this.movementAnimationCooldown += delta;
+        if (this.movementAnimationCooldown > Config.movement_animation_duration) {
+            this.movementAnimationCooldown = 0;
+            this.path.?.currIndex += 1;
+            const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
+
+            const entity = Systems.getEntityByPos(entities, new_pos);
+            if (entity) |_| {
+                this.path = null;
+                return;
+            } else {
+                this.pos = new_pos;
+            }
+            if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
+                this.path = null;
+            }
+        }
     }
 };
 
