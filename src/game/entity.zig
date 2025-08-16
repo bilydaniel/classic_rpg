@@ -170,22 +170,27 @@ pub const Entity = struct {
     }
 
     pub fn makeCombatStep(this: *Entity, delta: f32, entities: *std.ArrayList(*Entity)) void {
-        //TODO: take entities into account
-        this.movementAnimationCooldown += delta;
-        if (this.movementAnimationCooldown > Config.movement_animation_duration) {
-            this.movementAnimationCooldown = 0;
-            this.path.?.currIndex += 1;
-            const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
-
-            const entity = Systems.getEntityByPos(entities, new_pos);
-            if (entity) |_| {
-                this.path = null;
+        if (this.path) |path| {
+            if (path.nodes.items.len < 2) {
                 return;
-            } else {
-                this.pos = new_pos;
             }
-            if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
-                this.path = null;
+            this.movementAnimationCooldown += delta;
+            if (this.movementAnimationCooldown > Config.movement_animation_duration) {
+                this.movementAnimationCooldown = 0;
+                this.path.?.currIndex += 1;
+                const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
+
+                //TODO: put entities into pathfinder
+                const entity = Systems.getEntityByPos(entities, new_pos);
+                if (entity) |_| {
+                    this.path = null;
+                    return;
+                } else {
+                    this.pos = new_pos;
+                }
+                if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
+                    this.path = null;
+                }
             }
         }
     }

@@ -11,8 +11,6 @@ pub fn main() !void {
     c.InitWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
     defer c.CloseWindow();
 
-    c.SetTextureFilter(Window.screen.texture, c.TEXTURE_FILTER_POINT);
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 

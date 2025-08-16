@@ -1,6 +1,7 @@
 const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
 const World = @import("world.zig");
+const CameraManager = @import("cameraManager.zig");
 const Entity = @import("entity.zig");
 const Gamestate = @import("gamestate.zig");
 const Level = @import("level.zig");
@@ -11,7 +12,8 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, delta: f32, world: *World.World, camera: *c.Camera2D, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
+pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, delta: f32, world: *World.World, cameraManager: *CameraManager.CamManager, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
+    //TODO: @refactor continue
     const grid = world.currentLevel.grid; // for easier access
     switch (player.data.player.state) {
         .walking => {
@@ -22,14 +24,14 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                 const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
                 //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
                 //anymore
-                const hover_world = c.GetScreenToWorld2D(hover_texture, camera.*);
+                const hover_world = c.GetScreenToWorld2D(hover_texture, cameraManager.camera.*);
                 const hover_pos = Types.vector2ConvertWithPixels(hover_world);
                 highlightTile(grid, hover_pos, c.GREEN);
 
                 if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
                     const destination = c.GetMousePosition();
                     const renderDestination = Utils.screenToRenderTextureCoords(destination);
-                    const world_pos = c.GetScreenToWorld2D(renderDestination, camera.*);
+                    const world_pos = c.GetScreenToWorld2D(renderDestination, cameraManager.camera.*);
 
                     const player_dest = Utils.pixelToTile(world_pos);
                     //player.dest = player_dest;
@@ -169,18 +171,22 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                     } else if (c.IsKeyPressed(c.KEY_TWO)) {
                         if (player.data.player.puppets.items.len > 0) {
                             gamestate.selectedEntity = player.data.player.puppets.items[0];
+                            cameraManager.targetEntity = player.data.player.puppets.items[0];
                         }
                     } else if (c.IsKeyPressed(c.KEY_THREE)) {
                         if (player.data.player.puppets.items.len > 1) {
                             gamestate.selectedEntity = player.data.player.puppets.items[1];
+                            cameraManager.targetEntity = player.data.player.puppets.items[1];
                         }
                     } else if (c.IsKeyPressed(c.KEY_FOUR)) {
                         if (player.data.player.puppets.items.len > 2) {
                             gamestate.selectedEntity = player.data.player.puppets.items[2];
+                            cameraManager.targetEntity = player.data.player.puppets.items[2];
                         }
                     } else if (c.IsKeyPressed(c.KEY_FIVE)) {
                         if (player.data.player.puppets.items.len > 3) {
                             gamestate.selectedEntity = player.data.player.puppets.items[3];
+                            cameraManager.targetEntity = player.data.player.puppets.items[3];
                         }
                     }
 
@@ -224,9 +230,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
                                     player.path = try pathfinder.findPath(grid, player.pos, cur);
                                 }
                             }
-                            if (player.path) |_| {
-                                player.makeCombatStep(delta, entities);
-                            }
+                            player.makeCombatStep(delta, entities);
                         } else if (gamestate.selectedEntityMode == .attacking) {
                             std.debug.print("attacking...\n", .{});
                         }

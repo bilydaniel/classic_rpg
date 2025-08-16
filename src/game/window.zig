@@ -13,7 +13,6 @@ pub var offsetx: i32 = 0;
 pub var offsety: i32 = 0;
 pub var scaledWidth: i32 = 0;
 pub var scaledHeight: i32 = 0;
-pub var camera: c.Camera2D = .{};
 
 pub fn init() void {
     screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
@@ -38,12 +37,6 @@ pub fn init() void {
     scaledHeight = scaled_height;
     windowWidth = Config.window_width;
     windowHeight = Config.window_height;
-    camera = c.Camera2D{
-        .offset = c.Vector2{ .x = 0, .y = 0 },
-        .target = c.Vector2{ .x = 0, .y = 0 },
-        .rotation = 0.0,
-        .zoom = 1.0,
-    };
 }
 
 pub fn UpdateWindow() void {
