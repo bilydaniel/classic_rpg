@@ -8,6 +8,9 @@ pub var window_width: i32 = game_width * 1;
 pub var window_height: i32 = game_height * 1;
 
 pub const camera_zoom: f32 = 4;
+pub const camera_zoom_min: f32 = 1;
+pub const camera_zoom_max: f32 = 5;
+pub const camera_zoom_step: f32 = 0.25;
 
 pub const level_width: i32 = 80;
 pub const level_height: i32 = 25;

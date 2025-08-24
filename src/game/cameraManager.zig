@@ -49,13 +49,13 @@ pub const CamManager = struct {
             }
         }
         if (c.IsKeyPressed(c.KEY_DELETE)) {
-            if (this.camera.zoom < 4.0) {
-                this.camera.zoom += 0.25;
+            if (this.camera.zoom < Config.camera_zoom_max) {
+                this.camera.zoom += Config.camera_zoom_step;
             }
         }
         if (c.IsKeyPressed(c.KEY_INSERT)) {
-            if (this.camera.zoom > 1.0) {
-                this.camera.zoom -= 0.25;
+            if (this.camera.zoom > Config.camera_zoom_min) {
+                this.camera.zoom -= Config.camera_zoom_step;
             }
         }
         if (!this.manual) {

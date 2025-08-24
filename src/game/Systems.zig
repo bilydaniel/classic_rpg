@@ -12,264 +12,36 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+pub const playerUpdateContext = struct {
+    gamestate: *Gamestate.gameState,
+    player: *Entity.Entity,
+    delta: f32,
+    world: *World.World,
+    grid: *[]Level.Tile,
+    cameraManager: *CameraManager.CamManager,
+    pathfinder: *Pathfinder.Pathfinder,
+    entities: *std.ArrayList(*Entity.Entity),
+};
 pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, delta: f32, world: *World.World, cameraManager: *CameraManager.CamManager, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
-    //TODO: @refactor continue
-    const grid = world.currentLevel.grid; // for easier access
+    var ctx = playerUpdateContext{
+        .gamestate = gamestate,
+        .player = player,
+        .delta = delta,
+        .world = world,
+        .grid = &world.currentLevel.grid, // for easier access
+        .cameraManager = cameraManager,
+        .pathfinder = pathfinder,
+        .entities = entities,
+    };
     switch (player.data.player.state) {
         .walking => {
-            //TODO: make movement better, feels a bit off
-            if (Config.mouse_mode) {
-                //HOVER:
-                const hover_win = c.GetMousePosition();
-                const hover_texture = Utils.screenToRenderTextureCoords(hover_win);
-                //TODO: no idea if I still need screenToRenderTextureCoords, i dont use the render texture
-                //anymore
-                const hover_world = c.GetScreenToWorld2D(hover_texture, cameraManager.camera.*);
-                const hover_pos = Types.vector2ConvertWithPixels(hover_world);
-                highlightTile(grid, hover_pos, c.GREEN);
-
-                if (c.IsMouseButtonPressed(c.MOUSE_BUTTON_RIGHT)) {
-                    const destination = c.GetMousePosition();
-                    const renderDestination = Utils.screenToRenderTextureCoords(destination);
-                    const world_pos = c.GetScreenToWorld2D(renderDestination, cameraManager.camera.*);
-
-                    const player_dest = Utils.pixelToTile(world_pos);
-                    //player.dest = player_dest;
-                    //TODO: check for wron player_dest
-                    player.path = pathfinder.findPath(grid, player.pos, player_dest) catch null;
-                }
-
-                if (player.path) |path| {
-                    if (path.currIndex < path.nodes.items.len) {
-                        //TODO: add player movement speed
-                        if (player.movementCooldown > Config.turn_speed) {
-                            player.pos = path.nodes.items[path.currIndex];
-                            player.path.?.currIndex += 1;
-                            player.movementCooldown = 0;
-                        }
-                    } else {
-                        player.path.?.deinit();
-                        player.path = null;
-                    }
-                    player.movementCooldown += delta;
-                }
-            } else {
-                //TODO: change this shit, change the input system to something better
-
-                if (player.movementCooldown > 0.1) {
-                    var new_pos = player.pos;
-                    var moved = false;
-
-                    if (c.IsKeyDown(c.KEY_H)) {
-                        new_pos.x -= 1;
-                        moved = true;
-                    } else if (c.IsKeyDown(c.KEY_L)) {
-                        new_pos.x += 1;
-                        moved = true;
-                    } else if (c.IsKeyDown(c.KEY_J)) {
-                        new_pos.y += 1;
-                        moved = true;
-                    } else if (c.IsKeyDown(c.KEY_K)) {
-                        new_pos.y -= 1;
-                        moved = true;
-                    }
-
-                    if (c.IsKeyPressed(c.KEY_F)) {
-                        try player.startCombatSetup(entities, grid);
-                    }
-
-                    if (moved and canMove(world.currentLevel.grid, new_pos)) {
-                        if (isStaircase(world, new_pos)) {
-                            const levelLocation = getStaircaseDestination(world, new_pos);
-                            if (levelLocation) |lvllocation| {
-                                switchLevel(world, lvllocation.level);
-                                new_pos = lvllocation.pos;
-                            }
-                        }
-                        player.pos = new_pos;
-                        player.movementCooldown = 0;
-                        calculateFOV(&world.currentLevel.grid, new_pos, 8);
-                        const combat = checkCombatStart(player, entities);
-                        if (combat and player.data.player.state != .in_combat) {
-                            try player.startCombatSetup(entities, grid);
-                        }
-                    }
-                }
-                player.movementCooldown += delta;
-            }
+            try handlePlayerWalking(&ctx);
         },
         .deploying_puppets => {
-            if (gamestate.deployableCells == null) {
-                const neighbours = neighboursAll(player.pos);
-                gamestate.deployableCells = neighbours;
-            }
-            if (gamestate.deployableCells) |cells| {
-                if (!gamestate.deployHighlighted) {
-                    for (cells) |value| {
-                        if (value) |val| {
-                            //highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
-                            try highlightTile2(gamestate, val);
-                            gamestate.deployHighlighted = true;
-                        }
-                        if (gamestate.cursor == null) {
-                            gamestate.cursor = player.pos;
-                        }
-                    }
-                }
-            }
-
-            if (gamestate.cursor) |cursor| {
-                //player.visible = false;
-                highlightTile(grid, cursor, c.YELLOW);
-                if (c.IsKeyPressed(c.KEY_H)) {
-                    if (cursor.x > 0) {
-                        gamestate.cursor.?.x -= 1;
-                    }
-                } else if (c.IsKeyPressed(c.KEY_L)) {
-                    if (cursor.x < Config.level_width) {
-                        gamestate.cursor.?.x += 1;
-                    }
-                } else if (c.IsKeyPressed(c.KEY_J)) {
-                    if (cursor.y < Config.level_height) {
-                        gamestate.cursor.?.y += 1;
-                    }
-                } else if (c.IsKeyPressed(c.KEY_K)) {
-                    if (cursor.y > 0) {
-                        gamestate.cursor.?.y -= 1;
-                    }
-                } else if (c.IsKeyPressed(c.KEY_D)) {
-                    if (canDeploy(player, gamestate, grid, entities)) {
-                        try deployPuppet(player, gamestate, entities);
-                    }
-                }
-            }
-
-            //all puppets deployed
-            if (player.data.player.allPupsDeployed()) {
-                gamestate.resetDeploy();
-                player.data.player.state = .in_combat;
-            }
-            if (c.IsKeyPressed(c.KEY_F)) {
-                if (canEndCombat(player, entities)) {
-                    gamestate.resetDeploy();
-                    player.endCombat(entities);
-                }
-            }
+            try handlePlayerDeploying(&ctx);
         },
         .in_combat => {
-            switch (gamestate.currentTurn) {
-                .none => {
-                    gamestate.currentTurn = .player; //player always starts, for now
-                },
-                .player => {
-
-                    // take input, pick who you want to move => move/attack
-                    // after you moved all pices, end
-                    // you can either player master or all puppets
-                    if (c.IsKeyPressed(c.KEY_ONE)) {
-                        gamestate.selectedEntity = player;
-                    } else if (c.IsKeyPressed(c.KEY_TWO)) {
-                        if (player.data.player.puppets.items.len > 0) {
-                            gamestate.selectedEntity = player.data.player.puppets.items[0];
-                            cameraManager.targetEntity = player.data.player.puppets.items[0];
-                        }
-                    } else if (c.IsKeyPressed(c.KEY_THREE)) {
-                        if (player.data.player.puppets.items.len > 1) {
-                            gamestate.selectedEntity = player.data.player.puppets.items[1];
-                            cameraManager.targetEntity = player.data.player.puppets.items[1];
-                        }
-                    } else if (c.IsKeyPressed(c.KEY_FOUR)) {
-                        if (player.data.player.puppets.items.len > 2) {
-                            gamestate.selectedEntity = player.data.player.puppets.items[2];
-                            cameraManager.targetEntity = player.data.player.puppets.items[2];
-                        }
-                    } else if (c.IsKeyPressed(c.KEY_FIVE)) {
-                        if (player.data.player.puppets.items.len > 3) {
-                            gamestate.selectedEntity = player.data.player.puppets.items[3];
-                            cameraManager.targetEntity = player.data.player.puppets.items[3];
-                        }
-                    }
-
-                    if (gamestate.selectedEntity) |entity| {
-                        //TODO: move camera to the selected entity,
-                        //how do I highlight the selected entity?
-                        //probaly should try a blink, give a duration to highlight
-                        //could try to do a circle highlight
-
-                        highlightEntity(gamestate, entity.pos);
-
-                        if (c.IsKeyPressed(c.KEY_Q)) {
-                            gamestate.selectedEntityMode = .moving;
-                        } else if (c.IsKeyPressed(c.KEY_W)) {
-                            gamestate.selectedEntityMode = .attacking;
-                        }
-
-                        if (gamestate.selectedEntityMode == .moving) {
-                            if (gamestate.movableTiles.items.len == 0) {
-                                try neighboursDistance(entity.pos, 2, &gamestate.movableTiles);
-                            }
-                            if (gamestate.movableTiles.items.len > 0) {
-                                if (!gamestate.movementHighlighted) {
-                                    for (gamestate.movableTiles.items) |item| {
-                                        //TODO: highlight only valid tiles
-                                        try highlightTile2(gamestate, item);
-                                        gamestate.cursor = player.pos;
-                                        //TODO: make a spawn and remove cursor func
-                                        //make an update function for cursor, probably for the whole game state struct
-                                    }
-
-                                    std.debug.print("high {}\n", .{gamestate.highlightedTiles.items.len});
-                                }
-                                gamestate.movementHighlighted = true;
-                            }
-                            if (c.IsKeyPressed(c.KEY_A)) {
-                                //TODO: move to cursor
-                                //TODO: add checks to valid places
-
-                                if (gamestate.cursor) |cur| {
-                                    player.path = try pathfinder.findPath(grid, player.pos, cur);
-                                }
-                            }
-                            player.makeCombatStep(delta, entities);
-                        } else if (gamestate.selectedEntityMode == .attacking) {
-                            std.debug.print("attacking...\n", .{});
-                        }
-                    }
-
-                    if (gamestate.cursor != null) {
-                        //TODO: make this code general, just spawn and use the value from cursor where you need
-                        if (c.IsKeyPressed(c.KEY_H)) {
-                            gamestate.cursor.?.x -= 1;
-                        } else if (c.IsKeyPressed(c.KEY_L)) {
-                            gamestate.cursor.?.x += 1;
-                        } else if (c.IsKeyPressed(c.KEY_J)) {
-                            gamestate.cursor.?.y += 1;
-                        } else if (c.IsKeyPressed(c.KEY_K)) {
-                            gamestate.cursor.?.y -= 1;
-                        }
-                    }
-                    if (c.IsKeyPressed(c.KEY_F)) {
-                        // forcing end of combat for testing, REMOVE
-                        player.endCombat(entities);
-                        player.data.player.state = .walking;
-                        std.debug.print("F\n", .{});
-                        return;
-                    }
-
-                    if (player.data.player.inCombatWith.items.len == 0) {
-                        // everyone is dead
-                        gamestate.currentTurn = .none;
-                        player.data.player.state = .walking;
-                    } else {
-                        if (player.turnTaken or player.allPupsTurnTaken()) {
-                            // finished turn
-                            gamestate.currentTurn = .enemy;
-                            std.debug.print("turn_done\n", .{});
-                        }
-                    }
-                },
-                .enemy => {},
-            }
+            try handlePlayerCombat(&ctx);
         },
     }
 }
@@ -608,6 +380,238 @@ pub fn removeEntitiesType(entities: *std.ArrayList(*Entity.Entity), entityType: 
                 entities.items[i].data.puppet.deployed = false;
             }
             _ = entities.swapRemove(i);
+        }
+    }
+}
+
+pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
+    ctx.player.movementCooldown += ctx.delta;
+    //TODO: test the movement duration value
+    if (ctx.player.movementCooldown < Config.movement_animation_duration) {
+        return;
+    }
+    var new_pos = ctx.player.pos;
+    var moved = false;
+
+    //TODO: finish inputManager
+    if (c.IsKeyDown(c.KEY_H)) {
+        new_pos.x -= 1;
+        moved = true;
+    } else if (c.IsKeyDown(c.KEY_L)) {
+        new_pos.x += 1;
+        moved = true;
+    } else if (c.IsKeyDown(c.KEY_J)) {
+        new_pos.y += 1;
+        moved = true;
+    } else if (c.IsKeyDown(c.KEY_K)) {
+        new_pos.y -= 1;
+        moved = true;
+    }
+
+    if (c.IsKeyPressed(c.KEY_F)) {
+        try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
+    }
+
+    if (moved and canMove(ctx.world.currentLevel.grid, new_pos)) {
+        if (isStaircase(ctx.world, new_pos)) {
+            const levelLocation = getStaircaseDestination(ctx.world, new_pos);
+            if (levelLocation) |lvllocation| {
+                switchLevel(ctx.world, lvllocation.level);
+                new_pos = lvllocation.pos;
+            }
+        }
+        ctx.player.pos = new_pos;
+        ctx.player.movementCooldown = 0;
+
+        calculateFOV(&ctx.world.currentLevel.grid, new_pos, 8);
+
+        const combat = checkCombatStart(ctx.player, ctx.entities);
+        if (combat and ctx.player.data.player.state != .in_combat) {
+            try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
+        }
+    }
+}
+pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
+    if (ctx.gamestate.deployableCells == null) {
+        const neighbours = neighboursAll(ctx.player.pos);
+        ctx.gamestate.deployableCells = neighbours;
+    }
+    if (ctx.gamestate.deployableCells) |cells| {
+        if (!ctx.gamestate.deployHighlighted) {
+            for (cells) |value| {
+                if (value) |val| {
+                    //highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
+                    try highlightTile2(ctx.gamestate, val);
+                    ctx.gamestate.deployHighlighted = true;
+                }
+                //TODO: make a fn in gamestate
+                if (ctx.gamestate.cursor == null) {
+                    ctx.gamestate.cursor = ctx.player.pos;
+                }
+            }
+        }
+    }
+
+    if (ctx.gamestate.cursor) |cursor| {
+        //player.visible = false;
+        highlightTile(ctx.grid.*, cursor, c.YELLOW);
+        if (c.IsKeyPressed(c.KEY_H)) {
+            if (cursor.x > 0) {
+                ctx.gamestate.cursor.?.x -= 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_L)) {
+            if (cursor.x < Config.level_width) {
+                ctx.gamestate.cursor.?.x += 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_J)) {
+            if (cursor.y < Config.level_height) {
+                ctx.gamestate.cursor.?.y += 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_K)) {
+            if (cursor.y > 0) {
+                ctx.gamestate.cursor.?.y -= 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_D)) {
+            if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
+                try deployPuppet(ctx.player, ctx.gamestate, ctx.entities);
+            }
+        }
+    }
+
+    //all puppets deployed
+    if (ctx.player.data.player.allPupsDeployed()) {
+        ctx.gamestate.resetDeploy();
+        ctx.player.data.player.state = .in_combat;
+    }
+    if (c.IsKeyPressed(c.KEY_F)) {
+        if (canEndCombat(ctx.player, ctx.entities)) {
+            ctx.gamestate.resetDeploy();
+            ctx.player.endCombat(ctx.entities);
+        }
+    }
+}
+pub fn handlePlayerCombat(ctx: *playerUpdateContext) !void {
+    switch (ctx.gamestate.currentTurn) {
+        .none => {
+            ctx.gamestate.currentTurn = .player; //player always starts, for now
+        },
+        .player => {
+            try playerCombatTurn(ctx);
+
+            if (ctx.gamestate.cursor != null) {
+                //TODO: make this code general, just spawn and use the value from cursor where you need
+                if (c.IsKeyPressed(c.KEY_H)) {
+                    ctx.gamestate.cursor.?.x -= 1;
+                } else if (c.IsKeyPressed(c.KEY_L)) {
+                    ctx.gamestate.cursor.?.x += 1;
+                } else if (c.IsKeyPressed(c.KEY_J)) {
+                    ctx.gamestate.cursor.?.y += 1;
+                } else if (c.IsKeyPressed(c.KEY_K)) {
+                    ctx.gamestate.cursor.?.y -= 1;
+                }
+            }
+            if (c.IsKeyPressed(c.KEY_F)) {
+                // forcing end of combat for testing, REMOVE
+                ctx.player.endCombat(ctx.entities);
+                ctx.player.data.player.state = .walking;
+                std.debug.print("F\n", .{});
+                return;
+            }
+
+            if (ctx.player.data.player.inCombatWith.items.len == 0) {
+                // everyone is dead
+                ctx.gamestate.currentTurn = .none;
+                ctx.player.data.player.state = .walking;
+            } else {
+                if (ctx.player.turnTaken or ctx.player.allPupsTurnTaken()) {
+                    // finished turn
+                    ctx.gamestate.currentTurn = .enemy;
+                    std.debug.print("turn_done\n", .{});
+                }
+            }
+        },
+        .enemy => {},
+    }
+}
+
+pub fn playerCombatTurn(ctx: *playerUpdateContext) !void {
+    // take input, pick who you want to move => move/attack
+    // after you moved all pices, end
+    // you can either player master or all puppets
+
+    entitySelect(ctx);
+    try selectedEntityMove(ctx);
+}
+
+pub fn entitySelect(ctx: *playerUpdateContext) void {
+    if (c.IsKeyPressed(c.KEY_ONE)) {
+        ctx.gamestate.selectedEntity = ctx.player;
+    } else if (c.IsKeyPressed(c.KEY_TWO)) {
+        if (ctx.player.data.player.puppets.items.len > 0) {
+            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[0];
+            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[0];
+        }
+    } else if (c.IsKeyPressed(c.KEY_THREE)) {
+        if (ctx.player.data.player.puppets.items.len > 1) {
+            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[1];
+            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[1];
+        }
+    } else if (c.IsKeyPressed(c.KEY_FOUR)) {
+        if (ctx.player.data.player.puppets.items.len > 2) {
+            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[2];
+            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[2];
+        }
+    } else if (c.IsKeyPressed(c.KEY_FIVE)) {
+        if (ctx.player.data.player.puppets.items.len > 3) {
+            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[3];
+            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[3];
+        }
+    }
+}
+pub fn selectedEntityMove(ctx: *playerUpdateContext) !void {
+    if (ctx.gamestate.selectedEntity) |entity| {
+        //TODO: move camera to the selected entity,
+        //how do I highlight the selected entity?
+        //probaly should try a blink, give a duration to highlight
+        //could try to do a circle highlight
+
+        highlightEntity(ctx.gamestate, entity.pos);
+
+        if (c.IsKeyPressed(c.KEY_Q)) {
+            ctx.gamestate.selectedEntityMode = .moving;
+        } else if (c.IsKeyPressed(c.KEY_W)) {
+            ctx.gamestate.selectedEntityMode = .attacking;
+        }
+
+        if (ctx.gamestate.selectedEntityMode == .moving) {
+            if (ctx.gamestate.movableTiles.items.len == 0) {
+                try neighboursDistance(entity.pos, 2, &ctx.gamestate.movableTiles);
+            }
+            if (ctx.gamestate.movableTiles.items.len > 0) {
+                if (!ctx.gamestate.movementHighlighted) {
+                    for (ctx.gamestate.movableTiles.items) |item| {
+                        //TODO: highlight only valid tiles
+                        try highlightTile2(ctx.gamestate, item);
+                        ctx.gamestate.cursor = ctx.player.pos;
+                        //TODO: make a spawn and remove cursor func
+                        //make an update function for cursor, probably for the whole game state struct
+                    }
+
+                    std.debug.print("high {}\n", .{ctx.gamestate.highlightedTiles.items.len});
+                }
+                ctx.gamestate.movementHighlighted = true;
+            }
+            if (c.IsKeyPressed(c.KEY_A)) {
+                //TODO: move to cursor
+                //TODO: add checks to valid places
+
+                if (ctx.gamestate.cursor) |cur| {
+                    ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur);
+                }
+            }
+            ctx.player.makeCombatStep(ctx.delta, ctx.entities);
+        } else if (ctx.gamestate.selectedEntityMode == .attacking) {
+            std.debug.print("attacking...\n", .{});
         }
     }
 }

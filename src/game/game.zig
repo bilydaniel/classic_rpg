@@ -55,12 +55,12 @@ pub const Game = struct {
         const delta = c.GetFrameTime();
         //TODO: decide on a game loop, look into the book
         Window.UpdateWindow();
-        this.cameraManager.Update(delta);
 
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs
 
         try Systems.updatePlayer(this.gameState, this.player, delta, this.world, &this.cameraManager, this.pathfinder, &this.world.entities);
+        this.cameraManager.Update(delta);
         this.world.Update();
     }
 
