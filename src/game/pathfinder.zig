@@ -2,6 +2,7 @@ const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
 const std = @import("std");
 const Level = @import("level.zig");
+const Entity = @import("entity.zig");
 
 pub const NodeIndex = struct {
     node: *Node,
@@ -53,7 +54,7 @@ pub const Pathfinder = struct {
         return pathfinder;
     }
 
-    pub fn findPath(this: *Pathfinder, grid: []Level.Tile, start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
+    pub fn findPath(this: *Pathfinder, grid: []Level.Tile, start: Types.Vector2Int, end: Types.Vector2Int, entities: std.ArrayList(*Entity.Entity)) !?Path {
         //TODO: take entities into account
         //TODO: only return new nodes and index = 0, dont create a new std.arraylist every time
         //TODO: make all arraylist, use the pointer from all
@@ -82,7 +83,7 @@ pub const Pathfinder = struct {
 
             for (neighbours) |neighbour| {
                 const neigh = neighbour orelse continue;
-                if (!Systems.canMove(grid, neigh)) {
+                if (!Systems.canMove(grid, neigh, entities)) {
                     continue;
                 }
 

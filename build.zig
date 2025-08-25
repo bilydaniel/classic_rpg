@@ -25,21 +25,35 @@ pub fn build(b: *std.Build) void {
         .optimize = actual_optimize,
     });
 
+    const example = b.addExecutable(.{
+        .name = "example",
+        //change to what is needed
+        .root_source_file = .{ .cwd_relative = "examples/slashing_animation.zig" },
+        .target = target,
+        .optimize = actual_optimize,
+    });
+
     // Rest of your build script...
     game.linkLibC();
     editor.linkLibC();
+    example.linkLibC();
+
     game.linkSystemLibrary("raylib");
     editor.linkSystemLibrary("raylib");
+    example.linkSystemLibrary("raylib");
 
     b.installArtifact(game);
     b.installArtifact(editor);
+    b.installArtifact(example);
 
     const run_game = b.addRunArtifact(game);
     const run_editor = b.addRunArtifact(editor);
+    const run_example = b.addRunArtifact(example);
 
     // Standard run steps
     b.step("run-game", "Run the game").dependOn(&run_game.step);
     b.step("run-editor", "Run the editor").dependOn(&run_editor.step);
+    b.step("run-example", "Run the example").dependOn(&run_example.step);
 
     // Add fast-debug specific run steps
     const run_game_fast = b.addRunArtifact(game);

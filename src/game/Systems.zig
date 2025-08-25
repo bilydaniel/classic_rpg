@@ -33,7 +33,6 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
         .pathfinder = pathfinder,
         .entities = entities,
     };
-    std.debug.print("STATE: {}\n", .{player.data.player.state});
     switch (player.data.player.state) {
         .walking => {
             try handlePlayerWalking(&ctx);
@@ -68,7 +67,7 @@ pub fn canDeploy(player: *Entity.Entity, gamestate: *Gamestate.gameState, grid: 
             return false;
         }
 
-        const entity = getEntityByPos(entities, dep_pos);
+        const entity = getEntityByPos(entities.*, dep_pos);
         if (entity) |_| {
             return false;
         }
@@ -103,7 +102,7 @@ pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) boo
     return false;
 }
 
-pub fn getEntityByPos(entities: *std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
+pub fn getEntityByPos(entities: std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
     for (entities.items) |entity| {
         if (Types.vector2IntCompare(entity.pos, pos)) {
             return entity;
@@ -253,13 +252,21 @@ pub fn getStaircaseDestination(world: *World.World, pos: Types.Vector2Int) ?Leve
     return null;
 }
 
-pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int) bool {
+pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int, entities: std.ArrayList(*Entity.Entity)) bool {
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
         if (index < grid.len) {
-            return !grid[index].solid;
+            if (grid[index].solid) {
+                //TODO: probably gonna add something like walkable
+                return false;
+            }
         }
     }
+    const entity = getEntityByPos(entities, pos);
+    if (entity == null) {
+        return true;
+    }
+
     return false;
 }
 
@@ -413,7 +420,7 @@ pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
         try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
     }
 
-    if (moved and canMove(ctx.world.currentLevel.grid, new_pos)) {
+    if (moved and canMove(ctx.world.currentLevel.grid, new_pos, ctx.entities.*)) {
         if (isStaircase(ctx.world, new_pos)) {
             const levelLocation = getStaircaseDestination(ctx.world, new_pos);
             if (levelLocation) |lvllocation| {
@@ -614,7 +621,7 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !vo
         //TODO: add checks to valid places
 
         if (ctx.gamestate.cursor) |cur| {
-            ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur);
+            ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur, ctx.entities.*);
         }
     }
     ctx.player.makeCombatStep(ctx.delta, ctx.entities);

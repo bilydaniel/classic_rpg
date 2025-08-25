@@ -181,7 +181,7 @@ pub const Entity = struct {
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
 
                 //TODO: put entities into pathfinder
-                const entity = Systems.getEntityByPos(entities, new_pos);
+                const entity = Systems.getEntityByPos(entities.*, new_pos);
                 if (entity) |_| {
                     this.path = null;
                     return;
