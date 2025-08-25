@@ -33,6 +33,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
         .pathfinder = pathfinder,
         .entities = entities,
     };
+    std.debug.print("STATE: {}\n", .{player.data.player.state});
     switch (player.data.player.state) {
         .walking => {
             try handlePlayerWalking(&ctx);
@@ -513,7 +514,6 @@ pub fn handlePlayerCombat(ctx: *playerUpdateContext) !void {
             if (c.IsKeyPressed(c.KEY_F)) {
                 // forcing end of combat for testing, REMOVE
                 ctx.player.endCombat(ctx.entities);
-                ctx.player.data.player.state = .walking;
                 std.debug.print("F\n", .{});
                 return;
             }
@@ -540,7 +540,7 @@ pub fn playerCombatTurn(ctx: *playerUpdateContext) !void {
     // you can either player master or all puppets
 
     entitySelect(ctx);
-    try selectedEntityMove(ctx);
+    try selectedEntityAction(ctx);
 }
 
 pub fn entitySelect(ctx: *playerUpdateContext) void {
@@ -568,7 +568,7 @@ pub fn entitySelect(ctx: *playerUpdateContext) void {
         }
     }
 }
-pub fn selectedEntityMove(ctx: *playerUpdateContext) !void {
+pub fn selectedEntityAction(ctx: *playerUpdateContext) !void {
     if (ctx.gamestate.selectedEntity) |entity| {
         //TODO: move camera to the selected entity,
         //how do I highlight the selected entity?
@@ -584,34 +584,43 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext) !void {
         }
 
         if (ctx.gamestate.selectedEntityMode == .moving) {
-            if (ctx.gamestate.movableTiles.items.len == 0) {
-                try neighboursDistance(entity.pos, 2, &ctx.gamestate.movableTiles);
-            }
-            if (ctx.gamestate.movableTiles.items.len > 0) {
-                if (!ctx.gamestate.movementHighlighted) {
-                    for (ctx.gamestate.movableTiles.items) |item| {
-                        //TODO: highlight only valid tiles
-                        try highlightTile2(ctx.gamestate, item);
-                        ctx.gamestate.cursor = ctx.player.pos;
-                        //TODO: make a spawn and remove cursor func
-                        //make an update function for cursor, probably for the whole game state struct
-                    }
-
-                    std.debug.print("high {}\n", .{ctx.gamestate.highlightedTiles.items.len});
-                }
-                ctx.gamestate.movementHighlighted = true;
-            }
-            if (c.IsKeyPressed(c.KEY_A)) {
-                //TODO: move to cursor
-                //TODO: add checks to valid places
-
-                if (ctx.gamestate.cursor) |cur| {
-                    ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur);
-                }
-            }
-            ctx.player.makeCombatStep(ctx.delta, ctx.entities);
+            try selectedEntityMove(ctx, entity);
         } else if (ctx.gamestate.selectedEntityMode == .attacking) {
+            try selectedEntityAttack(ctx, entity);
             std.debug.print("attacking...\n", .{});
         }
     }
+}
+pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
+    if (ctx.gamestate.movableTiles.items.len == 0) {
+        try neighboursDistance(entity.pos, 2, &ctx.gamestate.movableTiles);
+    }
+    if (ctx.gamestate.movableTiles.items.len > 0) {
+        if (!ctx.gamestate.movementHighlighted) {
+            for (ctx.gamestate.movableTiles.items) |item| {
+                //TODO: highlight only valid tiles
+                try highlightTile2(ctx.gamestate, item);
+                ctx.gamestate.cursor = ctx.player.pos;
+                //TODO: make a spawn and remove cursor func
+                //make an update function for cursor, probably for the whole game state struct
+            }
+
+            std.debug.print("high {}\n", .{ctx.gamestate.highlightedTiles.items.len});
+        }
+        ctx.gamestate.movementHighlighted = true;
+    }
+    if (c.IsKeyPressed(c.KEY_A)) {
+        //TODO: move to cursor
+        //TODO: add checks to valid places
+
+        if (ctx.gamestate.cursor) |cur| {
+            ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur);
+        }
+    }
+    ctx.player.makeCombatStep(ctx.delta, ctx.entities);
+}
+pub fn selectedEntityAttack(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
+    //TODO: continue
+    _ = ctx;
+    _ = entity;
 }

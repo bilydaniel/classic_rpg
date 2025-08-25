@@ -73,5 +73,6 @@ pub const gameState = struct {
         this.cursor = null;
         this.highlightedTiles.clearRetainingCapacity();
         this.deployableCells = null;
+        this.deployHighlighted = false;
     }
 };
