@@ -69,11 +69,15 @@ pub const gameState = struct {
         return gamestate;
     }
 
-    pub fn resetDeploy(this: *gameState) void {
+    pub fn reset(this: *gameState) void {
         this.cursor = null;
+
         this.highlightedTiles.clearRetainingCapacity();
         this.deployableCells = null;
+
         this.deployHighlighted = false;
+        this.movementHighlighted = false;
+
         this.highlightedEntity = null;
     }
 

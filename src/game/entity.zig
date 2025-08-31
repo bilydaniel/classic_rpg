@@ -169,7 +169,7 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn makeCombatStep(this: *Entity, delta: f32, entities: *std.ArrayList(*Entity)) void {
+    pub fn makeCombatStep(this: *Entity, delta: f32) void {
         if (this.path) |path| {
             if (path.nodes.items.len < 2) {
                 return;
@@ -179,15 +179,7 @@ pub const Entity = struct {
                 this.movementAnimationCooldown = 0;
                 this.path.?.currIndex += 1;
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
-
-                //TODO: put entities into pathfinder
-                const entity = Systems.getEntityByPos(entities.*, new_pos);
-                if (entity) |_| {
-                    this.path = null;
-                    return;
-                } else {
-                    this.pos = new_pos;
-                }
+                this.pos = new_pos;
                 if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
                     this.path = null;
                 }

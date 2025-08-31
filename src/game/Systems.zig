@@ -453,13 +453,12 @@ pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
 
     //all puppets deployed
     if (ctx.player.data.player.allPupsDeployed()) {
-        ctx.gamestate.resetDeploy();
+        ctx.gamestate.reset();
         ctx.player.data.player.state = .in_combat;
     }
-    //TODO: maybe remove?
     if (c.IsKeyPressed(c.KEY_F)) {
         if (canEndCombat(ctx.player, ctx.entities)) {
-            ctx.gamestate.resetDeploy();
+            ctx.gamestate.reset();
             ctx.player.endCombat(ctx.entities);
         }
     }
@@ -472,21 +471,10 @@ pub fn handlePlayerCombat(ctx: *playerUpdateContext) !void {
         .player => {
             try playerCombatTurn(ctx);
 
-            if (ctx.gamestate.cursor != null) {
-                //TODO: make this code general, just spawn and use the value from cursor where you need
-                if (c.IsKeyPressed(c.KEY_H)) {
-                    ctx.gamestate.cursor.?.x -= 1;
-                } else if (c.IsKeyPressed(c.KEY_L)) {
-                    ctx.gamestate.cursor.?.x += 1;
-                } else if (c.IsKeyPressed(c.KEY_J)) {
-                    ctx.gamestate.cursor.?.y += 1;
-                } else if (c.IsKeyPressed(c.KEY_K)) {
-                    ctx.gamestate.cursor.?.y -= 1;
-                }
-            }
             if (c.IsKeyPressed(c.KEY_F)) {
                 // forcing end of combat for testing, REMOVE
                 ctx.player.endCombat(ctx.entities);
+                ctx.gamestate.reset();
                 std.debug.print("F\n", .{});
                 return;
             }
@@ -513,12 +501,14 @@ pub fn playerCombatTurn(ctx: *playerUpdateContext) !void {
     // you can either player master or all puppets
 
     entitySelect(ctx);
+
     try selectedEntityAction(ctx);
 }
 
 pub fn entitySelect(ctx: *playerUpdateContext) void {
     if (c.IsKeyPressed(c.KEY_ONE)) {
         ctx.gamestate.selectedEntity = ctx.player;
+        ctx.cameraManager.targetEntity = ctx.player;
     } else if (c.IsKeyPressed(c.KEY_TWO)) {
         if (ctx.player.data.player.puppets.items.len > 0) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[0];
@@ -566,6 +556,8 @@ pub fn selectedEntityAction(ctx: *playerUpdateContext) !void {
     }
 }
 pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
+    ctx.gamestate.makeCursor(entity.pos);
+    ctx.gamestate.updateCursor();
     if (ctx.gamestate.movableTiles.items.len == 0) {
         try neighboursDistance(entity.pos, 2, &ctx.gamestate.movableTiles);
     }
@@ -574,7 +566,6 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !vo
             for (ctx.gamestate.movableTiles.items) |item| {
                 //TODO: highlight only valid tiles
                 try highlightTile(ctx.gamestate, item);
-                ctx.gamestate.cursor = ctx.player.pos;
                 //TODO: make a spawn and remove cursor func
                 //make an update function for cursor, probably for the whole game state struct
             }
@@ -588,10 +579,11 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !vo
         //TODO: add checks to valid places
 
         if (ctx.gamestate.cursor) |cur| {
-            ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur, ctx.entities.*);
+            entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, cur, ctx.entities.*);
+            //ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur, ctx.entities.*);
         }
     }
-    ctx.player.makeCombatStep(ctx.delta, ctx.entities);
+    entity.makeCombatStep(ctx.delta);
 }
 pub fn selectedEntityAttack(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
     //TODO: continue

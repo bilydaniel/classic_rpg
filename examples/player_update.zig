@@ -177,13 +177,13 @@ fn handleDeployingPuppetsState(ctx: *const PlayerUpdateContext) !void {
 
     // Check for state transitions
     if (ctx.player.data.player.allPupsDeployed()) {
-        ctx.gamestate.resetDeploy();
+        ctx.gamestate.reset();
         ctx.player.data.player.state = .in_combat;
     }
 
     if (c.IsKeyPressed(c.KEY_F)) {
         if (canEndCombat(ctx.player, ctx.entities)) {
-            ctx.gamestate.resetDeploy();
+            ctx.gamestate.reset();
             ctx.player.endCombat(ctx.entities);
         }
     }
