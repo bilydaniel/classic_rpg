@@ -74,5 +74,38 @@ pub const gameState = struct {
         this.highlightedTiles.clearRetainingCapacity();
         this.deployableCells = null;
         this.deployHighlighted = false;
+        this.highlightedEntity = null;
+    }
+
+    pub fn makeCursor(this: *gameState, pos: Types.Vector2Int) void {
+        if (this.cursor == null) {
+            this.cursor = pos;
+        }
+    }
+    pub fn removeCursor(this: *gameState) void {
+        if (this.cursor != null) {
+            this.cursor = null;
+        }
+    }
+    pub fn updateCursor(this: *gameState) void {
+        if (this.cursor) |cursor| {
+            if (c.IsKeyPressed(c.KEY_H)) {
+                if (cursor.x > 0) {
+                    this.cursor.?.x -= 1;
+                }
+            } else if (c.IsKeyPressed(c.KEY_L)) {
+                if (cursor.x < Config.level_width) {
+                    this.cursor.?.x += 1;
+                }
+            } else if (c.IsKeyPressed(c.KEY_J)) {
+                if (cursor.y < Config.level_height) {
+                    this.cursor.?.y += 1;
+                }
+            } else if (c.IsKeyPressed(c.KEY_K)) {
+                if (cursor.y > 0) {
+                    this.cursor.?.y -= 1;
+                }
+            }
+        }
     }
 };

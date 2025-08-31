@@ -8,6 +8,7 @@ const Level = @import("level.zig");
 const Types = @import("../common/types.zig");
 const std = @import("std");
 const Pathfinder = @import("../game/pathfinder.zig");
+const InputManager = @import("../game/inputManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -33,7 +34,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
         .pathfinder = pathfinder,
         .entities = entities,
     };
-    std.debug.print("STATE: {}\n", .{player.data.player.state});
+    //std.debug.print("STATE: {}\n", .{player.data.player.state});
     switch (player.data.player.state) {
         .walking => {
             try handlePlayerWalking(&ctx);
@@ -176,8 +177,7 @@ pub fn switchLevel(world: *World.World, levelID: u32) void {
     }
 }
 
-//TODO: finish highlighting tiles that you can deploy to
-pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) void {
+pub fn old_highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) void {
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
         if (index >= 0 and index < grid.len) {
@@ -187,7 +187,7 @@ pub fn highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) 
     }
 }
 
-pub fn highlightTile2(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !void {
+pub fn highlightTile(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !void {
     try gamestate.highlightedTiles.append(Gamestate.highlight{
         .pos = pos,
         .color = c.YELLOW,
@@ -394,20 +394,7 @@ pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
     var new_pos = ctx.player.pos;
     var moved = false;
 
-    //TODO: finish inputManager
-    if (c.IsKeyDown(c.KEY_H)) {
-        new_pos.x -= 1;
-        moved = true;
-    } else if (c.IsKeyDown(c.KEY_L)) {
-        new_pos.x += 1;
-        moved = true;
-    } else if (c.IsKeyDown(c.KEY_J)) {
-        new_pos.y += 1;
-        moved = true;
-    } else if (c.IsKeyDown(c.KEY_K)) {
-        new_pos.y -= 1;
-        moved = true;
-    }
+    moved = InputManager.takePositionInput(&new_pos);
 
     if (c.IsKeyPressed(c.KEY_F)) {
         try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
@@ -441,41 +428,18 @@ pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
         if (!ctx.gamestate.deployHighlighted) {
             for (cells) |value| {
                 if (value) |val| {
-                    //highlightTile(grid, val, c.BLUE); //TODO: probably gonna change the ascii character temporarily too
-                    try highlightTile2(ctx.gamestate, val);
+                    try highlightTile(ctx.gamestate, val);
                     ctx.gamestate.deployHighlighted = true;
-                }
-                //TODO: make a fn in gamestate
-                if (ctx.gamestate.cursor == null) {
-                    ctx.gamestate.cursor = ctx.player.pos;
                 }
             }
         }
     }
 
-    if (ctx.gamestate.cursor) |cursor| {
-        //player.visible = false;
-        highlightTile(ctx.grid.*, cursor, c.YELLOW);
-        if (c.IsKeyPressed(c.KEY_H)) {
-            if (cursor.x > 0) {
-                ctx.gamestate.cursor.?.x -= 1;
-            }
-        } else if (c.IsKeyPressed(c.KEY_L)) {
-            if (cursor.x < Config.level_width) {
-                ctx.gamestate.cursor.?.x += 1;
-            }
-        } else if (c.IsKeyPressed(c.KEY_J)) {
-            if (cursor.y < Config.level_height) {
-                ctx.gamestate.cursor.?.y += 1;
-            }
-        } else if (c.IsKeyPressed(c.KEY_K)) {
-            if (cursor.y > 0) {
-                ctx.gamestate.cursor.?.y -= 1;
-            }
-        } else if (c.IsKeyPressed(c.KEY_D)) {
-            if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
-                try deployPuppet(ctx.player, ctx.gamestate, ctx.entities);
-            }
+    ctx.gamestate.makeCursor(ctx.player.pos);
+    ctx.gamestate.updateCursor();
+    if (c.IsKeyPressed(c.KEY_D)) {
+        if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
+            try deployPuppet(ctx.player, ctx.gamestate, ctx.entities);
         }
     }
 
@@ -484,6 +448,7 @@ pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
         ctx.gamestate.resetDeploy();
         ctx.player.data.player.state = .in_combat;
     }
+    //TODO: maybe remove?
     if (c.IsKeyPressed(c.KEY_F)) {
         if (canEndCombat(ctx.player, ctx.entities)) {
             ctx.gamestate.resetDeploy();
@@ -584,6 +549,7 @@ pub fn selectedEntityAction(ctx: *playerUpdateContext) !void {
         }
 
         if (ctx.gamestate.selectedEntityMode == .moving) {
+            std.debug.print("entity_move \n", .{});
             try selectedEntityMove(ctx, entity);
         } else if (ctx.gamestate.selectedEntityMode == .attacking) {
             try selectedEntityAttack(ctx, entity);
@@ -599,7 +565,7 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !vo
         if (!ctx.gamestate.movementHighlighted) {
             for (ctx.gamestate.movableTiles.items) |item| {
                 //TODO: highlight only valid tiles
-                try highlightTile2(ctx.gamestate, item);
+                try highlightTile(ctx.gamestate, item);
                 ctx.gamestate.cursor = ctx.player.pos;
                 //TODO: make a spawn and remove cursor func
                 //make an update function for cursor, probably for the whole game state struct
