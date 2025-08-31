@@ -36,11 +36,16 @@ pub const Game = struct {
         const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         const cameraManager = try CameraManager.CamManager.init(allocator, player);
+        const world = try World.World.init(allocator);
+        try world.entities.append(player);
+        for (player.data.player.puppets.items) |pup| {
+            try world.entities.append(pup);
+        }
 
         game.* = .{
             .allocator = allocator,
             .gameState = gamestate,
-            .world = try World.World.init(allocator),
+            .world = world,
             .player = player,
             .pathfinder = pathfinder,
             .tilesetManager = tilesetmanager,

@@ -46,16 +46,20 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
             try handlePlayerCombat(&ctx);
         },
     }
+    player.update(ctx.delta, ctx.grid);
+    for (player.data.player.puppets.items) |pup| {
+        pup.update(ctx.delta, ctx.grid);
+    }
 }
 
-pub fn deployPuppet(player: *Entity.Entity, gamestate: *Gamestate.gameState, entities: *std.ArrayList(*Entity.Entity)) !void {
+pub fn deployPuppet(player: *Entity.Entity, gamestate: *Gamestate.gameState) !void {
     const puppets = &player.data.player.puppets;
     for (puppets.items) |pup| {
         if (!pup.data.puppet.deployed) {
             if (gamestate.cursor) |curs| {
                 pup.pos = curs;
                 pup.data.puppet.deployed = true;
-                try entities.append(pup);
+                pup.visible = true;
                 return;
             }
         }
@@ -376,10 +380,6 @@ pub fn findEmptyCloseCell(grid: []Level.Tile, entities: *std.ArrayList(*Entity.E
     _ = entities;
 }
 
-pub fn returnPuppets(entities: *std.ArrayList(*Entity.Entity)) !void {
-    removeEntitiesType(entities, Entity.EntityType.puppet);
-}
-
 pub fn removeEntitiesType(entities: *std.ArrayList(*Entity.Entity), entityType: Entity.EntityType) void {
     var i = entities.items.len;
     while (i > 0) {
@@ -419,7 +419,7 @@ pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
         ctx.player.pos = new_pos;
         ctx.player.movementCooldown = 0;
 
-        calculateFOV(&ctx.world.currentLevel.grid, new_pos, 8);
+        //calculateFOV(&ctx.world.currentLevel.grid, new_pos, 8);
 
         const combat = checkCombatStart(ctx.player, ctx.entities);
         if (combat and ctx.player.data.player.state != .in_combat) {
@@ -447,7 +447,7 @@ pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
     ctx.gamestate.updateCursor();
     if (c.IsKeyPressed(c.KEY_D)) {
         if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
-            try deployPuppet(ctx.player, ctx.gamestate, ctx.entities);
+            try deployPuppet(ctx.player, ctx.gamestate);
         }
     }
 
@@ -459,7 +459,7 @@ pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
     if (c.IsKeyPressed(c.KEY_F)) {
         if (canEndCombat(ctx.player, ctx.entities)) {
             ctx.gamestate.reset();
-            ctx.player.endCombat(ctx.entities);
+            ctx.player.endCombat();
         }
     }
 }
@@ -473,7 +473,7 @@ pub fn handlePlayerCombat(ctx: *playerUpdateContext) !void {
 
             if (c.IsKeyPressed(c.KEY_F)) {
                 // forcing end of combat for testing, REMOVE
-                ctx.player.endCombat(ctx.entities);
+                ctx.player.endCombat();
                 ctx.gamestate.reset();
                 std.debug.print("F\n", .{});
                 return;
@@ -506,28 +506,32 @@ pub fn playerCombatTurn(ctx: *playerUpdateContext) !void {
 }
 
 pub fn entitySelect(ctx: *playerUpdateContext) void {
+    var selectedNow = false;
     if (c.IsKeyPressed(c.KEY_ONE)) {
         ctx.gamestate.selectedEntity = ctx.player;
-        ctx.cameraManager.targetEntity = ctx.player;
+        selectedNow = true;
     } else if (c.IsKeyPressed(c.KEY_TWO)) {
         if (ctx.player.data.player.puppets.items.len > 0) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[0];
-            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[0];
+            selectedNow = true;
         }
     } else if (c.IsKeyPressed(c.KEY_THREE)) {
         if (ctx.player.data.player.puppets.items.len > 1) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[1];
-            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[1];
+            selectedNow = true;
         }
     } else if (c.IsKeyPressed(c.KEY_FOUR)) {
         if (ctx.player.data.player.puppets.items.len > 2) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[2];
-            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[2];
+            selectedNow = true;
         }
     } else if (c.IsKeyPressed(c.KEY_FIVE)) {
-        if (ctx.player.data.player.puppets.items.len > 3) {
-            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[3];
-            ctx.cameraManager.targetEntity = ctx.player.data.player.puppets.items[3];
+        if (ctx.player.data.player.puppets.items.len > 3) {}
+    }
+    if (selectedNow) {
+        if (ctx.gamestate.selectedEntity) |selected_entity| {
+            ctx.cameraManager.targetEntity = selected_entity;
+            ctx.gamestate.cursor = selected_entity.pos;
         }
     }
 }
@@ -583,7 +587,6 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !vo
             //ctx.player.path = try ctx.pathfinder.findPath(ctx.grid.*, ctx.player.pos, cur, ctx.entities.*);
         }
     }
-    entity.makeCombatStep(ctx.delta);
 }
 pub fn selectedEntityAttack(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
     //TODO: continue

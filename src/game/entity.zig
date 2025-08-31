@@ -42,6 +42,7 @@ pub const Entity = struct {
     backgroundColor: c.Color,
     tempBackground: ?c.Color,
     visible: bool,
+    targetable: bool,
     turnTaken: bool,
     hasMoved: bool,
     hasAttacked: bool,
@@ -78,6 +79,7 @@ pub const Entity = struct {
             .backgroundColor = c.BLACK,
             .tempBackground = null,
             .visible = true,
+            .targetable = true, //TODO: add to the needed places
             .turnTaken = false,
             .hasMoved = false,
             .hasAttacked = false,
@@ -145,11 +147,19 @@ pub const Entity = struct {
         }
     }
 
-    pub fn endCombat(this: *Entity, entities: *std.ArrayList(*Entity)) void {
+    pub fn endCombat(this: *Entity) void {
         if (this.data == .player) {
             this.data.player.state = .walking;
             this.data.player.inCombatWith.clearRetainingCapacity();
-            try Systems.returnPuppets(entities);
+            this.returnPuppets();
+        }
+    }
+
+    pub fn returnPuppets(this: *Entity) void {
+        for (this.data.player.puppets.items) |pup| {
+            pup.visible = false;
+            pup.targetable = false;
+            pup.data.puppet.deployed = false;
         }
     }
 
@@ -169,7 +179,7 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn makeCombatStep(this: *Entity, delta: f32) void {
+    pub fn update(this: *Entity, delta: f32, grid: *[]Level.Tile) void {
         if (this.path) |path| {
             if (path.nodes.items.len < 2) {
                 return;
@@ -180,11 +190,17 @@ pub const Entity = struct {
                 this.path.?.currIndex += 1;
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
                 this.pos = new_pos;
+                this.move(new_pos, grid);
                 if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
                     this.path = null;
                 }
             }
         }
+    }
+
+    pub fn move(this: *Entity, pos: Types.Vector2Int, grid: *[]Level.Tile) void {
+        this.pos = pos;
+        Systems.calculateFOV(grid, pos, 8);
     }
 };
 
@@ -215,9 +231,11 @@ pub const PlayerData = struct {
         const inCombatWith = std.ArrayList(*Entity).init(allocator);
         var puppets = std.ArrayList(*Entity).init(allocator);
 
-        const pup_pos = Types.Vector2Int{ .x = 5, .y = 5 };
-        const puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
-        const puppet2 = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+        const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
+        var puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
+        puppet.visible = false;
+        var puppet2 = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+        puppet2.visible = false;
 
         puppet.setTextureID(50);
         puppet2.setTextureID(51);

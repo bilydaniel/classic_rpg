@@ -73,12 +73,16 @@ pub const gameState = struct {
         this.cursor = null;
 
         this.highlightedTiles.clearRetainingCapacity();
+        this.movableTiles.clearRetainingCapacity();
         this.deployableCells = null;
 
         this.deployHighlighted = false;
         this.movementHighlighted = false;
 
         this.highlightedEntity = null;
+        this.currentTurn = .none;
+        this.selectedEntity = null;
+        this.selectedEntityMode = .none;
     }
 
     pub fn makeCursor(this: *gameState, pos: Types.Vector2Int) void {
