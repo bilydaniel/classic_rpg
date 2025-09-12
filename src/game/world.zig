@@ -28,17 +28,19 @@ pub const World = struct {
         const pos = Types.Vector2Int{ .x = 5, .y = 5 };
         const enemy_tile = 55;
         const enemy_rect = Utils.makeSourceRect(enemy_tile);
-        const entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "r");
+        const enemy_goal = Types.Vector2Int.init(2, 2);
+
+        const entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
         entity.textureID = enemy_tile;
         entity.sourceRect = enemy_rect;
 
         const pos2 = Types.Vector2Int{ .x = 6, .y = 6 };
-        const entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "r");
+        const entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
         entity2.textureID = enemy_tile;
         entity2.sourceRect = enemy_rect;
 
         const pos3 = Types.Vector2Int{ .x = 7, .y = 7 };
-        const entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .qwe = true } }, "r");
+        const entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
         entity3.textureID = enemy_tile;
         entity3.sourceRect = enemy_rect;
 

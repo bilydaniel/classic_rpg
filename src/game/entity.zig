@@ -180,16 +180,26 @@ pub const Entity = struct {
     }
 
     pub fn update(this: *Entity, delta: f32, grid: *[]Level.Tile) void {
+        if (this.data == .enemy) {
+            if (this.data.enemy.goal) |goal| {
+                if (this.path == null) {
+                    _ = goal;
+                    //this.path = pathfinder.
+                }
+            }
+        }
         if (this.path) |path| {
             if (path.nodes.items.len < 2) {
                 return;
             }
+
             this.movementAnimationCooldown += delta;
             if (this.movementAnimationCooldown > Config.movement_animation_duration) {
                 this.movementAnimationCooldown = 0;
                 this.path.?.currIndex += 1;
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
                 this.pos = new_pos;
+
                 this.move(new_pos, grid);
                 if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
                     this.path = null;
@@ -259,7 +269,7 @@ pub const PlayerData = struct {
     }
 };
 pub const EnemyData = struct {
-    qwe: bool,
+    goal: ?Types.Vector2Int,
 };
 pub const ItemData = struct {};
 pub const PuppetData = struct {

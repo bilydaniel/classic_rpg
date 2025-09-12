@@ -34,7 +34,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
         .pathfinder = pathfinder,
         .entities = entities,
     };
-    //std.debug.print("STATE: {}\n", .{player.data.player.state});
+
     switch (player.data.player.state) {
         .walking => {
             try handlePlayerWalking(&ctx);
@@ -46,6 +46,7 @@ pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, del
             try handlePlayerCombat(&ctx);
         },
     }
+
     player.update(ctx.delta, ctx.grid);
     for (player.data.player.puppets.items) |pup| {
         pup.update(ctx.delta, ctx.grid);
@@ -358,9 +359,11 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
 
 pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) bool {
     for (entities.items) |entity| {
-        const distance = Types.vector2Distance(player.pos, entity.pos);
-        if (distance < 3) {
-            return true;
+        if (entity.data == .enemy) {
+            const distance = Types.vector2Distance(player.pos, entity.pos);
+            if (distance < 3) {
+                return true;
+            }
         }
     }
     return false;
@@ -416,10 +419,8 @@ pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
                 new_pos = lvllocation.pos;
             }
         }
-        ctx.player.pos = new_pos;
+        ctx.player.move(new_pos, ctx.grid);
         ctx.player.movementCooldown = 0;
-
-        //calculateFOV(&ctx.world.currentLevel.grid, new_pos, 8);
 
         const combat = checkCombatStart(ctx.player, ctx.entities);
         if (combat and ctx.player.data.player.state != .in_combat) {
@@ -528,10 +529,11 @@ pub fn entitySelect(ctx: *playerUpdateContext) void {
     } else if (c.IsKeyPressed(c.KEY_FIVE)) {
         if (ctx.player.data.player.puppets.items.len > 3) {}
     }
+
     if (selectedNow) {
         if (ctx.gamestate.selectedEntity) |selected_entity| {
             ctx.cameraManager.targetEntity = selected_entity;
-            ctx.gamestate.cursor = selected_entity.pos;
+            ctx.gamestate.removeCursor();
         }
     }
 }
@@ -546,8 +548,14 @@ pub fn selectedEntityAction(ctx: *playerUpdateContext) !void {
 
         if (c.IsKeyPressed(c.KEY_Q)) {
             ctx.gamestate.selectedEntityMode = .moving;
+            if (ctx.gamestate.selectedEntity) |selected_entity| {
+                ctx.gamestate.makeCursor(selected_entity.pos);
+            }
         } else if (c.IsKeyPressed(c.KEY_W)) {
             ctx.gamestate.selectedEntityMode = .attacking;
+            if (ctx.gamestate.selectedEntity) |selected_entity| {
+                ctx.gamestate.makeCursor(selected_entity.pos);
+            }
         }
 
         if (ctx.gamestate.selectedEntityMode == .moving) {
