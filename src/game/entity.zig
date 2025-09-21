@@ -31,6 +31,7 @@ pub const Entity = struct {
     mana: i32,
     tp: i32,
     pos: Types.Vector2Int,
+    levelID: u32,
     path: ?Pathfinder.Path,
     speed: f32,
     movementCooldown: f32, //TODO: probably do a different way
@@ -52,6 +53,7 @@ pub const Entity = struct {
     pub fn init(
         allocator: std.mem.Allocator,
         pos: Types.Vector2Int,
+        levelID: u32,
         speed: f32,
         entityData: anytype,
         asciiChar: []const u8,
@@ -68,6 +70,7 @@ pub const Entity = struct {
             .mana = 10,
             .tp = 0,
             .pos = pos,
+            .levelID = levelID,
             .isAscii = Config.ascii_mode,
             .ascii = ascii_array,
             .textureID = null,
@@ -242,9 +245,9 @@ pub const PlayerData = struct {
         var puppets = std.ArrayList(*Entity).init(allocator);
 
         const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
-        var puppet = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
+        var puppet = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
         puppet.visible = false;
-        var puppet2 = try Entity.init(allocator, pup_pos, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+        var puppet2 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
         puppet2.visible = false;
 
         puppet.setTextureID(50);

@@ -1,5 +1,6 @@
 const std = @import("std");
 const World = @import("world.zig");
+const Level = @import("level.zig");
 const Systems = @import("Systems.zig");
 const CameraManager = @import("cameraManager.zig");
 const TilesetManager = @import("tilesetManager.zig");
@@ -15,14 +16,51 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+pub const Context = struct {
+    gamestate: *Gamestate.gameState,
+    player: *Entity.Entity,
+    delta: f32,
+    world: *World.World,
+    grid: *[]Level.Tile,
+    cameraManager: *CameraManager.CamManager,
+    pathfinder: *Pathfinder.Pathfinder,
+    entities: *std.ArrayList(*Entity.Entity),
+
+    pub fn init(
+        allocator: std.mem.Allocator,
+        gamestate: *Gamestate.gameState,
+        player: *Entity.Entity,
+        delta: f32,
+        world: *World.World,
+        grid: *[]Level.Tile,
+        cameraManager: *CameraManager.CamManager,
+        pathfinder: *Pathfinder.Pathfinder,
+        entities: *std.ArrayList(*Entity.Entity),
+    ) !*Context {
+        const context = try allocator.create(Context);
+        context.* = .{
+            .gamestate = gamestate,
+            .player = player,
+            .delta = delta,
+            .world = world,
+            .grid = grid,
+            .cameraManager = cameraManager,
+            .pathfinder = pathfinder,
+            .entities = entities,
+        };
+        return context;
+    }
+};
+
 pub const Game = struct {
     allocator: std.mem.Allocator,
     gameState: *Gamestate.gameState,
-    world: *World.World,
     player: *Entity.Entity,
-    cameraManager: CameraManager.CamManager,
+    world: *World.World,
+    cameraManager: *CameraManager.CamManager,
     pathfinder: *Pathfinder.Pathfinder,
     tilesetManager: *TilesetManager.TilesetManager,
+    context: *Context,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
@@ -31,7 +69,7 @@ pub const Game = struct {
         const game = try allocator.create(Game);
         const gamestate = try Gamestate.gameState.init(allocator);
         const playerData = try Entity.PlayerData.init(allocator);
-        var player = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData }, "@");
+        var player = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 0, 1, Entity.EntityData{ .player = playerData }, "@");
         player.setTextureID(76);
         const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
@@ -42,6 +80,17 @@ pub const Game = struct {
             try world.entities.append(pup);
         }
 
+        const context = try Context.init(
+            allocator,
+            gamestate,
+            player,
+            0,
+            world,
+            &world.currentLevel.grid,
+            cameraManager,
+            pathfinder,
+            &world.entities,
+        );
         game.* = .{
             .allocator = allocator,
             .gameState = gamestate,
@@ -50,6 +99,7 @@ pub const Game = struct {
             .pathfinder = pathfinder,
             .tilesetManager = tilesetmanager,
             .cameraManager = cameraManager,
+            .context = context,
         };
 
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
@@ -58,15 +108,16 @@ pub const Game = struct {
 
     pub fn Update(this: *Game) !void {
         const delta = c.GetFrameTime();
+        this.context.delta = delta;
         //TODO: decide on a game loop, look into the book
         Window.UpdateWindow();
 
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs
 
-        try Systems.updatePlayer(this.gameState, this.player, delta, this.world, &this.cameraManager, this.pathfinder, &this.world.entities);
+        try Systems.updatePlayer(this.context);
         this.cameraManager.Update(delta);
-        this.world.Update();
+        this.world.Update(this.context);
     }
 
     pub fn Draw(this: *Game) void {

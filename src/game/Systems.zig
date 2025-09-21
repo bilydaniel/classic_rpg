@@ -9,46 +9,27 @@ const Types = @import("../common/types.zig");
 const std = @import("std");
 const Pathfinder = @import("../game/pathfinder.zig");
 const InputManager = @import("../game/inputManager.zig");
+const Game = @import("game.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub const playerUpdateContext = struct {
-    gamestate: *Gamestate.gameState,
-    player: *Entity.Entity,
-    delta: f32,
-    world: *World.World,
-    grid: *[]Level.Tile,
-    cameraManager: *CameraManager.CamManager,
-    pathfinder: *Pathfinder.Pathfinder,
-    entities: *std.ArrayList(*Entity.Entity),
-};
-pub fn updatePlayer(gamestate: *Gamestate.gameState, player: *Entity.Entity, delta: f32, world: *World.World, cameraManager: *CameraManager.CamManager, pathfinder: *Pathfinder.Pathfinder, entities: *std.ArrayList(*Entity.Entity)) !void {
-    var ctx = playerUpdateContext{
-        .gamestate = gamestate,
-        .player = player,
-        .delta = delta,
-        .world = world,
-        .grid = &world.currentLevel.grid, // for easier access
-        .cameraManager = cameraManager,
-        .pathfinder = pathfinder,
-        .entities = entities,
-    };
-
-    switch (player.data.player.state) {
+pub fn updatePlayer(ctx: *Game.Context) !void {
+    std.debug.print("entities: {}\n", .{ctx.entities.items.len});
+    switch (ctx.player.data.player.state) {
         .walking => {
-            try handlePlayerWalking(&ctx);
+            try handlePlayerWalking(ctx);
         },
         .deploying_puppets => {
-            try handlePlayerDeploying(&ctx);
+            try handlePlayerDeploying(ctx);
         },
         .in_combat => {
-            try handlePlayerCombat(&ctx);
+            try handlePlayerCombat(ctx);
         },
     }
 
-    player.update(ctx.delta, ctx.grid);
-    for (player.data.player.puppets.items) |pup| {
+    ctx.player.update(ctx.delta, ctx.grid);
+    for (ctx.player.data.player.puppets.items) |pup| {
         pup.update(ctx.delta, ctx.grid);
     }
 }
@@ -396,7 +377,7 @@ pub fn removeEntitiesType(entities: *std.ArrayList(*Entity.Entity), entityType: 
     }
 }
 
-pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
+pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     ctx.player.movementCooldown += ctx.delta;
     //TODO: test the movement duration value
     if (ctx.player.movementCooldown < Config.movement_animation_duration) {
@@ -428,7 +409,7 @@ pub fn handlePlayerWalking(ctx: *playerUpdateContext) !void {
         }
     }
 }
-pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
+pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
     if (ctx.gamestate.deployableCells == null) {
         const neighbours = neighboursAll(ctx.player.pos);
         ctx.gamestate.deployableCells = neighbours;
@@ -464,7 +445,7 @@ pub fn handlePlayerDeploying(ctx: *playerUpdateContext) !void {
         }
     }
 }
-pub fn handlePlayerCombat(ctx: *playerUpdateContext) !void {
+pub fn handlePlayerCombat(ctx: *Game.Context) !void {
     switch (ctx.gamestate.currentTurn) {
         .none => {
             ctx.gamestate.currentTurn = .player; //player always starts, for now
@@ -496,7 +477,7 @@ pub fn handlePlayerCombat(ctx: *playerUpdateContext) !void {
     }
 }
 
-pub fn playerCombatTurn(ctx: *playerUpdateContext) !void {
+pub fn playerCombatTurn(ctx: *Game.Context) !void {
     // take input, pick who you want to move => move/attack
     // after you moved all pices, end
     // you can either player master or all puppets
@@ -506,7 +487,7 @@ pub fn playerCombatTurn(ctx: *playerUpdateContext) !void {
     try selectedEntityAction(ctx);
 }
 
-pub fn entitySelect(ctx: *playerUpdateContext) void {
+pub fn entitySelect(ctx: *Game.Context) void {
     var selectedNow = false;
     if (c.IsKeyPressed(c.KEY_ONE)) {
         ctx.gamestate.selectedEntity = ctx.player;
@@ -537,7 +518,7 @@ pub fn entitySelect(ctx: *playerUpdateContext) void {
         }
     }
 }
-pub fn selectedEntityAction(ctx: *playerUpdateContext) !void {
+pub fn selectedEntityAction(ctx: *Game.Context) !void {
     if (ctx.gamestate.selectedEntity) |entity| {
         //TODO: move camera to the selected entity,
         //how do I highlight the selected entity?
@@ -567,7 +548,7 @@ pub fn selectedEntityAction(ctx: *playerUpdateContext) !void {
         }
     }
 }
-pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
+pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
     ctx.gamestate.makeCursor(entity.pos);
     ctx.gamestate.updateCursor();
     if (ctx.gamestate.movableTiles.items.len == 0) {
@@ -596,7 +577,7 @@ pub fn selectedEntityMove(ctx: *playerUpdateContext, entity: *Entity.Entity) !vo
         }
     }
 }
-pub fn selectedEntityAttack(ctx: *playerUpdateContext, entity: *Entity.Entity) !void {
+pub fn selectedEntityAttack(ctx: *Game.Context, entity: *Entity.Entity) !void {
     //TODO: continue
     _ = ctx;
     _ = entity;

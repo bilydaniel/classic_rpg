@@ -3,6 +3,7 @@ const Pathfinder = @import("pathfinder.zig");
 const Entity = @import("entity.zig");
 const TilesetManager = @import("tilesetManager.zig");
 const std = @import("std");
+const Game = @import("game.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const c = @cImport({
@@ -30,17 +31,17 @@ pub const World = struct {
         const enemy_rect = Utils.makeSourceRect(enemy_tile);
         const enemy_goal = Types.Vector2Int.init(2, 2);
 
-        const entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
+        const entity = try Entity.Entity.init(allocator, pos, 0, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
         entity.textureID = enemy_tile;
         entity.sourceRect = enemy_rect;
 
         const pos2 = Types.Vector2Int{ .x = 6, .y = 6 };
-        const entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
+        const entity2 = try Entity.Entity.init(allocator, pos2, 0, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
         entity2.textureID = enemy_tile;
         entity2.sourceRect = enemy_rect;
 
         const pos3 = Types.Vector2Int{ .x = 7, .y = 7 };
-        const entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
+        const entity3 = try Entity.Entity.init(allocator, pos3, 0, 1.0, Entity.EntityData{ .enemy = .{ .goal = enemy_goal } }, "r");
         entity3.textureID = enemy_tile;
         entity3.sourceRect = enemy_rect;
 
@@ -96,9 +97,14 @@ pub const World = struct {
         this.currentLevel.Draw(this.entities, tilesetManager);
     }
 
-    pub fn Update(this: *World) void {
+    pub fn Update(this: *World, ctx: *Game.Context) void {
+        //TODO: how do I want the order of the update?
+
+        for (this.entities.items) |entity| {
+            entity.update(ctx.delta, ctx.grid);
+        }
         for (this.levels.items) |lvl| {
-            lvl.Update();
+            lvl.Update(ctx.pathfinder);
         }
     }
 };

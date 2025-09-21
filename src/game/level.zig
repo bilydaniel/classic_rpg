@@ -1,4 +1,5 @@
 const std = @import("std");
+const Pathfinder = @import("pathfinder.zig");
 const Utils = @import("../common/utils.zig");
 const Entity = @import("entity.zig");
 const TilesetManager = @import("tilesetManager.zig");
@@ -166,7 +167,7 @@ pub const Level = struct {
     //TODO: REMOVE
     tile_texture: c.Texture2D,
     allocator: std.mem.Allocator,
-    entities: std.ArrayList(*Entity),
+    entities: std.ArrayList(*Entity.Entity),
     //TODO: put somewhere else, just for now
     font: c.Font,
 
@@ -192,7 +193,7 @@ pub const Level = struct {
 
         const font = c.LoadFontEx("../../assets/dejavu10x10_gs_tc.png", 16, null, 0);
         c.SetTextureFilter(font.texture, c.TEXTURE_FILTER_POINT);
-        const entities = std.ArrayList(*Entity).init(allocator);
+        const entities = std.ArrayList(*Entity.Entity).init(allocator);
         level.* = .{
             .id = id,
             .grid = grid,
@@ -276,12 +277,15 @@ pub const Level = struct {
         }
 
         for (entities.items) |entity| {
-            entity.Draw(tilesetManager);
+            if (this.id == entity.levelID) {
+                entity.Draw(tilesetManager);
+            }
         }
     }
 
-    pub fn Update(this: *Level) void {
+    pub fn Update(this: *Level, pathfinder: *Pathfinder.Pathfinder) void {
         _ = this;
+        _ = pathfinder;
     }
 
     pub fn generateInterestingLevel(level: *Level) void {

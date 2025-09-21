@@ -11,7 +11,7 @@ pub const CamManager = struct {
     speed: f32,
     targetEntity: *Entity.Entity,
 
-    pub fn init(allocator: std.mem.Allocator, entity: *Entity.Entity) !CamManager {
+    pub fn init(allocator: std.mem.Allocator, entity: *Entity.Entity) !*CamManager {
         const camera_manager = try allocator.create(CamManager);
         const camera = try allocator.create(c.Camera2D);
         camera.* = .{
@@ -26,7 +26,7 @@ pub const CamManager = struct {
             .speed = 100.0,
             .targetEntity = entity,
         };
-        return camera_manager.*;
+        return camera_manager;
     }
 
     pub fn Update(this: *CamManager, delta: f32) void {
