@@ -15,7 +15,6 @@ const c = @cImport({
 });
 
 pub fn updatePlayer(ctx: *Game.Context) !void {
-    std.debug.print("entities: {}\n", .{ctx.entities.items.len});
     switch (ctx.player.data.player.state) {
         .walking => {
             try handlePlayerWalking(ctx);
@@ -28,9 +27,9 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
         },
     }
 
-    ctx.player.update(ctx.delta, ctx.grid);
+    try ctx.player.update(ctx);
     for (ctx.player.data.player.puppets.items) |pup| {
-        pup.update(ctx.delta, ctx.grid);
+        try pup.update(ctx);
     }
 }
 
@@ -540,11 +539,9 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
         }
 
         if (ctx.gamestate.selectedEntityMode == .moving) {
-            std.debug.print("entity_move \n", .{});
             try selectedEntityMove(ctx, entity);
         } else if (ctx.gamestate.selectedEntityMode == .attacking) {
             try selectedEntityAttack(ctx, entity);
-            std.debug.print("attacking...\n", .{});
         }
     }
 }

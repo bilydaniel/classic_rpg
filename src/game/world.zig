@@ -97,11 +97,11 @@ pub const World = struct {
         this.currentLevel.Draw(this.entities, tilesetManager);
     }
 
-    pub fn Update(this: *World, ctx: *Game.Context) void {
+    pub fn Update(this: *World, ctx: *Game.Context) !void {
         //TODO: how do I want the order of the update?
 
         for (this.entities.items) |entity| {
-            entity.update(ctx.delta, ctx.grid);
+            try entity.update(ctx);
         }
         for (this.levels.items) |lvl| {
             lvl.Update(ctx.pathfinder);

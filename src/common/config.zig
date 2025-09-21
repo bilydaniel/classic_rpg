@@ -25,4 +25,4 @@ pub const tile_height: i32 = if (!ascii_mode) 12 else 24;
 
 pub const tileset_width = 25;
 
-pub const movement_animation_duration: f32 = 0.3;
+pub const movement_animation_duration: f32 = 0.4;

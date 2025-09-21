@@ -6,6 +6,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
 const Level = @import("level.zig");
+const Game = @import("game.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -182,12 +183,19 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn update(this: *Entity, delta: f32, grid: *[]Level.Tile) void {
+    pub fn update(this: *Entity, ctx: *Game.Context) !void {
+        const start = Types.Vector2Int.init(2, 2);
+        const end = Types.Vector2Int.init(9, 17);
         if (this.data == .enemy) {
             if (this.data.enemy.goal) |goal| {
                 if (this.path == null) {
-                    _ = goal;
-                    //this.path = pathfinder.
+                    if (Types.vector2IntCompare(goal, start)) {
+                        this.data.enemy.goal = end;
+                    } else if (Types.vector2IntCompare(goal, end)) {
+                        this.data.enemy.goal = start;
+                    }
+                    //TODO: @continue fix pathing, take moving entities into account, thing about how to do it
+                    this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
                 }
             }
         }
@@ -196,14 +204,14 @@ pub const Entity = struct {
                 return;
             }
 
-            this.movementAnimationCooldown += delta;
+            this.movementAnimationCooldown += ctx.delta;
             if (this.movementAnimationCooldown > Config.movement_animation_duration) {
                 this.movementAnimationCooldown = 0;
                 this.path.?.currIndex += 1;
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
                 this.pos = new_pos;
 
-                this.move(new_pos, grid);
+                this.move(new_pos, ctx.grid);
                 if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
                     this.path = null;
                 }
@@ -272,6 +280,7 @@ pub const PlayerData = struct {
     }
 };
 pub const EnemyData = struct {
+    //TODO: add a callback for enemy ai, call from the main update function in entity i think ??
     goal: ?Types.Vector2Int,
 };
 pub const ItemData = struct {};

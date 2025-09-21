@@ -116,8 +116,8 @@ pub const Game = struct {
         //TODO: make a state machine for inputs
 
         try Systems.updatePlayer(this.context);
+        try this.world.Update(this.context);
         this.cameraManager.Update(delta);
-        this.world.Update(this.context);
     }
 
     pub fn Draw(this: *Game) void {
