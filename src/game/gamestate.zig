@@ -12,7 +12,6 @@ const c = @cImport({
 pub const currentTurnEnum = enum {
     // TODO: for now only player and enemy, I want to have grups of enemies that will fight
     // amongst each other, will do later
-    none,
     player,
     enemy,
 };
@@ -57,7 +56,7 @@ pub const gameState = struct {
             .cursor = null,
             .deployableCells = null,
             .movableTiles = movable_tiles,
-            .currentTurn = .none,
+            .currentTurn = .player,
             .selectedEntity = null,
             .selectedEntityMode = .none,
             .highlightedTiles = highlighted_tiles,
@@ -80,7 +79,7 @@ pub const gameState = struct {
         this.movementHighlighted = false;
 
         this.highlightedEntity = null;
-        this.currentTurn = .none;
+        this.currentTurn = .player;
         this.selectedEntity = null;
         this.selectedEntityMode = .none;
     }

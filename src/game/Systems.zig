@@ -446,9 +446,6 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
 }
 pub fn handlePlayerCombat(ctx: *Game.Context) !void {
     switch (ctx.gamestate.currentTurn) {
-        .none => {
-            ctx.gamestate.currentTurn = .player; //player always starts, for now
-        },
         .player => {
             try playerCombatTurn(ctx);
 
@@ -462,7 +459,7 @@ pub fn handlePlayerCombat(ctx: *Game.Context) !void {
 
             if (ctx.player.data.player.inCombatWith.items.len == 0) {
                 // everyone is dead
-                ctx.gamestate.currentTurn = .none;
+                ctx.gamestate.currentTurn = .player;
                 ctx.player.data.player.state = .walking;
             } else {
                 if (ctx.player.turnTaken or ctx.player.allPupsTurnTaken()) {

@@ -186,7 +186,14 @@ pub const Entity = struct {
     pub fn update(this: *Entity, ctx: *Game.Context) !void {
         const start = Types.Vector2Int.init(2, 2);
         const end = Types.Vector2Int.init(9, 17);
-        if (this.data == .enemy) {
+        if (this.data == .enemy and ctx.gamestate.currentTurn != .enemy) {
+            return;
+        }
+        if (this.data == .player and ctx.gamestate.currentTurn != .player) {
+            return;
+        }
+
+        if (this.data == .enemy and ctx.gamestate.currentTurn == .enemy) {
             if (this.data.enemy.goal) |goal| {
                 if (this.path == null) {
                     if (Types.vector2IntCompare(goal, start)) {
@@ -199,6 +206,7 @@ pub const Entity = struct {
                 }
             }
         }
+
         if (this.path) |path| {
             if (path.nodes.items.len < 2) {
                 return;
