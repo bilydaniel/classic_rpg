@@ -400,6 +400,7 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
             }
         }
         ctx.player.move(new_pos, ctx.grid);
+        ctx.gamestate.currentTurn = .enemy;
         ctx.player.movementCooldown = 0;
 
         const combat = checkCombatStart(ctx.player, ctx.entities);

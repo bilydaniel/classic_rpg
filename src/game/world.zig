@@ -100,8 +100,11 @@ pub const World = struct {
     pub fn Update(this: *World, ctx: *Game.Context) !void {
         //TODO: how do I want the order of the update?
 
-        for (this.entities.items) |entity| {
-            try entity.update(ctx);
+        if (ctx.gamestate.currentTurn == .enemy) {
+            for (this.entities.items) |entity| {
+                try entity.update(ctx);
+            }
+            ctx.gamestate.currentTurn = .player;
         }
         for (this.levels.items) |lvl| {
             lvl.Update(ctx.pathfinder);

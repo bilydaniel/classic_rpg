@@ -186,6 +186,7 @@ pub const Entity = struct {
     pub fn update(this: *Entity, ctx: *Game.Context) !void {
         const start = Types.Vector2Int.init(2, 2);
         const end = Types.Vector2Int.init(9, 17);
+
         if (this.data == .enemy and ctx.gamestate.currentTurn != .enemy) {
             return;
         }
@@ -207,13 +208,14 @@ pub const Entity = struct {
             }
         }
 
-        if (this.path) |path| {
-            if (path.nodes.items.len < 2) {
-                return;
-            }
+        if (this.data == .enemy) {
+            if (this.path) |path| {
+                if (path.nodes.items.len < 2) {
+                    return;
+                }
 
-            this.movementAnimationCooldown += ctx.delta;
-            if (this.movementAnimationCooldown > Config.movement_animation_duration) {
+                this.movementAnimationCooldown += ctx.delta;
+                //if (this.movementAnimationCooldown > Config.movement_animation_duration) {
                 this.movementAnimationCooldown = 0;
                 this.path.?.currIndex += 1;
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
@@ -223,6 +225,7 @@ pub const Entity = struct {
                 if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
                     this.path = null;
                 }
+                //}
             }
         }
     }
