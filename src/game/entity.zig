@@ -219,11 +219,21 @@ pub const Entity = struct {
                 this.movementAnimationCooldown = 0;
                 this.path.?.currIndex += 1;
                 const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
-                this.pos = new_pos;
+                const new_pos_entity = Systems.getEntityByPos(ctx.entities.*, new_pos);
 
-                this.move(new_pos, ctx.grid);
-                if (this.path.?.currIndex >= this.path.?.nodes.items.len - 1) {
-                    this.path = null;
+                if (new_pos_entity) |_| {
+                    // position has entity, recalculate
+                    if (this.data.enemy.goal) |goal| {
+                        this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
+                    }
+                } else {
+                    this.move(new_pos, ctx.grid);
+                }
+
+                if (this.path) |path_| {
+                    if (path_.currIndex >= this.path.?.nodes.items.len - 1) {
+                        this.path = null;
+                    }
                 }
                 //}
             }
