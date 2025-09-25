@@ -12,6 +12,7 @@ const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
+const UiManager = @import("../ui/uiManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -61,6 +62,7 @@ pub const Game = struct {
     pathfinder: *Pathfinder.Pathfinder,
     tilesetManager: *TilesetManager.TilesetManager,
     context: *Context,
+    uiManager: *UiManager.UiManager,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
@@ -91,6 +93,8 @@ pub const Game = struct {
             pathfinder,
             &world.entities,
         );
+
+        const uimanager = try UiManager.UiManager.init(allocator, context);
         game.* = .{
             .allocator = allocator,
             .gameState = gamestate,
@@ -100,6 +104,7 @@ pub const Game = struct {
             .tilesetManager = tilesetmanager,
             .cameraManager = cameraManager,
             .context = context,
+            .uiManager = uimanager,
         };
 
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
@@ -118,6 +123,8 @@ pub const Game = struct {
         try Systems.updatePlayer(this.context);
         try this.world.Update(this.context);
         this.cameraManager.Update(delta);
+
+        this.uiManager.update(this.context);
     }
 
     pub fn Draw(this: *Game) void {
@@ -129,6 +136,8 @@ pub const Game = struct {
         this.player.Draw(this.tilesetManager);
         Systems.drawGameState(this.gameState, this.world.currentLevel);
         c.EndMode2D();
+        this.uiManager.draw();
+
         c.EndDrawing();
     }
 };
