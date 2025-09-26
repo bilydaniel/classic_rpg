@@ -23,12 +23,11 @@ pub const UiManager = struct {
     }
     pub fn draw(this: *UiManager) void {
         _ = this;
-        std.debug.print("width: {}\n", .{Window.windowWidth});
-        std.debug.print("height: {}\n", .{Window.windowHeight});
-        std.debug.print("********************\n", .{});
         const rectHeight = Window.windowHeight;
         const rectWidth = @divFloor(Window.windowWidth, 10);
 
-        c.DrawRectangle(0, 0, rectWidth, rectHeight, c.ORANGE);
+        _ = rectHeight;
+        _ = rectWidth;
+        //c.DrawRectangle(0, 0, rectWidth, rectHeight, c.ORANGE);
     }
 };

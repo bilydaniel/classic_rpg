@@ -21,12 +21,13 @@ pub const highlightTypeEnum = enum {
     pup_deploy,
     square,
     circle,
+    movable,
+    entity,
 };
 
 pub const highlight = struct {
     pos: Types.Vector2Int,
     type: highlightTypeEnum,
-    color: c.Color,
 };
 
 pub const EntityModeEnum = enum {
@@ -37,15 +38,20 @@ pub const EntityModeEnum = enum {
 
 pub const gameState = struct {
     cursor: ?Types.Vector2Int,
+
     deployableCells: ?[8]?Types.Vector2Int, //TODO: maybe more than 8?, after some power up
-    movableTiles: std.ArrayList(Types.Vector2Int),
+    deployHighlighted: bool,
+
     currentTurn: currentTurnEnum,
+
     selectedEntity: ?*Entity.Entity,
     selectedEntityMode: EntityModeEnum,
-    highlightedTiles: std.ArrayList(highlight),
-    deployHighlighted: bool,
+
+    movableTiles: std.ArrayList(Types.Vector2Int),
     movementHighlighted: bool,
+
     highlightedEntity: ?highlight,
+    highlightedTiles: std.ArrayList(highlight),
 
     pub fn init(allocator: std.mem.Allocator) !*gameState {
         const highlighted_tiles = std.ArrayList(highlight).init(allocator);
@@ -112,6 +118,39 @@ pub const gameState = struct {
                 if (cursor.y > 0) {
                     this.cursor.?.y -= 1;
                 }
+            }
+        }
+    }
+
+    pub fn highlightMovement(this: *gameState, entity: *Entity.Entity) !void {
+        if (!this.movementHighlighted) {
+            try Systems.neighboursDistance(entity.pos, entity.movementDistance, &this.movableTiles);
+            try this.highlightTiles(this.movableTiles, .movable);
+            this.movementHighlighted = true;
+        }
+    }
+
+    pub fn highlightTiles(this: *gameState, tiles: std.ArrayList(Types.Vector2Int), highType: highlightTypeEnum) !void {
+        for (tiles.items) |tile| {
+            try this.highlightedTiles.append(highlight{
+                .pos = Types.Vector2Int.init(tile.x, tile.y),
+                .type = highType,
+            });
+        }
+    }
+
+    pub fn resetMovementHighlight(this: *gameState) void {
+        this.movementHighlighted = false;
+        this.movableTiles.clearRetainingCapacity();
+        this.removeHighlightOfType(.movable);
+    }
+
+    pub fn removeHighlightOfType(this: *gameState, highType: highlightTypeEnum) void {
+        std.debug.print("movable_len: {}\n", .{this.movableTiles.items.len});
+        //TODO: @continue, dies on swapremove, no idea how, fix
+        for (this.highlightedTiles.items, 0..) |tile, index| {
+            if (tile.type == highType) {
+                _ = this.movableTiles.swapRemove(index);
             }
         }
     }

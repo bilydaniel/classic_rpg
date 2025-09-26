@@ -175,7 +175,6 @@ pub fn old_highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Col
 pub fn highlightTile(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !void {
     try gamestate.highlightedTiles.append(Gamestate.highlight{
         .pos = pos,
-        .color = c.YELLOW,
         .type = .pup_deploy,
     });
 }
@@ -194,13 +193,23 @@ pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level
     _ = currentLevel;
     if (gamestate.highlightedTiles.items.len > 0) {
         for (gamestate.highlightedTiles.items) |highlight| {
-            c.DrawRectangleLines(highlight.pos.x * Config.tile_width, highlight.pos.y * Config.tile_height, Config.tile_width, Config.tile_height, c.BLUE);
+            var highlightColor = c.RED;
+
+            if (highlight.type == .movable) {
+                highlightColor = c.BLUE;
+            }
+
+            c.DrawRectangleLines(highlight.pos.x * Config.tile_width, highlight.pos.y * Config.tile_height, Config.tile_width, Config.tile_height, highlightColor);
         }
     }
 
     if (gamestate.highlightedEntity) |highlight| {
         if (highlight.type == .circle) {
-            c.DrawCircleLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, highlight.color);
+            var highColor = c.RED;
+            if (highlight.type == .entity) {
+                highColor = c.YELLOW;
+            }
+            c.DrawCircleLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, highColor);
             //c.DrawEllipseLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height, Config.tile_width / 2, Config.tile_height / 3, highlight.color);
             //TODO: figure out the elipse, circle for now
         }
@@ -214,8 +223,7 @@ pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level
 pub fn highlightEntity(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) void {
     gamestate.highlightedEntity = Gamestate.highlight{
         .pos = pos,
-        .color = c.YELLOW,
-        .type = .circle,
+        .type = .entity,
     };
 }
 
@@ -400,12 +408,15 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
             }
         }
         ctx.player.move(new_pos, ctx.grid);
-        ctx.gamestate.currentTurn = .enemy;
         ctx.player.movementCooldown = 0;
 
         const combat = checkCombatStart(ctx.player, ctx.entities);
         if (combat and ctx.player.data.player.state != .in_combat) {
             try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
+        }
+
+        if (!combat) {
+            ctx.gamestate.currentTurn = .enemy;
         }
     }
 }
@@ -489,23 +500,31 @@ pub fn entitySelect(ctx: *Game.Context) void {
     if (c.IsKeyPressed(c.KEY_ONE)) {
         ctx.gamestate.selectedEntity = ctx.player;
         selectedNow = true;
+        ctx.gamestate.resetMovementHighlight();
     } else if (c.IsKeyPressed(c.KEY_TWO)) {
         if (ctx.player.data.player.puppets.items.len > 0) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[0];
             selectedNow = true;
+            ctx.gamestate.resetMovementHighlight();
         }
     } else if (c.IsKeyPressed(c.KEY_THREE)) {
         if (ctx.player.data.player.puppets.items.len > 1) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[1];
             selectedNow = true;
+            ctx.gamestate.resetMovementHighlight();
         }
     } else if (c.IsKeyPressed(c.KEY_FOUR)) {
         if (ctx.player.data.player.puppets.items.len > 2) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[2];
             selectedNow = true;
+            ctx.gamestate.resetMovementHighlight();
         }
     } else if (c.IsKeyPressed(c.KEY_FIVE)) {
-        if (ctx.player.data.player.puppets.items.len > 3) {}
+        if (ctx.player.data.player.puppets.items.len > 3) {
+            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[3];
+            selectedNow = true;
+            ctx.gamestate.resetMovementHighlight();
+        }
     }
 
     if (selectedNow) {
@@ -546,22 +565,10 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
 pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
     ctx.gamestate.makeCursor(entity.pos);
     ctx.gamestate.updateCursor();
-    if (ctx.gamestate.movableTiles.items.len == 0) {
-        try neighboursDistance(entity.pos, 2, &ctx.gamestate.movableTiles);
-    }
-    if (ctx.gamestate.movableTiles.items.len > 0) {
-        if (!ctx.gamestate.movementHighlighted) {
-            for (ctx.gamestate.movableTiles.items) |item| {
-                //TODO: highlight only valid tiles
-                try highlightTile(ctx.gamestate, item);
-                //TODO: make a spawn and remove cursor func
-                //make an update function for cursor, probably for the whole game state struct
-            }
+    try ctx.gamestate.highlightMovement(entity);
 
-            std.debug.print("high {}\n", .{ctx.gamestate.highlightedTiles.items.len});
-        }
-        ctx.gamestate.movementHighlighted = true;
-    }
+    std.debug.print("high {}\n", .{ctx.gamestate.highlightedTiles.items.len});
+
     if (c.IsKeyPressed(c.KEY_A)) {
         //TODO: move to cursor
         //TODO: add checks to valid places

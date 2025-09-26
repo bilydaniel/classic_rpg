@@ -36,6 +36,7 @@ pub const Entity = struct {
     path: ?Pathfinder.Path,
     speed: f32,
     movementCooldown: f32, //TODO: probably do a different way
+    movementDistance: u32,
     isAscii: bool,
     ascii: ?[4]u8,
     textureID: ?i32,
@@ -77,6 +78,7 @@ pub const Entity = struct {
             .textureID = null,
             .sourceRect = null,
             .movementCooldown = 0,
+            .movementDistance = 2,
             .speed = speed,
             .path = null,
             .color = c.WHITE,
@@ -145,6 +147,7 @@ pub const Entity = struct {
 
             for (entities.items) |entity| {
                 try this.data.player.inCombatWith.append(entity);
+                entity.resetPathing();
             }
             _ = grid;
             //try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
@@ -184,9 +187,6 @@ pub const Entity = struct {
     }
 
     pub fn update(this: *Entity, ctx: *Game.Context) !void {
-        const start = Types.Vector2Int.init(2, 2);
-        const end = Types.Vector2Int.init(9, 17);
-
         if (this.data == .enemy and ctx.gamestate.currentTurn != .enemy) {
             return;
         }
@@ -197,52 +197,52 @@ pub const Entity = struct {
         if (this.data == .enemy and ctx.gamestate.currentTurn == .enemy) {
             if (this.data.enemy.goal) |goal| {
                 if (this.path == null) {
-                    if (Types.vector2IntCompare(goal, start)) {
-                        this.data.enemy.goal = end;
-                    } else if (Types.vector2IntCompare(goal, end)) {
-                        this.data.enemy.goal = start;
-                    }
                     //TODO: @continue fix pathing, take moving entities into account, thing about how to do it
                     this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
                 }
             }
         }
 
-        if (this.data == .enemy) {
-            if (this.path) |path| {
-                if (path.nodes.items.len < 2) {
-                    return;
-                }
-
-                this.movementAnimationCooldown += ctx.delta;
-                //if (this.movementAnimationCooldown > Config.movement_animation_duration) {
-                this.movementAnimationCooldown = 0;
-                this.path.?.currIndex += 1;
-                const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
-                const new_pos_entity = Systems.getEntityByPos(ctx.entities.*, new_pos);
-
-                if (new_pos_entity) |_| {
-                    // position has entity, recalculate
-                    if (this.data.enemy.goal) |goal| {
-                        this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
-                    }
-                } else {
-                    this.move(new_pos, ctx.grid);
-                }
-
-                if (this.path) |path_| {
-                    if (path_.currIndex >= this.path.?.nodes.items.len - 1) {
-                        this.path = null;
-                    }
-                }
-                //}
+        if (this.path) |path| {
+            if (path.nodes.items.len < 2) {
+                return;
             }
+
+            this.movementAnimationCooldown += ctx.delta;
+            //if (this.movementAnimationCooldown > Config.movement_animation_duration) {
+            this.movementAnimationCooldown = 0;
+            this.path.?.currIndex += 1;
+            const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
+            const new_pos_entity = Systems.getEntityByPos(ctx.entities.*, new_pos);
+
+            if (new_pos_entity) |_| {
+                // position has entity, recalculate
+                if (this.data.enemy.goal) |goal| {
+                    this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
+                }
+            } else {
+                this.move(new_pos, ctx.grid);
+            }
+
+            if (this.path) |path_| {
+                if (path_.currIndex >= this.path.?.nodes.items.len - 1) {
+                    this.path = null;
+                }
+            }
+            //}
         }
     }
 
     pub fn move(this: *Entity, pos: Types.Vector2Int, grid: *[]Level.Tile) void {
         this.pos = pos;
         Systems.calculateFOV(grid, pos, 8);
+    }
+
+    pub fn resetPathing(this: *Entity) void {
+        if (this.data == .enemy) {
+            this.data.enemy.goal = null;
+        }
+        this.path = null;
     }
 };
 

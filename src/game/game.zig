@@ -134,7 +134,10 @@ pub const Game = struct {
         c.BeginMode2D(this.cameraManager.camera.*);
         this.world.Draw(this.tilesetManager);
         this.player.Draw(this.tilesetManager);
+
+        //TODO: @conitnue put draw in gamestate
         Systems.drawGameState(this.gameState, this.world.currentLevel);
+
         c.EndMode2D();
         this.uiManager.draw();
 
