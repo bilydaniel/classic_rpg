@@ -186,11 +186,8 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn update(this: *Entity, ctx: *Game.Context) !void {
-        if (this.data == .enemy and ctx.gamestate.currentTurn != .enemy) {
-            return;
-        }
-        if (this.data == .player and ctx.gamestate.currentTurn != .player) {
+    pub fn updateEnemy(this: *Entity, ctx: *Game.Context) !void {
+        if (ctx.gamestate.currentTurn != .enemy) {
             return;
         }
 
@@ -202,6 +199,15 @@ pub const Entity = struct {
                 }
             }
         }
+    }
+
+    pub fn update(this: *Entity, ctx: *Game.Context) !void {
+        if (this.data == .enemy) {
+            this.updateEnemy(ctx);
+        }
+        if (this.data == .player and ctx.gamestate.currentTurn != .player) {
+            return;
+        }
 
         if (this.path) |path| {
             if (path.nodes.items.len < 2) {
@@ -209,7 +215,6 @@ pub const Entity = struct {
             }
 
             this.movementAnimationCooldown += ctx.delta;
-            //if (this.movementAnimationCooldown > Config.movement_animation_duration) {
             this.movementAnimationCooldown = 0;
             this.path.?.currIndex += 1;
             const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
@@ -229,7 +234,6 @@ pub const Entity = struct {
                     this.path = null;
                 }
             }
-            //}
         }
     }
 

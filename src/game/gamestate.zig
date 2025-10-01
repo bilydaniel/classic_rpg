@@ -146,12 +146,24 @@ pub const gameState = struct {
     }
 
     pub fn removeHighlightOfType(this: *gameState, highType: highlightTypeEnum) void {
-        std.debug.print("movable_len: {}\n", .{this.movableTiles.items.len});
         //TODO: @continue, dies on swapremove, no idea how, fix
-        for (this.highlightedTiles.items, 0..) |tile, index| {
+        var i: usize = 0;
+        while (i < this.highlightedTiles.items.len) {
+            const tile = this.highlightedTiles.items[i];
             if (tile.type == highType) {
-                _ = this.movableTiles.swapRemove(index);
+                _ = this.highlightedTiles.swapRemove(i);
+            } else {
+                i += 1;
             }
         }
+    }
+
+    pub fn isinMovable(this: *gameState, pos: Types.Vector2Int) bool {
+        for (this.movableTiles.items) |item| {
+            if (Types.vector2IntCompare(item, pos)) {
+                return true;
+            }
+        }
+        return false;
     }
 };
