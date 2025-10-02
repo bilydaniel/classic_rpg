@@ -274,6 +274,13 @@ pub const Entity = struct {
         }
         this.path = null;
     }
+
+    pub fn canAttack(this: *Entity, ctx: *Game.Context) bool {
+        _ = this;
+        _ = ctx;
+        //TODO: @finish
+        return false;
+    }
 };
 
 pub const playerStateEnum = enum {

@@ -473,6 +473,7 @@ pub fn handlePlayerCombat(ctx: *Game.Context) !void {
                 // everyone is dead
                 ctx.gamestate.currentTurn = .player;
                 ctx.player.data.player.state = .walking;
+                //TODO: probably gonna need some gamestate reset
             } else {
                 if (ctx.player.turnTaken or ctx.player.allPupsTurnTaken()) {
                     // finished turn
@@ -545,7 +546,7 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
 
         switch (ctx.gamestate.selectedEntityMode) {
             .none => {
-                if (c.IsKeyPressed(c.KEY_Q)) {
+                if (!entity.hasMoved and c.IsKeyPressed(c.KEY_Q)) {
                     ctx.gamestate.selectedEntityMode = .moving;
                     if (ctx.gamestate.selectedEntity) |selected_entity| {
                         ctx.gamestate.makeCursor(selected_entity.pos);
@@ -578,9 +579,29 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
         if (ctx.gamestate.selectedEntityMode == .moving) {
             ctx.gamestate.updateCursor();
             try selectedEntityMove(ctx, entity);
+            if (c.IsKeyPressed(c.KEY_SPACE)) {
+                //skip moving
+                entity.hasMoved = true;
+                ctx.gamestate.resetMovementHighlight();
+                ctx.gamestate.selectedEntityMode = .none;
+                ctx.gamestate.removeCursor();
+            }
         } else if (ctx.gamestate.selectedEntityMode == .attacking) {
             ctx.gamestate.updateCursor();
             try selectedEntityAttack(ctx, entity);
+            if (c.IsKeyPressed(c.KEY_SPACE)) {
+                //skip attacking
+                entity.hasAttacked = true;
+                //TODO: reset gamestate
+            }
+        }
+
+        if (entity.hasMoved and !entity.canAttack(ctx)) {
+            //TODO:
+        }
+
+        if (entity.hasMoved and entity.hasAttacked) {
+            entity.turnTaken = true;
         }
     }
 }
@@ -591,6 +612,10 @@ pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
         if (ctx.gamestate.cursor) |cur| {
             if (ctx.gamestate.isinMovable(cur)) {
                 entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, cur, ctx.entities.*);
+                entity.hasMoved = true;
+                ctx.gamestate.selectedEntityMode = .none;
+                ctx.gamestate.resetMovementHighlight();
+                ctx.gamestate.removeCursor();
             }
         }
     }
