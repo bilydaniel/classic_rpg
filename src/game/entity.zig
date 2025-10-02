@@ -50,6 +50,7 @@ pub const Entity = struct {
     hasMoved: bool,
     hasAttacked: bool,
     movementAnimationCooldown: f32,
+    inCombat: bool,
     data: EntityData,
 
     pub fn init(
@@ -90,6 +91,7 @@ pub const Entity = struct {
             .hasMoved = false,
             .hasAttacked = false,
             .movementAnimationCooldown = 0,
+            .inCombat = false,
             .data = entityData,
         };
         entity_id += 1;
@@ -144,10 +146,12 @@ pub const Entity = struct {
             // smarter entities shout at other to help etc...
 
             this.data.player.state = .deploying_puppets;
+            this.inCombat = true;
 
             for (entities.items) |entity| {
                 try this.data.player.inCombatWith.append(entity);
                 entity.resetPathing();
+                entity.inCombat = true;
             }
             _ = grid;
             //try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
@@ -191,6 +195,14 @@ pub const Entity = struct {
             return;
         }
 
+        switch (this.inCombat) {
+            true => {
+                const left = Types.Vector2Int.init(-1, 0);
+                this.wander(Types.vector2IntAdd(this.pos, left), ctx);
+            },
+            false => {},
+        }
+
         if (this.data == .enemy and ctx.gamestate.currentTurn == .enemy) {
             if (this.data.enemy.goal) |goal| {
                 if (this.path == null) {
@@ -203,7 +215,7 @@ pub const Entity = struct {
 
     pub fn update(this: *Entity, ctx: *Game.Context) !void {
         if (this.data == .enemy) {
-            this.updateEnemy(ctx);
+            try this.updateEnemy(ctx);
         }
         if (this.data == .player and ctx.gamestate.currentTurn != .player) {
             return;
@@ -240,6 +252,20 @@ pub const Entity = struct {
     pub fn move(this: *Entity, pos: Types.Vector2Int, grid: *[]Level.Tile) void {
         this.pos = pos;
         Systems.calculateFOV(grid, pos, 8);
+    }
+
+    pub fn wander(this: *Entity, pos: Types.Vector2Int, ctx: *Game.Context) void {
+        const index = Systems.posToIndex(pos);
+        if (index) |idx| {
+            const tile = ctx.grid.*[idx];
+            if (!tile.solid) {
+                const entity = Systems.getEntityByPos(ctx.entities.*, pos);
+                if (entity == null) {
+                    this.pos = pos;
+                }
+            }
+        }
+        this.pos = pos;
     }
 
     pub fn resetPathing(this: *Entity) void {
