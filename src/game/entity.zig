@@ -199,6 +199,7 @@ pub const Entity = struct {
             true => {
                 const left = Types.Vector2Int.init(-1, 0);
                 this.wander(Types.vector2IntAdd(this.pos, left), ctx);
+                std.debug.print("wandering\n", .{});
             },
             false => {},
         }
@@ -265,7 +266,6 @@ pub const Entity = struct {
                 }
             }
         }
-        this.pos = pos;
     }
 
     pub fn resetPathing(this: *Entity) void {
@@ -273,6 +273,19 @@ pub const Entity = struct {
             this.data.enemy.goal = null;
         }
         this.path = null;
+    }
+    pub fn resetTurnTakens(this: *Entity) void {
+        if (this.data == .player) {
+            this.hasMoved = false;
+            this.hasAttacked = false;
+            this.turnTaken = false;
+
+            for (this.data.player.puppets.items) |pup| {
+                pup.hasMoved = false;
+                pup.hasAttacked = false;
+                pup.turnTaken = false;
+            }
+        }
     }
 
     pub fn canAttack(this: *Entity, ctx: *Game.Context) bool {

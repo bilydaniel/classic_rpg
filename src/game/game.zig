@@ -120,7 +120,9 @@ pub const Game = struct {
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs
 
-        try Systems.updatePlayer(this.context);
+        if (this.context.gamestate.currentTurn == .player) {
+            try Systems.updatePlayer(this.context);
+        }
         try this.world.Update(this.context);
         this.cameraManager.Update(delta);
 

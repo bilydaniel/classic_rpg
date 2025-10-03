@@ -99,10 +99,13 @@ pub const World = struct {
 
     pub fn Update(this: *World, ctx: *Game.Context) !void {
         //TODO: how do I want the order of the update?
+        std.debug.print("current_turn: {}\n", .{ctx.gamestate.currentTurn});
 
         if (ctx.gamestate.currentTurn == .enemy) {
             for (this.entities.items) |entity| {
-                try entity.update(ctx);
+                if (entity.data == .enemy) {
+                    try entity.update(ctx);
+                }
             }
             ctx.gamestate.currentTurn = .player;
         }

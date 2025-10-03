@@ -471,14 +471,14 @@ pub fn handlePlayerCombat(ctx: *Game.Context) !void {
 
             if (ctx.player.data.player.inCombatWith.items.len == 0) {
                 // everyone is dead
-                ctx.gamestate.currentTurn = .player;
-                ctx.player.data.player.state = .walking;
+                //ctx.gamestate.currentTurn = .player;
+                //ctx.player.data.player.state = .walking;
                 //TODO: probably gonna need some gamestate reset
             } else {
                 if (ctx.player.turnTaken or ctx.player.allPupsTurnTaken()) {
                     // finished turn
                     ctx.gamestate.currentTurn = .enemy;
-                    std.debug.print("turn_done\n", .{});
+                    ctx.player.resetTurnTakens();
                 }
             }
         },
@@ -593,6 +593,9 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
                 //skip attacking
                 entity.hasAttacked = true;
                 //TODO: reset gamestate
+                //TODO: remove attack highlight
+                ctx.gamestate.selectedEntityMode = .none;
+                ctx.gamestate.removeCursor();
             }
         }
 
