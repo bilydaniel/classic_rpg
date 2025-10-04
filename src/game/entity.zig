@@ -37,6 +37,7 @@ pub const Entity = struct {
     speed: f32,
     movementCooldown: f32, //TODO: probably do a different way
     movementDistance: u32,
+    attackDistance: u32,
     isAscii: bool,
     ascii: ?[4]u8,
     textureID: ?i32,
@@ -80,6 +81,7 @@ pub const Entity = struct {
             .sourceRect = null,
             .movementCooldown = 0,
             .movementDistance = 2,
+            .attackDistance = 1,
             .speed = speed,
             .path = null,
             .color = c.WHITE,

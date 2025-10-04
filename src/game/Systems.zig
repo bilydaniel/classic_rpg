@@ -534,6 +534,9 @@ pub fn entitySelect(ctx: *Game.Context) void {
             ctx.gamestate.selectedEntityMode = .none;
         }
     }
+    if (ctx.gamestate.selectedEntity) |entity| {
+        highlightEntity(ctx.gamestate, entity.pos);
+    }
 }
 pub fn selectedEntityAction(ctx: *Game.Context) !void {
     if (ctx.gamestate.selectedEntity) |entity| {
@@ -541,8 +544,6 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
         //how do I highlight the selected entity?
         //probaly should try a blink, give a duration to highlight
         //could try to do a circle highlight
-
-        highlightEntity(ctx.gamestate, entity.pos);
 
         switch (ctx.gamestate.selectedEntityMode) {
             .none => {
@@ -571,7 +572,7 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
                     ctx.gamestate.selectedEntityMode = .none;
                     ctx.gamestate.removeCursor();
                     //TODO: attack highlight?
-                    ctx.gamestate.resetMovementHighlight();
+                    ctx.gamestate.resetAttackHighlight();
                 }
             },
         }
@@ -580,22 +581,13 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
             ctx.gamestate.updateCursor();
             try selectedEntityMove(ctx, entity);
             if (c.IsKeyPressed(c.KEY_SPACE)) {
-                //skip moving
-                entity.hasMoved = true;
-                ctx.gamestate.resetMovementHighlight();
-                ctx.gamestate.selectedEntityMode = .none;
-                ctx.gamestate.removeCursor();
+                skipMovement(ctx);
             }
         } else if (ctx.gamestate.selectedEntityMode == .attacking) {
             ctx.gamestate.updateCursor();
             try selectedEntityAttack(ctx, entity);
             if (c.IsKeyPressed(c.KEY_SPACE)) {
-                //skip attacking
-                entity.hasAttacked = true;
-                //TODO: reset gamestate
-                //TODO: remove attack highlight
-                ctx.gamestate.selectedEntityMode = .none;
-                ctx.gamestate.removeCursor();
+                skipAttack(ctx);
             }
         }
 
@@ -608,6 +600,25 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
         }
     }
 }
+
+pub fn skipMovement(ctx: *Game.Context) void {
+    if (ctx.gamestate.selectedEntity) |entity| {
+        entity.hasMoved = true;
+    }
+    ctx.gamestate.selectedEntityMode = .none;
+    ctx.gamestate.resetMovementHighlight();
+    ctx.gamestate.removeCursor();
+}
+
+pub fn skipAttack(ctx: *Game.Context) void {
+    if (ctx.gamestate.selectedEntity) |entity| {
+        entity.hasAttacked = true;
+    }
+    ctx.gamestate.selectedEntityMode = .none;
+    ctx.gamestate.resetAttackHighlight();
+    ctx.gamestate.removeCursor();
+}
+
 pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
     try ctx.gamestate.highlightMovement(entity);
 
@@ -624,7 +635,25 @@ pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
     }
 }
 pub fn selectedEntityAttack(ctx: *Game.Context, entity: *Entity.Entity) !void {
-    //TODO: continue
-    _ = ctx;
-    _ = entity;
+    try ctx.gamestate.highlightAttack(entity);
+
+    if (c.IsKeyPressed(c.KEY_A)) {
+        if (ctx.gamestate.cursor) |cur| {
+            if (ctx.gamestate.isinAttackable(cur)) {
+                const attackedEntity = getEntityByPos(ctx.entities.*, cur);
+                attack(ctx, entity, attackedEntity);
+                ctx.gamestate.resetAttackHighlight();
+                ctx.gamestate.removeCursor();
+                entity.hasAttacked = true;
+                ctx.gamestate.selectedEntityMode = .none;
+            }
+        }
+    }
+}
+pub fn attack(ctx: *Game.Context, entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
+    if (attackedEntity) |attacked_entity| {
+        _ = ctx;
+        _ = attacked_entity;
+        _ = entity;
+    } else {}
 }

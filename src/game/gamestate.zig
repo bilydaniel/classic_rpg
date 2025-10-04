@@ -22,6 +22,7 @@ pub const highlightTypeEnum = enum {
     square,
     circle,
     movable,
+    attackable,
     entity,
 };
 
@@ -53,9 +54,13 @@ pub const gameState = struct {
     highlightedEntity: ?highlight,
     highlightedTiles: std.ArrayList(highlight),
 
+    attackableTiles: std.ArrayList(Types.Vector2Int),
+    attackHighlighted: bool,
+
     pub fn init(allocator: std.mem.Allocator) !*gameState {
         const highlighted_tiles = std.ArrayList(highlight).init(allocator);
         const movable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
+        const attackable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
         const gamestate = try allocator.create(gameState);
 
         gamestate.* = .{
@@ -69,6 +74,9 @@ pub const gameState = struct {
             .highlightedEntity = null,
             .deployHighlighted = false,
             .movementHighlighted = false,
+
+            .attackableTiles = attackable_tiles,
+            .attackHighlighted = false,
         };
 
         return gamestate;
@@ -130,6 +138,14 @@ pub const gameState = struct {
         }
     }
 
+    pub fn highlightAttack(this: *gameState, entity: *Entity.Entity) !void {
+        if (!this.attackHighlighted) {
+            try Systems.neighboursDistance(entity.pos, entity.attackDistance, &this.attackableTiles);
+            try this.highlightTiles(this.attackableTiles, .attackable);
+            this.attackHighlighted = true;
+        }
+    }
+
     pub fn highlightTiles(this: *gameState, tiles: std.ArrayList(Types.Vector2Int), highType: highlightTypeEnum) !void {
         for (tiles.items) |tile| {
             try this.highlightedTiles.append(highlight{
@@ -143,6 +159,12 @@ pub const gameState = struct {
         this.movementHighlighted = false;
         this.movableTiles.clearRetainingCapacity();
         this.removeHighlightOfType(.movable);
+    }
+
+    pub fn resetAttackHighlight(this: *gameState) void {
+        this.attackHighlighted = false;
+        this.attackableTiles.clearRetainingCapacity();
+        this.removeHighlightOfType(.attackable);
     }
 
     pub fn removeHighlightOfType(this: *gameState, highType: highlightTypeEnum) void {
@@ -160,6 +182,15 @@ pub const gameState = struct {
 
     pub fn isinMovable(this: *gameState, pos: Types.Vector2Int) bool {
         for (this.movableTiles.items) |item| {
+            if (Types.vector2IntCompare(item, pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn isinAttackable(this: *gameState, pos: Types.Vector2Int) bool {
+        for (this.attackableTiles.items) |item| {
             if (Types.vector2IntCompare(item, pos)) {
                 return true;
             }
