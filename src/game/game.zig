@@ -13,6 +13,7 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
+const ShaderManager = @import("shaderManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -26,6 +27,7 @@ pub const Context = struct {
     cameraManager: *CameraManager.CamManager,
     pathfinder: *Pathfinder.Pathfinder,
     entities: *std.ArrayList(*Entity.Entity),
+    shaderManager: *ShaderManager.ShaderManger,
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -37,6 +39,7 @@ pub const Context = struct {
         cameraManager: *CameraManager.CamManager,
         pathfinder: *Pathfinder.Pathfinder,
         entities: *std.ArrayList(*Entity.Entity),
+        shadermanager: *ShaderManager.ShaderManager,
     ) !*Context {
         const context = try allocator.create(Context);
         context.* = .{
@@ -48,6 +51,7 @@ pub const Context = struct {
             .cameraManager = cameraManager,
             .pathfinder = pathfinder,
             .entities = entities,
+            .shaderManager = shadermanager,
         };
         return context;
     }
@@ -63,6 +67,7 @@ pub const Game = struct {
     tilesetManager: *TilesetManager.TilesetManager,
     context: *Context,
     uiManager: *UiManager.UiManager,
+    shaderManager: *ShaderManager.ShaderManger,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
@@ -81,6 +86,7 @@ pub const Game = struct {
         for (player.data.player.puppets.items) |pup| {
             try world.entities.append(pup);
         }
+        const shadermanager = ShaderManager.ShaderManager.init(allocator);
 
         const context = try Context.init(
             allocator,

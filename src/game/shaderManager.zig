@@ -118,4 +118,18 @@ pub const ShaderManager = struct {
         const effect = Effect.init(from_pixel, to_pixel, 0.3);
         try this.effects.append(effect);
     }
+
+    pub fn draw(this: *ShaderManager) void {
+        for (this.effects.items) |*effect| {
+            if (!effect.active) continue;
+
+            const progress = effect.time / effect.duration;
+
+            switch (effect.effectType) {
+                .slash => this.drawSlash(effect, progress),
+                //.impact => this.drawImpact(effect, progress),
+                //.explosion => this.drawExplosion(effect, progress),
+            }
+        }
+    }
 };
