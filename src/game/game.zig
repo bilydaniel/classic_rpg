@@ -27,7 +27,7 @@ pub const Context = struct {
     cameraManager: *CameraManager.CamManager,
     pathfinder: *Pathfinder.Pathfinder,
     entities: *std.ArrayList(*Entity.Entity),
-    shaderManager: *ShaderManager.ShaderManger,
+    shaderManager: *ShaderManager.ShaderManager,
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -67,7 +67,7 @@ pub const Game = struct {
     tilesetManager: *TilesetManager.TilesetManager,
     context: *Context,
     uiManager: *UiManager.UiManager,
-    shaderManager: *ShaderManager.ShaderManger,
+    shaderManager: *ShaderManager.ShaderManager,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
@@ -86,7 +86,7 @@ pub const Game = struct {
         for (player.data.player.puppets.items) |pup| {
             try world.entities.append(pup);
         }
-        const shadermanager = ShaderManager.ShaderManager.init(allocator);
+        const shadermanager = try ShaderManager.ShaderManager.init(allocator);
 
         const context = try Context.init(
             allocator,
@@ -98,6 +98,7 @@ pub const Game = struct {
             cameraManager,
             pathfinder,
             &world.entities,
+            shadermanager,
         );
 
         const uimanager = try UiManager.UiManager.init(allocator, context);
@@ -111,6 +112,7 @@ pub const Game = struct {
             .cameraManager = cameraManager,
             .context = context,
             .uiManager = uimanager,
+            .shaderManager = shadermanager,
         };
 
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);

@@ -45,23 +45,34 @@ pub const Shader = struct {
     source: c.Shader,
     timeLoc: i32,
     resolutionLoc: i32,
+
+    pub fn init(allocator: std.mem.Allocator, path: []const u8) !*Shader {
+        const shader = try allocator.create(Shader);
+        const source = c.LoadShader(null, path.ptr);
+        shader.* = .{
+            .source = source,
+            .timeLoc = c.GetShaderLocation(source, "time"),
+            .resolutionLoc = c.GetShaderLocation(source, "resolution"),
+        };
+        return shader;
+    }
 };
 
 pub const ShaderManager = struct {
     allocator: std.mem.Allocator,
     effects: std.ArrayList(Effect),
 
-    slashShader: Shader,
+    slashShader: *Shader,
 
     pub fn init(allocator: std.mem.Allocator) !*ShaderManager {
         const shaderManager = try allocator.create(ShaderManager);
-        const slash_shader = c.LoadShader(null, "../shaders/slash.fs");
+        const slashShader = try Shader.init(allocator, "../shaders/slash.fs");
         const effects = std.ArrayList(Effect).init(allocator);
 
         shaderManager.* = .{
             .allocator = allocator,
             .effects = effects,
-            .slashShader = slash_shader,
+            .slashShader = slashShader,
         };
     }
 
