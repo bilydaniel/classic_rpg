@@ -117,6 +117,7 @@ pub const ShaderManager = struct {
         };
         const origin = c.Vector2{ .x = 0, .y = width / 2 };
 
+        //TODO: @continue should be texture, not rectanglepro
         c.DrawRectanglePro(rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
 
         c.EndShaderMode();
