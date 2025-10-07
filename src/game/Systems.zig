@@ -639,6 +639,7 @@ pub fn selectedEntityAttack(ctx: *Game.Context, entity: *Entity.Entity) !void {
 
     if (c.IsKeyPressed(c.KEY_A)) {
         if (ctx.gamestate.cursor) |cur| {
+            try ctx.shaderManager.spawnSlash(entity.pos, cur);
             if (ctx.gamestate.isinAttackable(cur)) {
                 const attackedEntity = getEntityByPos(ctx.entities.*, cur);
                 attack(ctx, entity, attackedEntity);

@@ -12,7 +12,6 @@ pub const EffectType = enum {
 };
 
 pub const Effect = struct {
-    pos: c.Vector2,
     effectType: EffectType,
     time: f32,
     duration: f32,
@@ -74,6 +73,8 @@ pub const ShaderManager = struct {
             .effects = effects,
             .slashShader = slashShader,
         };
+
+        return shaderManager;
     }
 
     pub fn update(this: *ShaderManager, delta: f32) void {
@@ -88,7 +89,7 @@ pub const ShaderManager = struct {
     }
 
     fn drawSlash(this: *ShaderManager, effect: *Effect, progress: f32) void {
-        c.BeginShaderMode(this.slashShader);
+        c.BeginShaderMode(this.slashShader.source);
 
         c.SetShaderValue(this.slashShader.source, this.slashShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
 
@@ -98,8 +99,13 @@ pub const ShaderManager = struct {
 
         // Draw a quad between from and to positions
         const width: f32 = 20.0;
-        const dx = effect.toPos.x - effect.fromPos.x;
-        const dy = effect.toPos.y - effect.fromPos.y;
+        var dx: f32 = 0;
+        var dy: f32 = 0;
+
+        if (effect.toPos) |to_pos| {
+            dx = to_pos.x - effect.fromPos.x;
+            dy = to_pos.y - effect.fromPos.y;
+        }
         const length = @sqrt(dx * dx + dy * dy);
         const angle = std.math.atan2(dy, dx);
 
@@ -126,7 +132,7 @@ pub const ShaderManager = struct {
             .y = @as(f32, @floatFromInt(to.y * Config.tile_height + Config.tile_height / 2)),
         };
 
-        const effect = Effect.init(from_pixel, to_pixel, 0.3);
+        const effect = Effect.init(from_pixel, to_pixel, .slash, 0.3);
         try this.effects.append(effect);
     }
 
@@ -138,6 +144,7 @@ pub const ShaderManager = struct {
 
             switch (effect.effectType) {
                 .slash => this.drawSlash(effect, progress),
+                else => std.debug.print("DRAWING WRONG SHADER\n", .{}),
                 //.impact => this.drawImpact(effect, progress),
                 //.explosion => this.drawExplosion(effect, progress),
             }

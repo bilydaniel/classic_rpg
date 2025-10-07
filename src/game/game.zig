@@ -134,6 +134,8 @@ pub const Game = struct {
         try this.world.Update(this.context);
         this.cameraManager.Update(delta);
 
+        this.shaderManager.update(delta);
+
         this.uiManager.update(this.context);
     }
 
@@ -144,6 +146,7 @@ pub const Game = struct {
         c.BeginMode2D(this.cameraManager.camera.*);
         this.world.Draw(this.tilesetManager);
         this.player.Draw(this.tilesetManager);
+        this.shaderManager.draw();
 
         //TODO: @conitnue put draw in gamestate
         Systems.drawGameState(this.gameState, this.world.currentLevel);
