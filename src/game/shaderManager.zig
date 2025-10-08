@@ -48,6 +48,9 @@ pub const Shader = struct {
     pub fn init(allocator: std.mem.Allocator, path: []const u8) !*Shader {
         const shader = try allocator.create(Shader);
         const source = c.LoadShader(null, path.ptr);
+
+        std.debug.print("shader: {}\n", .{source});
+
         shader.* = .{
             .source = source,
             .timeLoc = c.GetShaderLocation(source, "time"),
@@ -62,16 +65,26 @@ pub const ShaderManager = struct {
     effects: std.ArrayList(Effect),
 
     slashShader: *Shader,
+    impactShader: *Shader,
+    explosionShader: *Shader,
+    texture: c.Texture2D,
 
     pub fn init(allocator: std.mem.Allocator) !*ShaderManager {
         const shaderManager = try allocator.create(ShaderManager);
-        const slashShader = try Shader.init(allocator, "../shaders/slash.fs");
+        const slashShader = try Shader.init(allocator, "src/shaders/slash.fs");
+        const impactShader = try Shader.init(allocator, "src/shaders/impact.fs");
+        const explosionShader = try Shader.init(allocator, "src/shaders/explosion.fs");
         const effects = std.ArrayList(Effect).init(allocator);
+        const whiteImage = c.GenImageColor(1, 1, c.WHITE);
+        const texture = c.LoadTextureFromImage(whiteImage);
 
         shaderManager.* = .{
             .allocator = allocator,
             .effects = effects,
             .slashShader = slashShader,
+            .impactShader = impactShader,
+            .explosionShader = explosionShader,
+            .texture = texture,
         };
 
         return shaderManager;
@@ -87,7 +100,35 @@ pub const ShaderManager = struct {
             }
         }
     }
+    fn drawImpact(this: *ShaderManager, effect: *Effect, progress: f32) void {
+        c.BeginShaderMode(this.impactShader.source);
 
+        c.SetShaderValue(this.impactShader.source, this.impactShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
+
+        const resolution = [2]f32{ @as(f32, @floatFromInt(c.GetScreenWidth())), @as(f32, @floatFromInt(c.GetScreenHeight())) };
+        c.SetShaderValue(this.impactShader.source, this.impactShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
+
+        const size = 60.0;
+        c.DrawTexture(this.texture, @as(i32, @intFromFloat(effect.fromPos.x - size / 2)), @as(i32, @intFromFloat(effect.fromPos.y - size / 2)), @as(i32, @intFromFloat(size)), @as(i32, @intFromFloat(size)), c.WHITE);
+
+        c.EndShaderMode();
+    }
+
+    fn drawExplosion(this: *ShaderManager, effect: *Effect, progress: f32) void {
+        c.BeginShaderMode(this.explosionShader.source);
+
+        c.SetShaderValue(this.explosionShader.source, this.explosionShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
+
+        const resolution = [2]f32{ @as(f32, @floatFromInt(c.GetScreenWidth())), @as(f32, @floatFromInt(c.GetScreenHeight())) };
+        c.SetShaderValue(this.explosionShader.source, this.explosionShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
+
+        const size = 80.0 * (1.0 + progress);
+        c.DrawTexture(this.texture, @as(i32, @intFromFloat(effect.fromPos.x - size / 2)), @as(i32, @intFromFloat(effect.fromPos.y - size / 2)), @as(i32, @intFromFloat(size)), @as(i32, @intFromFloat(size)), c.WHITE);
+
+        //c.DrawTexturePro(this.texture, src, rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
+
+        c.EndShaderMode();
+    }
     fn drawSlash(this: *ShaderManager, effect: *Effect, progress: f32) void {
         c.BeginShaderMode(this.slashShader.source);
 
@@ -118,7 +159,11 @@ pub const ShaderManager = struct {
         const origin = c.Vector2{ .x = 0, .y = width / 2 };
 
         //TODO: @continue should be texture, not rectanglepro
-        c.DrawRectanglePro(rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
+        //c.DrawRectanglePro(rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
+        //
+        const src = c.Rectangle{ .x = 0, .y = 0, .width = 1, .height = 1 };
+
+        c.DrawTexturePro(this.texture, src, rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
 
         c.EndShaderMode();
     }
@@ -137,6 +182,26 @@ pub const ShaderManager = struct {
         try this.effects.append(effect);
     }
 
+    pub fn spawnExplosion(this: *ShaderManager, pos: Types.Vector2Int) !void {
+        const pos_pixel = c.Vector2{
+            .x = @as(f32, @floatFromInt(pos.x * Config.tile_width + Config.tile_width / 2)),
+            .y = @as(f32, @floatFromInt(pos.y * Config.tile_height + Config.tile_height / 2)),
+        };
+
+        const effect = Effect.init(pos_pixel, null, .explosion, 0.5);
+        try this.effects.append(effect);
+    }
+
+    pub fn spawnImpact(this: *ShaderManager, pos: Types.Vector2Int) !void {
+        const pos_pixel = c.Vector2{
+            .x = @as(f32, @floatFromInt(pos.x * Config.tile_width + Config.tile_width / 2)),
+            .y = @as(f32, @floatFromInt(pos.y * Config.tile_height + Config.tile_height / 2)),
+        };
+
+        const effect = Effect.init(pos_pixel, null, .impact, 0.3);
+        try this.effects.append(effect);
+    }
+
     pub fn draw(this: *ShaderManager) void {
         for (this.effects.items) |*effect| {
             if (!effect.active) continue;
@@ -145,9 +210,8 @@ pub const ShaderManager = struct {
 
             switch (effect.effectType) {
                 .slash => this.drawSlash(effect, progress),
-                else => std.debug.print("DRAWING WRONG SHADER\n", .{}),
-                //.impact => this.drawImpact(effect, progress),
-                //.explosion => this.drawExplosion(effect, progress),
+                .impact => this.drawImpact(effect, progress),
+                .explosion => this.drawExplosion(effect, progress),
             }
         }
     }
