@@ -103,13 +103,38 @@ pub const ShaderManager = struct {
     fn drawImpact(this: *ShaderManager, effect: *Effect, progress: f32) void {
         c.BeginShaderMode(this.impactShader.source);
 
+        // Set shader uniforms
         c.SetShaderValue(this.impactShader.source, this.impactShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
 
-        const resolution = [2]f32{ @as(f32, @floatFromInt(c.GetScreenWidth())), @as(f32, @floatFromInt(c.GetScreenHeight())) };
+        const resolution = [2]f32{
+            @as(f32, @floatFromInt(c.GetScreenWidth())),
+            @as(f32, @floatFromInt(c.GetScreenHeight())),
+        };
         c.SetShaderValue(this.impactShader.source, this.impactShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
 
-        const size = 60.0;
-        c.DrawTexture(this.texture, @as(i32, @intFromFloat(effect.fromPos.x - size / 2)), @as(i32, @intFromFloat(effect.fromPos.y - size / 2)), @as(i32, @intFromFloat(size)), @as(i32, @intFromFloat(size)), c.WHITE);
+        // Compute size and position
+        const size = 40.0 * (1.0 + progress);
+        const destX = effect.fromPos.x; //- size / 2;
+        const destY = effect.fromPos.y; //- size / 2;
+
+        // Draw texture instead of rectangle
+        const tex = this.texture; // Assuming you have loaded this earlier
+        const srcRect = c.Rectangle{
+            .x = 0,
+            .y = 0,
+            .width = @as(f32, @floatFromInt(tex.width)),
+            .height = @as(f32, @floatFromInt(tex.height)),
+        };
+        const destRect = c.Rectangle{
+            .x = destX,
+            .y = destY,
+            .width = size,
+            .height = size,
+        };
+        const origin = c.Vector2{ .x = size / 2.0, .y = size / 2.0 };
+
+        // Rotation 0, color white (so shader fully controls the look)
+        c.DrawTexturePro(tex, srcRect, destRect, origin, 0.0, c.WHITE);
 
         c.EndShaderMode();
     }
@@ -117,15 +142,38 @@ pub const ShaderManager = struct {
     fn drawExplosion(this: *ShaderManager, effect: *Effect, progress: f32) void {
         c.BeginShaderMode(this.explosionShader.source);
 
+        // Set shader uniforms
         c.SetShaderValue(this.explosionShader.source, this.explosionShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
 
-        const resolution = [2]f32{ @as(f32, @floatFromInt(c.GetScreenWidth())), @as(f32, @floatFromInt(c.GetScreenHeight())) };
+        const resolution = [2]f32{
+            @as(f32, @floatFromInt(c.GetScreenWidth())),
+            @as(f32, @floatFromInt(c.GetScreenHeight())),
+        };
         c.SetShaderValue(this.explosionShader.source, this.explosionShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
 
-        const size = 80.0 * (1.0 + progress);
-        c.DrawTexture(this.texture, @as(i32, @intFromFloat(effect.fromPos.x - size / 2)), @as(i32, @intFromFloat(effect.fromPos.y - size / 2)), @as(i32, @intFromFloat(size)), @as(i32, @intFromFloat(size)), c.WHITE);
+        // Compute size and position
+        const size = 30.0 * (1.0 + progress);
+        const destX = effect.fromPos.x; //- size / 2;
+        const destY = effect.fromPos.y; //- size / 2;
 
-        //c.DrawTexturePro(this.texture, src, rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
+        // Draw texture instead of rectangle
+        const tex = this.texture; // Assuming you have loaded this earlier
+        const srcRect = c.Rectangle{
+            .x = 0,
+            .y = 0,
+            .width = @as(f32, @floatFromInt(tex.width)),
+            .height = @as(f32, @floatFromInt(tex.height)),
+        };
+        const destRect = c.Rectangle{
+            .x = destX,
+            .y = destY,
+            .width = size,
+            .height = size,
+        };
+        const origin = c.Vector2{ .x = size / 2.0, .y = size / 2.0 };
+
+        // Rotation 0, color white (so shader fully controls the look)
+        c.DrawTexturePro(tex, srcRect, destRect, origin, 0.0, c.WHITE);
 
         c.EndShaderMode();
     }

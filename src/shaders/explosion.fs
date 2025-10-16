@@ -18,6 +18,9 @@ void main()
     vec2 uv = fragTexCoord * 2.0 - 1.0;
     float dist = length(uv);
 
+    // Discard pixels outside circular explosion area
+    if (dist > 1.0) discard;
+
     // Expanding explosion wave
     float expansion = time * 1.5;
     float wave = 1.0 - abs(dist - expansion);

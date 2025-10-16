@@ -1,6 +1,7 @@
-0. Refactor state machine, split out functions a lillte bit more(handle funcitons are too big), refactor input system
-1. Mouse input
-2. UI
+
+0. UI final fantasy like ui, only use keyboard, dont do mouse
+1. Refactor state machine, split out functions a lillte bit more(handle funcitons are too big), refactor input system
+2. Mouse input
 3. start using ids, instead of sending pointer, dangerous if an entity dies or something
 4. better error handling(sometimes I check error in the caller, sometimes in the callee)
 5. magic numbers

@@ -14,6 +14,9 @@ void main()
     vec2 uv = fragTexCoord * 2.0 - 1.0;
     float dist = length(uv);
 
+    // Discard pixels outside circular explosion area
+    if (dist > 1.0) discard;
+
     // Expanding ring
     float ring = abs(dist - time * 2.0);
     ring = 1.0 - smoothstep(0.0, 0.1, ring);

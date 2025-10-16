@@ -630,10 +630,14 @@ pub fn selectedEntityAttack(ctx: *Game.Context, entity: *Entity.Entity) !void {
     if (c.IsKeyPressed(c.KEY_A)) {
         if (ctx.gamestate.cursor) |cur| {
             //try ctx.shaderManager.spawnSlash(entity.pos, cur);
-            try ctx.shaderManager.spawnExplosion(entity.pos);
+            //try ctx.shaderManager.spawnExplosion(entity.pos);
             //try ctx.shaderManager.spawnImpact(cur);
             if (ctx.gamestate.isinAttackable(cur)) {
                 const attackedEntity = getEntityByPos(ctx.entities.*, cur);
+
+                try ctx.shaderManager.spawnSlash(entity.pos, cur);
+                try ctx.shaderManager.spawnImpact(cur);
+
                 attack(ctx, entity, attackedEntity);
                 ctx.gamestate.resetAttackHighlight();
                 ctx.gamestate.removeCursor();
