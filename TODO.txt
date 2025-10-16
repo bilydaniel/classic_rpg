@@ -1,5 +1,15 @@
+0. Refactor state machine, split out functions a lillte bit more(handle funcitons are too big), refactor input system
 1. Mouse input
 2. UI
+3. start using ids, instead of sending pointer, dangerous if an entity dies or something
+4. better error handling(sometimes I check error in the caller, sometimes in the callee)
+5. magic numbers
+
+
+TO RESEARCH:
+go through the examples I saved
+
+
 
 figure out how to work with assets(tiles) better
 

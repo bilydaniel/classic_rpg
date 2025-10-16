@@ -179,16 +179,6 @@ pub fn highlightTile(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !vo
     });
 }
 
-pub fn drawCursor(gridLen: usize, pos: Types.Vector2Int) void {
-    const pos_index = posToIndex(pos);
-    if (pos_index) |index| {
-        if (index >= 0 and index < gridLen) {
-            //TODO: debug why the box doesent fit
-            //c.DrawRectangleLines(pos.x * Config.tile_width + 1, pos.y * Config.tile_height + 1, Config.tile_width, Config.tile_height, c.YELLOW);
-        }
-    }
-}
-
 pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level) void {
     _ = currentLevel;
     if (gamestate.highlightedTiles.items.len > 0) {
