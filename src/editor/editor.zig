@@ -51,7 +51,7 @@ pub const Editor = struct {
     }
 
     pub fn Update(this: *Editor) void {
-        Window.UpdateWindow();
+        Window.updateWindow();
         const delta = c.GetFrameTime();
         this.deltaTime += delta;
         //TODO: make a state machine for inputs

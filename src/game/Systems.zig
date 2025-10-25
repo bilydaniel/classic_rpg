@@ -426,8 +426,10 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
         }
     }
 
+    //TODO: pick a puppet to deploy first
     ctx.gamestate.makeCursor(ctx.player.pos);
     ctx.gamestate.updateCursor();
+
     if (c.IsKeyPressed(c.KEY_D)) {
         if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
             try deployPuppet(ctx.player, ctx.gamestate);

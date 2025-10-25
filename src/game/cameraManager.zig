@@ -1,6 +1,7 @@
 const std = @import("std");
 const Entity = @import("entity.zig");
 const Config = @import("../common/config.zig");
+const Window = @import("window.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -59,8 +60,9 @@ pub const CamManager = struct {
             }
         }
         if (!this.manual) {
-            this.camera.target.x = @floor(@as(f32, @floatFromInt(this.targetEntity.pos.x * Config.tile_width)) - Config.game_width_half / this.camera.zoom);
-            this.camera.target.y = @floor(@as(f32, @floatFromInt(this.targetEntity.pos.y * Config.tile_height)) - Config.game_height_half / this.camera.zoom);
+            //std.debug.print("scaled: {}\n", .{Window.scaledWidthHalf});
+            this.camera.target.x = @floor(@as(f32, @floatFromInt(this.targetEntity.pos.x * Config.tile_width)) - Window.scaledWidthHalf / this.camera.zoom);
+            this.camera.target.y = @floor(@as(f32, @floatFromInt(this.targetEntity.pos.y * Config.tile_height)) - Window.scaledHeightHalf / this.camera.zoom);
         }
     }
 };

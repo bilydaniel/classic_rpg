@@ -206,9 +206,6 @@ pub const ShaderManager = struct {
         };
         const origin = c.Vector2{ .x = 0, .y = width / 2 };
 
-        //TODO: @continue should be texture, not rectanglepro
-        //c.DrawRectanglePro(rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
-        //
         const src = c.Rectangle{ .x = 0, .y = 0, .width = 1, .height = 1 };
 
         c.DrawTexturePro(this.texture, src, rect, origin, angle * 180.0 / std.math.pi, c.WHITE);

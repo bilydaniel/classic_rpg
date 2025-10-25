@@ -270,6 +270,7 @@ pub const Level = struct {
                         if (tile.tempBackground) |back| {
                             background = back;
                         }
+                        //TODO: pridat scaling podle Wwindow.scale ???
                         c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, background);
                     }
                 }

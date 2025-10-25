@@ -123,7 +123,7 @@ pub const Game = struct {
         const delta = c.GetFrameTime();
         this.context.delta = delta;
         //TODO: decide on a game loop, look into the book
-        Window.UpdateWindow();
+        Window.updateWindow();
 
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs

@@ -13,6 +13,8 @@ pub var offsetx: i32 = 0;
 pub var offsety: i32 = 0;
 pub var scaledWidth: i32 = 0;
 pub var scaledHeight: i32 = 0;
+pub var scaledWidthHalf: f32 = 0;
+pub var scaledHeightHalf: f32 = 0;
 
 pub fn init() void {
     screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
@@ -35,15 +37,19 @@ pub fn init() void {
     offsety = offset_y;
     scaledWidth = scaled_width;
     scaledHeight = scaled_height;
-    windowWidth = Config.window_width;
-    windowHeight = Config.window_height;
+    scaledWidthHalf = @as(f32, @floatFromInt(scaled_width)) / 2;
+    scaledHeightHalf = @as(f32, @floatFromInt(scaled_height)) / 2;
+    windowWidth = scaledWidth;
+    windowHeight = scaledHeight;
+    //windowWidth = Config.window_width;
+    //windowHeight = Config.window_height;
 }
 
-pub fn UpdateWindow() void {
+pub fn updateWindow() void {
     const new_width = c.GetScreenWidth();
     const new_height = c.GetScreenHeight();
 
-    if (new_width == windowWidth and new_height == windowHeight) {
+    if (new_width == windowWidth or new_height == windowHeight) {
         return;
     }
 
@@ -66,4 +72,6 @@ pub fn UpdateWindow() void {
     offsety = offset_y;
     scaledWidth = scaled_width;
     scaledHeight = scaled_height;
+    scaledWidthHalf = @as(f32, @floatFromInt(scaled_width)) / 2;
+    scaledHeightHalf = @as(f32, @floatFromInt(scaled_height)) / 2;
 }
