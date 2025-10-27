@@ -15,6 +15,9 @@ const c = @cImport({
 });
 
 pub fn updatePlayer(ctx: *Game.Context) !void {
+    if (c.IsKeyPressed(c.KEY_B)) {
+        ctx.uiManager.deployMenu.visible = !ctx.uiManager.deployMenu.visible;
+    }
     switch (ctx.player.data.player.state) {
         .walking => {
             try handlePlayerWalking(ctx);
@@ -425,6 +428,8 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
             }
         }
     }
+
+    ctx.uiManager.deployMenu.visible = true;
 
     //TODO: pick a puppet to deploy first
     ctx.gamestate.makeCursor(ctx.player.pos);

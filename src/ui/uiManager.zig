@@ -9,6 +9,7 @@ const c = @cImport({
 
 pub const Element = struct {
     //TODO: add stuff like margin etc. will check in the future what is needed
+    visible: bool,
     rect: c.Rectangle,
     color: c.Color,
     //TODO: filled: bool, full vs only lines
@@ -19,6 +20,7 @@ pub const Element = struct {
         const element = try allocator.create(Element);
         const elements = std.ArrayList(*Element).init(allocator);
         element.* = .{
+            .visible = true,
             .rect = rect,
             .color = color,
             .data = data,
@@ -33,6 +35,7 @@ pub const Element = struct {
         const elements = std.ArrayList(*Element).init(allocator);
         element.* = .{
             .rect = rect,
+            .visible = true,
             .color = color,
             .data = undefined,
             .elements = elements,
@@ -53,6 +56,17 @@ pub const Element = struct {
         return element;
     }
 
+    pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color) !*Element {
+        var element = try init(allocator, rect, color, undefined);
+        element.data = ElementData{ .menu = ElementMenuData{
+            .items = std.ArrayList(ElementMenuItem).init(allocator),
+            .index = 0,
+            .type = .puppet_select,
+        } };
+
+        return element;
+    }
+
     pub fn update(this: *Element, ctx: *Game.Context, rect: ?c.Rectangle) void {
         //TODO: make logic for extracting data from ctx
         if (rect) |r| {
@@ -65,6 +79,10 @@ pub const Element = struct {
     }
 
     pub fn draw(this: *Element) void {
+        if (!this.visible) {
+            return;
+        }
+
         switch (this.data) {
             .background => {
                 var rect = this.rect;
@@ -72,7 +90,18 @@ pub const Element = struct {
                 rect.width = rect.width * Window.scale;
                 c.DrawRectangleRec(rect, this.color);
             },
-            .menu => {},
+            .menu => {
+                //TODO: @finish
+                for (this.data.menu.items) |item| {
+                    c.DrawText(
+                        item.text.ptr,
+                        @intFromFloat(this.rect.x),
+                        @intFromFloat(this.rect.y),
+                        this.data.text.fontSize,
+                        this.data.text.textColor,
+                    );
+                }
+            },
             .bar => {},
             .text => {
                 c.DrawText(
@@ -115,12 +144,14 @@ pub const MenuType = enum {
 
 pub const ElementMenuItem = struct {
     text: []u8,
+    fontSize: i32,
+    textColor: c.Color,
     enabled: bool,
     data: MenuItemData,
 };
 
 pub const MenuItemData = union(enum) {
-    puppet_index: usize,
+    puppet_id: usize,
     action: ActionType,
 };
 
@@ -181,11 +212,13 @@ pub const UiManager = struct {
     elements: std.ArrayList(*Element),
     commands: std.ArrayList(Command),
     //TODO: pointer to active element or have active value in elements?
+    //accessing certain elements that are needed, maybe do this in another way?
+    deployMenu: *Element,
 
     pub fn init(allocator: std.mem.Allocator) !*UiManager {
         const uimanager = try allocator.create(UiManager);
 
-        const elements = try makeUIElements(allocator);
+        const elements = try uimanager.makeUIElements(allocator);
         const commands = std.ArrayList(Command).init(allocator);
 
         //TODO: make a deploy menu
@@ -195,11 +228,13 @@ pub const UiManager = struct {
             .allocator = allocator,
             .elements = elements,
             .commands = commands,
+            .deployMenu = uimanager.deployMenu,
         };
         return uimanager;
     }
 
     pub fn update(this: *UiManager, ctx: *Game.Context) void {
+        //TODO: @continue add items into menu based on the context
         for (this.elements.items) |element| {
             element.update(ctx, null);
         }
@@ -226,19 +261,20 @@ pub const UiManager = struct {
     pub fn hasCommands(this: *UiManager) bool {
         return (this.commands.items.len > 0);
     }
+
+    pub fn makeUIElements(this: *UiManager, allocator: std.mem.Allocator) !std.ArrayList(*Element) {
+        var elements = std.ArrayList(*Element).init(allocator);
+
+        const playerPlate = try makeCharacterPlate(allocator, c.Vector2{ .x = 0, .y = 0 });
+        try elements.append(playerPlate);
+
+        const deployMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 });
+        try elements.append(deployMenu);
+        this.deployMenu = deployMenu;
+
+        return elements;
+    }
 };
-
-pub fn makeUIElements(allocator: std.mem.Allocator) !std.ArrayList(*Element) {
-    var elements = std.ArrayList(*Element).init(allocator);
-
-    const playerPlate = try makeCharacterPlate(allocator, c.Vector2{ .x = 0, .y = 0 });
-    try elements.append(playerPlate);
-
-    const deployMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 0, .y = 0 });
-    try elements.append(deployMenu);
-
-    return elements;
-}
 
 pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
     const plateRect = c.Rectangle{
@@ -277,37 +313,27 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
 }
 
 pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
-    const plateRect = c.Rectangle{
+    const menuRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
         //TODO: what to do about width and height?
         .width = 200,
         .height = 150,
     };
-    const characterPlate = try Element.initBackground(
+    const menuBackground = try Element.initBackground(
         allocator,
-        plateRect,
-        c.BEIGE,
+        menuRect,
+        c.BLUE,
     );
 
-    const textRect = c.Rectangle{
-        .x = pos.x + 3,
-        .y = pos.y + 5,
-        //TODO: what to do about width and height?
-        .width = 0,
-        .height = 0,
-    };
-    const characterText = try Element.initText(allocator, textRect, c.Color{
-        .r = 0,
-        .g = 0,
-        .b = 0,
-        .a = 0,
-    });
-    try characterPlate.elements.append(characterText);
+    const menu = try Element.initMenu(
+        allocator,
+        menuRect,
+        c.BLUE,
+        "Select a Puppet:",
+    );
 
-    //const hpBar = try Element.initBar(
-    //allocator,
-    //);
+    try menuBackground.elements.append(menu);
 
-    return characterPlate;
+    return menuBackground;
 }
