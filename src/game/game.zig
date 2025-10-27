@@ -28,6 +28,7 @@ pub const Context = struct {
     pathfinder: *Pathfinder.Pathfinder,
     entities: *std.ArrayList(*Entity.Entity),
     shaderManager: *ShaderManager.ShaderManager,
+    uiManager: *UiManager.UiManager,
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -40,6 +41,7 @@ pub const Context = struct {
         pathfinder: *Pathfinder.Pathfinder,
         entities: *std.ArrayList(*Entity.Entity),
         shadermanager: *ShaderManager.ShaderManager,
+        uimanager: *UiManager.UiManager,
     ) !*Context {
         const context = try allocator.create(Context);
         context.* = .{
@@ -52,6 +54,7 @@ pub const Context = struct {
             .pathfinder = pathfinder,
             .entities = entities,
             .shaderManager = shadermanager,
+            .uiManager = uimanager,
         };
         return context;
     }
@@ -88,6 +91,8 @@ pub const Game = struct {
         }
         const shadermanager = try ShaderManager.ShaderManager.init(allocator);
 
+        const uimanager = try UiManager.UiManager.init(allocator);
+
         const context = try Context.init(
             allocator,
             gamestate,
@@ -99,9 +104,9 @@ pub const Game = struct {
             pathfinder,
             &world.entities,
             shadermanager,
+            uimanager,
         );
 
-        const uimanager = try UiManager.UiManager.init(allocator, context);
         game.* = .{
             .allocator = allocator,
             .gameState = gamestate,
@@ -128,6 +133,8 @@ pub const Game = struct {
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs
 
+        this.uiManager.update(this.context);
+
         if (this.context.gamestate.currentTurn == .player) {
             try Systems.updatePlayer(this.context);
         }
@@ -135,8 +142,6 @@ pub const Game = struct {
         this.cameraManager.Update(delta);
 
         this.shaderManager.update(delta);
-
-        this.uiManager.update(this.context);
     }
 
     pub fn Draw(this: *Game) void {

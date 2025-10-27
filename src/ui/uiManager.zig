@@ -91,9 +91,37 @@ pub const Element = struct {
     }
 };
 
+pub const ElementData = union(ElementType) {
+    menu: ElementMenuData,
+    background: ElementBackgroundData,
+    bar: ElementBarData,
+    text: ElementTextData,
+};
+
 pub const ElementMenuData = struct {
     items: std.ArrayList(ElementMenuItem),
     index: u32,
+    type: MenuType,
+};
+
+//TODO: no idea if I should do it this way, maybe just use the commandType???
+// its 1:1 anyway
+pub const MenuType = enum {
+    puppet_select,
+    action_select,
+    skill_select,
+    item_select,
+};
+
+pub const ElementMenuItem = struct {
+    text: []u8,
+    enabled: bool,
+    data: MenuItemData,
+};
+
+pub const MenuItemData = union(enum) {
+    puppet_index: usize,
+    action: ActionType,
 };
 
 pub const ElementBackgroundData = struct {};
@@ -119,10 +147,6 @@ pub const ElementTextData = struct {
     }
 };
 
-pub const ElementMenuItem = struct {
-    text: []u8,
-};
-
 pub const ElementType = enum {
     menu,
     background,
@@ -130,42 +154,77 @@ pub const ElementType = enum {
     text,
 };
 
-pub const ElementData = union(ElementType) {
-    menu: ElementMenuData,
-    background: ElementBackgroundData,
-    bar: ElementBarData,
-    text: ElementTextData,
+pub const ActionType = enum {
+    move,
+    attack,
+};
+
+pub const Command = struct {
+    type: CommandType,
+    data: CommandData,
+};
+
+pub const CommandType = enum {
+    none,
+    select_puppet,
+    select_action,
+};
+
+pub const CommandData = union(CommandType) {
+    none: void,
+    select_puppet: usize,
+    select_action: ActionType,
 };
 
 pub const UiManager = struct {
     allocator: std.mem.Allocator,
-    ctx: *Game.Context,
     elements: std.ArrayList(*Element),
+    commands: std.ArrayList(Command),
+    //TODO: pointer to active element or have active value in elements?
 
-    pub fn init(allocator: std.mem.Allocator, ctx: *Game.Context) !*UiManager {
+    pub fn init(allocator: std.mem.Allocator) !*UiManager {
         const uimanager = try allocator.create(UiManager);
 
         const elements = try makeUIElements(allocator);
+        const commands = std.ArrayList(Command).init(allocator);
 
         //TODO: make a deploy menu
         //const deployMenu = Element.init(allocator, c.Rectangle{ .x = 0, .y = 0, .width = 100, .height = 100 }, c.RED);
 
         uimanager.* = .{
             .allocator = allocator,
-            .ctx = ctx,
             .elements = elements,
+            .commands = commands,
         };
         return uimanager;
     }
+
     pub fn update(this: *UiManager, ctx: *Game.Context) void {
         for (this.elements.items) |element| {
             element.update(ctx, null);
         }
     }
+
     pub fn draw(this: *UiManager) void {
         for (this.elements.items) |element| {
             element.draw();
         }
+    }
+
+    pub fn push(this: *UiManager, command: Command) !void {
+        try this.commands.append(command);
+    }
+
+    pub fn pop(this: *UiManager) ?Command {
+        if (this.commands.items.len < 1) {
+            return null;
+        }
+        const command = this.commands.orderedRemove(0);
+        return command;
+    }
+
+    pub fn hasCommands(this: *UiManager) bool {
+        return (this.commands.items.len > 0);
     }
 };
 
