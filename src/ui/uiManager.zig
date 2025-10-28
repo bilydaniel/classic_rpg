@@ -13,8 +13,9 @@ pub const Element = struct {
     rect: c.Rectangle,
     color: c.Color,
     //TODO: filled: bool, full vs only lines
-    data: ElementData,
     elements: std.ArrayList(*Element),
+    data: ElementData,
+    updateFn: ?*const fn (*Element, *Game.Context) void = null,
 
     pub fn init(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
         const element = try allocator.create(Element);
@@ -50,14 +51,17 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn initText(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color) !*Element {
+    pub fn initText(allocator: std.mem.Allocator, rect: c.Rectangle, text: []const u8, color: c.Color) !*Element {
         var element = try init(allocator, rect, color, undefined);
-        element.data = ElementData{ .text = ElementTextData.init("Player", c.WHITE) };
+        element.data = ElementData{ .text = ElementTextData.init(text, c.WHITE) };
         return element;
     }
 
     pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color) !*Element {
         var element = try init(allocator, rect, color, undefined);
+
+        element.updateFn = &updatePuppetMenu;
+
         element.data = ElementData{ .menu = ElementMenuData{
             .items = std.ArrayList(ElementMenuItem).init(allocator),
             .index = 0,
@@ -68,6 +72,9 @@ pub const Element = struct {
     }
 
     pub fn update(this: *Element, ctx: *Game.Context, rect: ?c.Rectangle) void {
+        if (this.updateFn) |_fn| {
+            _fn(this, ctx);
+        }
         //TODO: make logic for extracting data from ctx
         if (rect) |r| {
             this.rect = r;
@@ -92,7 +99,7 @@ pub const Element = struct {
             },
             .menu => {
                 //TODO: @finish
-                for (this.data.menu.items) |item| {
+                for (this.data.menu.items.items) |item| {
                     c.DrawText(
                         item.text.ptr,
                         @intFromFloat(this.rect.x),
@@ -144,10 +151,16 @@ pub const MenuType = enum {
 
 pub const ElementMenuItem = struct {
     text: []u8,
-    fontSize: i32,
-    textColor: c.Color,
-    enabled: bool,
+    fontSize: i32 = 10,
+    textColor: c.Color = c.BLACK,
+    enabled: bool = true,
     data: MenuItemData,
+
+    //TODO: @continue @finish
+
+    pub fn init(
+        text: []const u8,
+    ) void {}
 };
 
 pub const MenuItemData = union(enum) {
@@ -297,7 +310,7 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
         .width = 0,
         .height = 0,
     };
-    const characterText = try Element.initText(allocator, textRect, c.Color{
+    const characterText = try Element.initText(allocator, textRect, "Player", c.Color{
         .r = 0,
         .g = 0,
         .b = 0,
@@ -326,14 +339,32 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
         c.BLUE,
     );
 
+    const titleRect = c.Rectangle{
+        .x = pos.x + 3,
+        .y = pos.y + 5,
+        .width = 0,
+        .height = 0,
+    };
+
+    const menuTitle = try Element.initText(allocator, titleRect, "Pick a Puppet", c.WHITE);
+    try menuBackground.elements.append(menuTitle);
+
     const menu = try Element.initMenu(
         allocator,
         menuRect,
         c.BLUE,
-        "Select a Puppet:",
     );
-
     try menuBackground.elements.append(menu);
 
     return menuBackground;
+}
+
+pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) void {
+    this.data.menu.items.clearRetainingCapacity();
+
+    //TODO: this is ridicolous, maybe make a getter or something?
+    for (ctx.player.data.player.puppets.items) |pup| {
+        const item = ElementMenuItem.init();
+        this.data.menu.items.append(item);
+    }
 }
