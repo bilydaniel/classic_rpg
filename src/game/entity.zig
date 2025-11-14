@@ -28,6 +28,7 @@ pub const EntityData = union(EntityType) {
 
 pub const Entity = struct {
     id: u32,
+    name: []const u8 = "",
     health: i32,
     mana: i32,
     tp: i32,
@@ -328,8 +329,10 @@ pub const PlayerData = struct {
         const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
         var puppet = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
         puppet.visible = false;
+        puppet.name = "Pamama";
         var puppet2 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
         puppet2.visible = false;
+        puppet2.name = "Igor";
 
         puppet.setTextureID(50);
         puppet2.setTextureID(51);

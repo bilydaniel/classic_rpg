@@ -133,7 +133,7 @@ pub const Game = struct {
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs
 
-        this.uiManager.update(this.context);
+        try this.uiManager.update(this.context);
 
         if (this.context.gamestate.currentTurn == .player) {
             try Systems.updatePlayer(this.context);

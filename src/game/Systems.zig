@@ -15,10 +15,18 @@ const c = @cImport({
 });
 
 pub fn updatePlayer(ctx: *Game.Context) !void {
+    //TODO: remove, just test
     if (c.IsKeyPressed(c.KEY_B)) {
-        ctx.uiManager.deployMenu.visible = !ctx.uiManager.deployMenu.visible;
+        //TODO: finish
+        if (ctx.uiManager.deployMenu.visible) {
+            ctx.uiManager.hideDeployMenu();
+        } else {
+            ctx.uiManager.showDeployMenu();
+        }
     }
+
     switch (ctx.player.data.player.state) {
+        //TODO: go through everything, make more functions, messy
         .walking => {
             try handlePlayerWalking(ctx);
         },
@@ -429,17 +437,19 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
         }
     }
 
-    ctx.uiManager.deployMenu.visible = true;
+    //TODO: finish later
+    //ctx.uiManager.deployMenu.visible = true;
+    //ctx.uiManager.showDeployMenu();
 
     //TODO: pick a puppet to deploy first
     ctx.gamestate.makeCursor(ctx.player.pos);
     ctx.gamestate.updateCursor();
 
-    if (c.IsKeyPressed(c.KEY_D)) {
-        if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
-            try deployPuppet(ctx.player, ctx.gamestate);
-        }
-    }
+    // if (c.IsKeyPressed(c.KEY_D)) {
+    //     if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
+    //         try deployPuppet(ctx.player, ctx.gamestate);
+    //     }
+    // }
 
     //all puppets deployed
     if (ctx.player.data.player.allPupsDeployed()) {

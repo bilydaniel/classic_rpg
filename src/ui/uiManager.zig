@@ -15,7 +15,7 @@ pub const Element = struct {
     //TODO: filled: bool, full vs only lines
     elements: std.ArrayList(*Element),
     data: ElementData,
-    updateFn: ?*const fn (*Element, *Game.Context) void = null,
+    updateFn: ?*const fn (*Element, *Game.Context) MenuError!void = null,
 
     pub fn init(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
         const element = try allocator.create(Element);
@@ -63,7 +63,7 @@ pub const Element = struct {
         element.updateFn = &updatePuppetMenu;
 
         element.data = ElementData{ .menu = ElementMenuData{
-            .items = std.ArrayList(ElementMenuItem).init(allocator),
+            .menuItems = std.ArrayList(ElementMenuItem).init(allocator),
             .index = 0,
             .type = .puppet_select,
         } };
@@ -71,9 +71,9 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn update(this: *Element, ctx: *Game.Context, rect: ?c.Rectangle) void {
+    pub fn update(this: *Element, ctx: *Game.Context, rect: ?c.Rectangle) !void {
         if (this.updateFn) |_fn| {
-            _fn(this, ctx);
+            try _fn(this, ctx);
         }
         //TODO: make logic for extracting data from ctx
         if (rect) |r| {
@@ -81,7 +81,7 @@ pub const Element = struct {
         }
 
         for (this.elements.items) |item| {
-            item.update(ctx, null);
+            try item.update(ctx, null);
         }
     }
 
@@ -99,14 +99,18 @@ pub const Element = struct {
             },
             .menu => {
                 //TODO: @finish
-                for (this.data.menu.items.items) |item| {
+                var x = this.rect.x;
+                var y = this.rect.y;
+                for (this.data.menu.menuItems.items) |item| {
                     c.DrawText(
                         item.text.ptr,
-                        @intFromFloat(this.rect.x),
-                        @intFromFloat(this.rect.y),
-                        this.data.text.fontSize,
-                        this.data.text.textColor,
+                        @intFromFloat(x),
+                        @intFromFloat(y),
+                        this.data.menu.fontSize,
+                        this.data.menu.textColor,
                     );
+                    x += 0;
+                    y += 20;
                 }
             },
             .bar => {},
@@ -135,9 +139,11 @@ pub const ElementData = union(ElementType) {
 };
 
 pub const ElementMenuData = struct {
-    items: std.ArrayList(ElementMenuItem),
+    menuItems: std.ArrayList(ElementMenuItem),
     index: u32,
     type: MenuType,
+    fontSize: i32 = 20,
+    textColor: c.Color = c.YELLOW,
 };
 
 //TODO: no idea if I should do it this way, maybe just use the commandType???
@@ -150,7 +156,7 @@ pub const MenuType = enum {
 };
 
 pub const ElementMenuItem = struct {
-    text: []u8,
+    text: []const u8,
     fontSize: i32 = 10,
     textColor: c.Color = c.BLACK,
     enabled: bool = true,
@@ -158,9 +164,16 @@ pub const ElementMenuItem = struct {
 
     //TODO: @continue @finish
 
-    pub fn init(
+    pub fn initPupItem(
         text: []const u8,
-    ) void {}
+        puppet_id: usize,
+    ) ElementMenuItem {
+        const elementData = MenuItemData{ .puppet_id = puppet_id };
+        return ElementMenuItem{
+            .text = text,
+            .data = elementData,
+        };
+    }
 };
 
 pub const MenuItemData = union(enum) {
@@ -220,6 +233,8 @@ pub const CommandData = union(CommandType) {
     select_action: ActionType,
 };
 
+const MenuError = error{OutOfMemory};
+
 pub const UiManager = struct {
     allocator: std.mem.Allocator,
     elements: std.ArrayList(*Element),
@@ -227,6 +242,7 @@ pub const UiManager = struct {
     //TODO: pointer to active element or have active value in elements?
     //accessing certain elements that are needed, maybe do this in another way?
     deployMenu: *Element,
+    activeMenu: ?*Element = null,
 
     pub fn init(allocator: std.mem.Allocator) !*UiManager {
         const uimanager = try allocator.create(UiManager);
@@ -246,10 +262,10 @@ pub const UiManager = struct {
         return uimanager;
     }
 
-    pub fn update(this: *UiManager, ctx: *Game.Context) void {
+    pub fn update(this: *UiManager, ctx: *Game.Context) !void {
         //TODO: @continue add items into menu based on the context
         for (this.elements.items) |element| {
-            element.update(ctx, null);
+            try element.update(ctx, null);
         }
     }
 
@@ -286,6 +302,16 @@ pub const UiManager = struct {
         this.deployMenu = deployMenu;
 
         return elements;
+    }
+
+    pub fn showDeployMenu(this: *UiManager) void {
+        this.deployMenu.visible = true;
+        this.activeMenu = this.deployMenu;
+    }
+
+    pub fn hideDeployMenu(this: *UiManager) void {
+        this.deployMenu.visible = false;
+        this.activeMenu = null;
     }
 };
 
@@ -326,7 +352,7 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
 }
 
 pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
-    const menuRect = c.Rectangle{
+    const backgroundRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
         //TODO: what to do about width and height?
@@ -335,7 +361,7 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
     };
     const menuBackground = try Element.initBackground(
         allocator,
-        menuRect,
+        backgroundRect,
         c.BLUE,
     );
 
@@ -346,8 +372,17 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
         .height = 0,
     };
 
+    //TODO: title
     const menuTitle = try Element.initText(allocator, titleRect, "Pick a Puppet", c.WHITE);
     try menuBackground.elements.append(menuTitle);
+
+    //TODO: figure out the offsets, probably based on fontsize??? not really clue how it works
+    const menuRect = c.Rectangle{
+        .x = pos.x + 3,
+        .y = pos.y + 30,
+        .width = 0,
+        .height = 0,
+    };
 
     const menu = try Element.initMenu(
         allocator,
@@ -359,12 +394,13 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
     return menuBackground;
 }
 
-pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) void {
-    this.data.menu.items.clearRetainingCapacity();
+pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) MenuError!void {
+    //TODO: update every frame for now, probably can make it better
+    this.data.menu.menuItems.clearRetainingCapacity();
 
     //TODO: this is ridicolous, maybe make a getter or something?
     for (ctx.player.data.player.puppets.items) |pup| {
-        const item = ElementMenuItem.init();
-        this.data.menu.items.append(item);
+        const item = ElementMenuItem.initPupItem(pup.name, pup.id);
+        try this.data.menu.menuItems.append(item);
     }
 }
