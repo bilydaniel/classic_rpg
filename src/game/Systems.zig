@@ -394,7 +394,13 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     var new_pos = ctx.player.pos;
     var moved = false;
 
-    moved = InputManager.takePositionInput(&new_pos);
+    const deltaVector = ctx.inputManager.takePositionInput();
+    if (deltaVector) |delta_vector| {
+        //TODO: make a function that works with the delta
+        moved = true;
+        new_pos = Types.vector2IntAdd(new_pos, delta_vector);
+    }
+    //moved = InputManager.takePositionInput(&new_pos);
 
     if (c.IsKeyPressed(c.KEY_F)) {
         try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
@@ -422,28 +428,47 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     }
 }
 pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
-    if (ctx.gamestate.deployableCells == null) {
-        const neighbours = neighboursAll(ctx.player.pos);
-        ctx.gamestate.deployableCells = neighbours;
-    }
-    if (ctx.gamestate.deployableCells) |cells| {
-        if (!ctx.gamestate.deployHighlighted) {
-            for (cells) |value| {
-                if (value) |val| {
-                    try highlightTile(ctx.gamestate, val);
-                    ctx.gamestate.deployHighlighted = true;
-                }
-            }
-        }
-    }
 
     //TODO: finish later
     //ctx.uiManager.deployMenu.visible = true;
     //ctx.uiManager.showDeployMenu();
 
-    //TODO: pick a puppet to deploy first
-    ctx.gamestate.makeCursor(ctx.player.pos);
-    ctx.gamestate.updateCursor();
+    //TODO: pick a puppet to deploy first in ui
+    if (ctx.gamestate.selectedPupId == null) {
+        if (!ctx.uiManager.deployMenu.visible) {
+            ctx.uiManager.showDeployMenu();
+        } else {
+            const input = ctx.inputManager.takePositionInput();
+            if (input) |in| {
+                ctx.uiManager.updateDeployMenu(in);
+            }
+
+            if (ctx.inputManager.takeConfirmInput()) {
+                const selectedIndex = ctx.uiManager.getSelectedIndex();
+                std.debug.print("selected_index: {}\n", .{selectedIndex});
+            }
+        }
+    }
+
+    if (ctx.gamestate.selectedPupId) |selected_pup_id| {
+        _ = selected_pup_id;
+        ctx.gamestate.makeCursor(ctx.player.pos);
+        ctx.gamestate.updateCursor(); //TODO: use inputManager
+        if (ctx.gamestate.deployableCells == null) {
+            const neighbours = neighboursAll(ctx.player.pos);
+            ctx.gamestate.deployableCells = neighbours;
+        }
+        if (ctx.gamestate.deployableCells) |cells| {
+            if (!ctx.gamestate.deployHighlighted) {
+                for (cells) |value| {
+                    if (value) |val| {
+                        try highlightTile(ctx.gamestate, val);
+                        ctx.gamestate.deployHighlighted = true;
+                    }
+                }
+            }
+        }
+    }
 
     // if (c.IsKeyPressed(c.KEY_D)) {
     //     if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
@@ -455,11 +480,14 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
     if (ctx.player.data.player.allPupsDeployed()) {
         ctx.gamestate.reset();
         ctx.player.data.player.state = .in_combat;
+        ctx.uiManager.hideDeployMenu();
     }
     if (c.IsKeyPressed(c.KEY_F)) {
         if (canEndCombat(ctx.player, ctx.entities)) {
             ctx.gamestate.reset();
             ctx.player.endCombat();
+            //TODO: probably gonna need some better way of handling state / ui, especially goind state to state
+            ctx.uiManager.hideDeployMenu();
         }
     }
 }

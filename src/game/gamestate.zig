@@ -57,6 +57,8 @@ pub const gameState = struct {
     attackableTiles: std.ArrayList(Types.Vector2Int),
     attackHighlighted: bool,
 
+    selectedPupId: ?usize = null,
+
     pub fn init(allocator: std.mem.Allocator) !*gameState {
         const highlighted_tiles = std.ArrayList(highlight).init(allocator);
         const movable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);

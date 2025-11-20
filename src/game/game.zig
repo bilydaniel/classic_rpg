@@ -13,6 +13,7 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
+const InputManager = @import("inputManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
@@ -29,6 +30,7 @@ pub const Context = struct {
     entities: *std.ArrayList(*Entity.Entity),
     shaderManager: *ShaderManager.ShaderManager,
     uiManager: *UiManager.UiManager,
+    inputManager: *InputManager.InputManager,
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -42,6 +44,7 @@ pub const Context = struct {
         entities: *std.ArrayList(*Entity.Entity),
         shadermanager: *ShaderManager.ShaderManager,
         uimanager: *UiManager.UiManager,
+        inputManager: *InputManager.InputManager,
     ) !*Context {
         const context = try allocator.create(Context);
         context.* = .{
@@ -55,6 +58,7 @@ pub const Context = struct {
             .entities = entities,
             .shaderManager = shadermanager,
             .uiManager = uimanager,
+            .inputManager = inputManager,
         };
         return context;
     }
@@ -70,6 +74,7 @@ pub const Game = struct {
     tilesetManager: *TilesetManager.TilesetManager,
     context: *Context,
     uiManager: *UiManager.UiManager,
+    inputManager: *InputManager.InputManager,
     shaderManager: *ShaderManager.ShaderManager,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
@@ -92,6 +97,7 @@ pub const Game = struct {
         const shadermanager = try ShaderManager.ShaderManager.init(allocator);
 
         const uimanager = try UiManager.UiManager.init(allocator);
+        const inputManager = try InputManager.InputManager.init(allocator);
 
         const context = try Context.init(
             allocator,
@@ -105,6 +111,7 @@ pub const Game = struct {
             &world.entities,
             shadermanager,
             uimanager,
+            inputManager,
         );
 
         game.* = .{
@@ -118,6 +125,7 @@ pub const Game = struct {
             .context = context,
             .uiManager = uimanager,
             .shaderManager = shadermanager,
+            .inputManager = inputManager,
         };
 
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
@@ -133,6 +141,7 @@ pub const Game = struct {
         //TODO: when i change the window size, clicking is not precise anymore
         //TODO: make a state machine for inputs
 
+        //TODO: make uimanager retutn commands that get used in updateplayer etc.
         try this.uiManager.update(this.context);
 
         if (this.context.gamestate.currentTurn == .player) {

@@ -267,6 +267,10 @@ pub const UiManager = struct {
         for (this.elements.items) |element| {
             try element.update(ctx, null);
         }
+
+        if (this.activeMenu) |active_menu| {
+            _ = active_menu;
+        }
     }
 
     pub fn draw(this: *UiManager) void {
@@ -298,6 +302,7 @@ pub const UiManager = struct {
         try elements.append(playerPlate);
 
         const deployMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 });
+        deployMenu.visible = false;
         try elements.append(deployMenu);
         this.deployMenu = deployMenu;
 
@@ -312,6 +317,46 @@ pub const UiManager = struct {
     pub fn hideDeployMenu(this: *UiManager) void {
         this.deployMenu.visible = false;
         this.activeMenu = null;
+    }
+
+    pub fn updateDeployMenu(this: *UiManager, delta: Types.Vector2Int) void {
+        var menuData: ?*ElementMenuData = null;
+        for (this.deployMenu.elements.items) |element| {
+            if (element.data == .menu) {
+                menuData = &element.data.menu;
+            }
+        }
+
+        if (menuData) |menu_data| {
+            const itemCount = @as(u32, @intCast(menu_data.menuItems.items.len));
+            std.debug.print("item_count: {}\n", .{itemCount});
+            var index = menu_data.index;
+            if (itemCount == 0) {
+                return;
+            }
+
+            if (delta.y == -1) {
+                if (index == 0) {
+                    index = itemCount - 1;
+                } else {
+                    index -= 1;
+                }
+            } else if (delta.y == 1) {
+                if (index == itemCount - 1) {
+                    index = 0;
+                } else {
+                    index += 1;
+                }
+            }
+            //this.deployMenu.data.menu.index = index;
+            menu_data.index = index;
+            std.debug.print("index: {}\n", .{index});
+        }
+    }
+
+    pub fn getSelectedIndex(this: *UiManager) usize {
+        _ = this;
+        return 0;
     }
 };
 
