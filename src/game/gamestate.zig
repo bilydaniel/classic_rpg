@@ -5,6 +5,7 @@ const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
 const Entity = @import("entity.zig");
 const Level = @import("level.zig");
+const UiManager = @import("../ui/uiManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -57,7 +58,8 @@ pub const gameState = struct {
     attackableTiles: std.ArrayList(Types.Vector2Int),
     attackHighlighted: bool,
 
-    selectedPupId: ?usize = null,
+    selectedPupId: ?u32 = null,
+    selectedAction: ?UiManager.ActionType = null,
 
     pub fn init(allocator: std.mem.Allocator) !*gameState {
         const highlighted_tiles = std.ArrayList(highlight).init(allocator);

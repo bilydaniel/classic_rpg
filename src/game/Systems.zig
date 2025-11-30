@@ -14,6 +14,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+//TODO: add an optiom to "look around", get info on enemies, etc.
 pub fn updatePlayer(ctx: *Game.Context) !void {
     //TODO: remove, just test
     if (c.IsKeyPressed(c.KEY_B)) {
@@ -27,6 +28,7 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
 
     switch (ctx.player.data.player.state) {
         //TODO: go through everything, make more functions, messy
+        //TODO: fix state management, state transitions(use funcitons?)
         .walking => {
             try handlePlayerWalking(ctx);
         },
@@ -44,14 +46,15 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
     }
 }
 
-pub fn deployPuppet(player: *Entity.Entity, gamestate: *Gamestate.gameState) !void {
-    const puppets = &player.data.player.puppets;
-    for (puppets.items) |pup| {
+pub fn deployPuppet(ctx: *Game.Context, pupId: u32) !void {
+    const puppet = getPupById(ctx.player.data.player.puppets, pupId);
+    if (puppet) |pup| {
         if (!pup.data.puppet.deployed) {
-            if (gamestate.cursor) |curs| {
+            if (ctx.gamestate.cursor) |curs| {
                 pup.pos = curs;
                 pup.data.puppet.deployed = true;
                 pup.visible = true;
+                ctx.gamestate.selectedPupId = null; //TODO: maybe wrong, check
                 return;
             }
         }
@@ -103,6 +106,15 @@ pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) boo
 pub fn getEntityByPos(entities: std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
     for (entities.items) |entity| {
         if (Types.vector2IntCompare(entity.pos, pos)) {
+            return entity;
+        }
+    }
+    return null;
+}
+
+pub fn getEntityById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Entity {
+    for (entities.items) |entity| {
+        if (entity.id == id) {
             return entity;
         }
     }
@@ -440,18 +452,32 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
         } else {
             const input = ctx.inputManager.takePositionInput();
             if (input) |in| {
-                ctx.uiManager.updateDeployMenu(in);
+                ctx.uiManager.updateActiveMenu(in);
             }
 
             if (ctx.inputManager.takeConfirmInput()) {
-                const selectedIndex = ctx.uiManager.getSelectedIndex();
-                std.debug.print("selected_index: {}\n", .{selectedIndex});
+                const selectedItem = ctx.uiManager.getSelectedItem();
+                if (selectedItem) |selected_item| {
+                    std.debug.print("selected_item: {}\n", .{selected_item.puppet_id});
+                    //TODO: what should I do about puppet_id? its enum, check
+                    //const selectedPup = getEntityById(ctx.entities.*, @intCast(selected_item.puppet_id));
+                    ctx.gamestate.selectedPupId = selected_item.puppet_id;
+                }
             }
         }
     }
 
     if (ctx.gamestate.selectedPupId) |selected_pup_id| {
-        _ = selected_pup_id;
+        if (ctx.uiManager.deployMenu.visible) {
+            ctx.uiManager.hideDeployMenu();
+        }
+        if (ctx.inputManager.takeConfirmInput()) {
+            if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
+                //TODO: change deployPuppet
+                try deployPuppet(ctx, selected_pup_id);
+            }
+        }
+        //TODO: fix for new way of deploying
         ctx.gamestate.makeCursor(ctx.player.pos);
         ctx.gamestate.updateCursor(); //TODO: use inputManager
         if (ctx.gamestate.deployableCells == null) {
@@ -469,12 +495,6 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
             }
         }
     }
-
-    // if (c.IsKeyPressed(c.KEY_D)) {
-    //     if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
-    //         try deployPuppet(ctx.player, ctx.gamestate);
-    //     }
-    // }
 
     //all puppets deployed
     if (ctx.player.data.player.allPupsDeployed()) {
@@ -532,6 +552,8 @@ pub fn playerCombatTurn(ctx: *Game.Context) !void {
 
 pub fn entitySelect(ctx: *Game.Context) void {
     var selectedNow = false;
+
+    //TODO: make a menu for swapping puppets in the array(different index => different keybind)
     if (c.IsKeyPressed(c.KEY_ONE)) {
         ctx.gamestate.selectedEntity = ctx.player;
         selectedNow = true;
@@ -579,6 +601,25 @@ pub fn selectedEntityAction(ctx: *Game.Context) !void {
         //how do I highlight the selected entity?
         //probaly should try a blink, give a duration to highlight
         //could try to do a circle highlight
+
+        if (ctx.gamestate.selectedAction == null) {
+            if (!ctx.uiManager.actionMenu.visible) {
+                ctx.uiManager.showActionMenu();
+            } else {
+                const input = ctx.inputManager.takePositionInput();
+                if (input) |in| {
+                    ctx.uiManager.updateActiveMenu(in);
+                }
+
+                if (ctx.inputManager.takeConfirmInput()) {
+                    const selectedItem = ctx.uiManager.getSelectedItem();
+                    if (selectedItem) |selected_item| {
+                        std.debug.print("selected_item: {}\n", .{selected_item.action});
+                        ctx.gamestate.selectedAction = selected_item.action;
+                    }
+                }
+            }
+        }
 
         switch (ctx.gamestate.selectedEntityMode) {
             .none => {
@@ -698,4 +739,14 @@ pub fn attack(ctx: *Game.Context, entity: *Entity.Entity, attackedEntity: ?*Enti
         _ = attacked_entity;
         _ = entity;
     } else {}
+}
+
+pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Entity {
+    for (entities.items) |entity| {
+        if (entity.id == id) {
+            return entity;
+        }
+    }
+
+    return null;
 }

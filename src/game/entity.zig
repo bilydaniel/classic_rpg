@@ -334,11 +334,17 @@ pub const PlayerData = struct {
         puppet2.visible = false;
         puppet2.name = "Igor";
 
+        var puppet3 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+        puppet3.visible = false;
+        puppet3.name = "R2D2";
+
         puppet.setTextureID(50);
         puppet2.setTextureID(51);
+        puppet3.setTextureID(51);
 
         try puppets.append(puppet);
         try puppets.append(puppet2);
+        try puppets.append(puppet3);
         return PlayerData{
             .state = .walking,
             .inCombatWith = inCombatWith,

@@ -7,6 +7,8 @@ const c = @cImport({
 });
 //TODO: how to make some lines / additional graphics?
 
+pub const updatefunction = *const fn (*Element, *Game.Context) MenuError!void;
+
 pub const Element = struct {
     //TODO: add stuff like margin etc. will check in the future what is needed
     visible: bool,
@@ -15,7 +17,7 @@ pub const Element = struct {
     //TODO: filled: bool, full vs only lines
     elements: std.ArrayList(*Element),
     data: ElementData,
-    updateFn: ?*const fn (*Element, *Game.Context) MenuError!void = null,
+    updateFn: ?updatefunction = null,
 
     pub fn init(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
         const element = try allocator.create(Element);
@@ -57,10 +59,10 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color) !*Element {
+    pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, updateFunction: updatefunction) !*Element {
         var element = try init(allocator, rect, color, undefined);
 
-        element.updateFn = &updatePuppetMenu;
+        element.updateFn = updateFunction;
 
         element.data = ElementData{ .menu = ElementMenuData{
             .menuItems = std.ArrayList(ElementMenuItem).init(allocator),
@@ -69,6 +71,15 @@ pub const Element = struct {
         } };
 
         return element;
+    }
+
+    pub fn getChild(this: *Element, elementType: ElementType) ?*Element {
+        for (this.elements.items) |element| {
+            if (element.data == elementType) {
+                return element;
+            }
+        }
+        return null;
     }
 
     pub fn update(this: *Element, ctx: *Game.Context, rect: ?c.Rectangle) !void {
@@ -101,13 +112,18 @@ pub const Element = struct {
                 //TODO: @finish
                 var x = this.rect.x;
                 var y = this.rect.y;
-                for (this.data.menu.menuItems.items) |item| {
+                for (this.data.menu.menuItems.items, 0..) |item, i| {
+                    var text_color = this.data.menu.textColor;
+                    if (this.data.menu.index == i) {
+                        text_color = this.data.menu.pickedTextColor;
+                    }
+
                     c.DrawText(
                         item.text.ptr,
                         @intFromFloat(x),
                         @intFromFloat(y),
                         this.data.menu.fontSize,
-                        this.data.menu.textColor,
+                        text_color,
                     );
                     x += 0;
                     y += 20;
@@ -144,6 +160,7 @@ pub const ElementMenuData = struct {
     type: MenuType,
     fontSize: i32 = 20,
     textColor: c.Color = c.YELLOW,
+    pickedTextColor: c.Color = c.RED,
 };
 
 //TODO: no idea if I should do it this way, maybe just use the commandType???
@@ -166,7 +183,7 @@ pub const ElementMenuItem = struct {
 
     pub fn initPupItem(
         text: []const u8,
-        puppet_id: usize,
+        puppet_id: u32,
     ) ElementMenuItem {
         const elementData = MenuItemData{ .puppet_id = puppet_id };
         return ElementMenuItem{
@@ -177,7 +194,7 @@ pub const ElementMenuItem = struct {
 };
 
 pub const MenuItemData = union(enum) {
-    puppet_id: usize,
+    puppet_id: u32,
     action: ActionType,
 };
 
@@ -242,6 +259,7 @@ pub const UiManager = struct {
     //TODO: pointer to active element or have active value in elements?
     //accessing certain elements that are needed, maybe do this in another way?
     deployMenu: *Element,
+    actionMenu: *Element,
     activeMenu: ?*Element = null,
 
     pub fn init(allocator: std.mem.Allocator) !*UiManager {
@@ -258,6 +276,7 @@ pub const UiManager = struct {
             .elements = elements,
             .commands = commands,
             .deployMenu = uimanager.deployMenu,
+            .actionMenu = uimanager.actionMenu,
         };
         return uimanager;
     }
@@ -301,10 +320,15 @@ pub const UiManager = struct {
         const playerPlate = try makeCharacterPlate(allocator, c.Vector2{ .x = 0, .y = 0 });
         try elements.append(playerPlate);
 
-        const deployMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 });
+        const deployMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 }, "Pick a Puppet:", updatePuppetMenu);
         deployMenu.visible = false;
         try elements.append(deployMenu);
         this.deployMenu = deployMenu;
+
+        const actionMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 }, "Pick Action:", updateActionMenu);
+        actionMenu.visible = false;
+        try elements.append(actionMenu);
+        this.actionMenu = actionMenu;
 
         return elements;
     }
@@ -319,44 +343,57 @@ pub const UiManager = struct {
         this.activeMenu = null;
     }
 
-    pub fn updateDeployMenu(this: *UiManager, delta: Types.Vector2Int) void {
+    pub fn updateActiveMenu(this: *UiManager, delta: Types.Vector2Int) void {
         var menuData: ?*ElementMenuData = null;
-        for (this.deployMenu.elements.items) |element| {
-            if (element.data == .menu) {
-                menuData = &element.data.menu;
-            }
-        }
 
-        if (menuData) |menu_data| {
-            const itemCount = @as(u32, @intCast(menu_data.menuItems.items.len));
-            std.debug.print("item_count: {}\n", .{itemCount});
-            var index = menu_data.index;
-            if (itemCount == 0) {
-                return;
+        if (this.activeMenu) |active_menu| {
+            const menu = active_menu.getChild(.menu);
+            if (menu) |_menu| {
+                menuData = &_menu.data.menu;
             }
 
-            if (delta.y == -1) {
-                if (index == 0) {
-                    index = itemCount - 1;
-                } else {
-                    index -= 1;
+            if (menuData) |menu_data| {
+                const itemCount = @as(u32, @intCast(menu_data.menuItems.items.len));
+                var index = menu_data.index;
+                if (itemCount == 0) {
+                    return;
                 }
-            } else if (delta.y == 1) {
-                if (index == itemCount - 1) {
-                    index = 0;
-                } else {
-                    index += 1;
+
+                if (delta.y == -1) {
+                    if (index == 0) {
+                        index = itemCount - 1;
+                    } else {
+                        index -= 1;
+                    }
+                } else if (delta.y == 1) {
+                    if (index == itemCount - 1) {
+                        index = 0;
+                    } else {
+                        index += 1;
+                    }
                 }
+                menu_data.index = index;
             }
-            //this.deployMenu.data.menu.index = index;
-            menu_data.index = index;
-            std.debug.print("index: {}\n", .{index});
         }
     }
 
-    pub fn getSelectedIndex(this: *UiManager) usize {
-        _ = this;
-        return 0;
+    pub fn showActionMenu(this: *UiManager) void {
+        this.actionMenu.visible = true;
+        this.activeMenu = this.actionMenu;
+    }
+
+    pub fn hideActionMenu(this: *UiManager) void {
+        this.actionMenu.visible = false;
+        this.activeMenu = null;
+    }
+
+    pub fn getSelectedItem(this: *UiManager) ?MenuItemData {
+        const menu = this.deployMenu.getChild(.menu);
+        if (menu) |_menu| {
+            const menuData = &_menu.data.menu;
+            return menuData.menuItems.items[menuData.index].data;
+        }
+        return null;
     }
 };
 
@@ -396,7 +433,12 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
     return characterPlate;
 }
 
-pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
+pub fn makeChoiceMenu(
+    allocator: std.mem.Allocator,
+    pos: c.Vector2,
+    title: []const u8,
+    updateFunction: updatefunction,
+) !*Element {
     const backgroundRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
@@ -418,7 +460,7 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
     };
 
     //TODO: title
-    const menuTitle = try Element.initText(allocator, titleRect, "Pick a Puppet", c.WHITE);
+    const menuTitle = try Element.initText(allocator, titleRect, title, c.WHITE);
     try menuBackground.elements.append(menuTitle);
 
     //TODO: figure out the offsets, probably based on fontsize??? not really clue how it works
@@ -433,6 +475,7 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
         allocator,
         menuRect,
         c.BLUE,
+        updateFunction,
     );
     try menuBackground.elements.append(menu);
 
@@ -445,7 +488,21 @@ pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) MenuError!void {
 
     //TODO: this is ridicolous, maybe make a getter or something?
     for (ctx.player.data.player.puppets.items) |pup| {
-        const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-        try this.data.menu.menuItems.append(item);
+        if (!pup.data.puppet.deployed) {
+            const item = ElementMenuItem.initPupItem(pup.name, pup.id);
+            try this.data.menu.menuItems.append(item);
+        }
+    }
+}
+
+pub fn updateActionMenu(this: *Element, ctx: *Game.Context) MenuError!void {
+    this.data.menu.menuItems.clearRetainingCapacity();
+
+    //TODO: this is ridicolous, maybe make a getter or something?
+    for (ctx.player.data.player.puppets.items) |pup| {
+        if (!pup.data.puppet.deployed) {
+            const item = ElementenuItem.initPupItem(pup.name, pup.id);
+            try this.data.menu.menuItems.append(item);
+        }
     }
 }
