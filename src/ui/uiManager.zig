@@ -501,7 +501,7 @@ pub fn updateActionMenu(this: *Element, ctx: *Game.Context) MenuError!void {
     //TODO: this is ridicolous, maybe make a getter or something?
     for (ctx.player.data.player.puppets.items) |pup| {
         if (!pup.data.puppet.deployed) {
-            const item = ElementenuItem.initPupItem(pup.name, pup.id);
+            const item = ElementMenuItem.initPupItem(pup.name, pup.id);
             try this.data.menu.menuItems.append(item);
         }
     }

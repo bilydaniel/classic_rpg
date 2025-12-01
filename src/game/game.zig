@@ -142,6 +142,9 @@ pub const Game = struct {
         //TODO: make a state machine for inputs
 
         //TODO: make uimanager retutn commands that get used in updateplayer etc.
+        //TODO take UIintent out of this
+        //uiintent = intent.init()
+        //-> send &uiintent into uimanager.update, use it in update
         try this.uiManager.update(this.context);
 
         if (this.context.gamestate.currentTurn == .player) {
