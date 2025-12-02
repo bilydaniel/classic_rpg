@@ -31,7 +31,7 @@ pub const UIIntent = struct {
     move_dir: ?Types.Vector2Int, // input direction
     menu_select: ?usize,
     quick_select_entity_idx: ?u8, // for pressing keys 1..n
-    // reset each frame after consumed
+    //TODO: reset each frame after consumed, at the end of the update function
 };
 
 //THIRD 
@@ -134,6 +134,38 @@ fn processIntents(ctx: *Context) void {
     }
 }
 
+pub fn processIntents(ctx: *Game.Context) void {
+    // move cursor by delta (UI supplies deltas)
+    if (ctx.intent.move_cursor) |d| {
+        if (ctx.gamestate.cursor) |cur| {
+            const new = Types.vector2IntAdd(cur, d);
+            // clamp to bounds
+            if (new.x >= 0 and new.y >= 0 and new.x < Config.level_width and new.y < Config.level_height) {
+                ctx.gamestate.cursor = new;
+            }
+        } else {
+            // if no cursor, create one near player
+            ctx.gamestate.makeCursor(ctx.player.pos);
+            if (ctx.gamestate.cursor) |cur| {
+                const new = Types.vector2IntAdd(cur, d);
+                if (new.x >= 0 and new.y >= 0 and new.x < Config.level_width and new.y < Config.level_height) {
+                    ctx.gamestate.cursor = new;
+                }
+            }
+        }
+    }
+
+    // quick select maps to selecting a puppet by index (UI convention)
+    if (ctx.intent.quick_select) |idx| {
+        const i = @intCast(usize, idx);
+        if (i < ctx.player.data.player.puppets.items.len) {
+            ctx.gamestate.selectedPupId = ctx.player.data.player.puppets.items[i].id;
+        }
+    }
+
+    // confirm/cancel are consumed by state update functions
+}
+
 
 
 //SIXTH
@@ -151,3 +183,16 @@ if (!canDeploy(ctx, puppet_id, pos)) {
     // show error in UI? sound? doesn't matter.
     return;
 }
+
+
+//EIGHT
+if (gs.player.selected_puppet == null) {
+        // Wait for player to choose one via intent.select_puppet_index
+        return;
+    }
+
+//NINE
+//have a look at updates, where am i updating player, where puppets and where enemies, etc.
+
+//TEN
+//probably should just go through the whole codebase now that I know what iam making, clean up
