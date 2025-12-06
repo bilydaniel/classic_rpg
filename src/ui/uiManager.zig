@@ -5,6 +5,21 @@ const Types = @import("../common/types.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
+
+//TODO:
+// gameplay => ui communication
+//ctx.gamestate.showDeployMenu = true;
+//
+// ui => gameplay communication
+// pub const UIIntent = struct {
+//     confirm: bool,
+//     cancel: bool,
+//     move_dir: ?Types.Vector2Int, // input direction
+//     menu_select: ?usize,
+//     quick_select_entity_idx: ?u8, // for pressing keys 1..n
+//     //TODO: reset each frame after consumed, at the end of the update function
+// };
+
 //TODO: how to make some lines / additional graphics?
 
 pub const updatefunction = *const fn (*Element, *Game.Context) MenuError!void;
@@ -252,6 +267,14 @@ pub const CommandData = union(CommandType) {
 
 const MenuError = error{OutOfMemory};
 
+pub const UiCommand = struct {
+    confirm: bool = false,
+    cancel: bool = false,
+    move: ?Types.Vector2Int = null,
+    menuSelect: ?MenuItemData = null,
+    quickSelect: ?u8 = null,
+};
+
 pub const UiManager = struct {
     allocator: std.mem.Allocator,
     elements: std.ArrayList(*Element),
@@ -281,15 +304,47 @@ pub const UiManager = struct {
         return uimanager;
     }
 
-    pub fn update(this: *UiManager, ctx: *Game.Context) !void {
+    pub fn update(this: *UiManager, ctx: *Game.Context) !UiCommand {
+        if (ctx.gamestate.showPupDeployMenu) {
+            this.showDeployMenu();
+        } else {
+            this.hideDeployMenu();
+        }
+
         //TODO: @continue add items into menu based on the context
         for (this.elements.items) |element| {
             try element.update(ctx, null);
         }
 
-        if (this.activeMenu) |active_menu| {
-            _ = active_menu;
+        //confirm
+        const confirm = ctx.inputManager.takeConfirmInput();
+
+        //cancel
+        const cancel = ctx.inputManager.takeCancelInput();
+
+        //move
+        const move = ctx.inputManager.takePositionInput();
+
+        //menu select
+        if (move) |_move| {
+            this.updateActiveMenu(_move);
         }
+
+        var menuSelect: ?MenuItemData = null;
+        if (confirm) {
+            menuSelect = this.getSelectedItem();
+        }
+
+        //quick select
+        const quickSelect = ctx.inputManager.takeQuickSelectInput();
+
+        return UiCommand{
+            .confirm = confirm,
+            .cancel = cancel,
+            .move = move,
+            .menuSelect = menuSelect,
+            .quickSelect = quickSelect,
+        };
     }
 
     pub fn draw(this: *UiManager) void {
@@ -343,7 +398,7 @@ pub const UiManager = struct {
         this.activeMenu = null;
     }
 
-    pub fn updateActiveMenu(this: *UiManager, delta: Types.Vector2Int) void {
+    pub fn updateActiveMenu(this: *UiManager, move: Types.Vector2Int) void {
         var menuData: ?*ElementMenuData = null;
 
         if (this.activeMenu) |active_menu| {
@@ -359,13 +414,13 @@ pub const UiManager = struct {
                     return;
                 }
 
-                if (delta.y == -1) {
+                if (move.y == -1) {
                     if (index == 0) {
                         index = itemCount - 1;
                     } else {
                         index -= 1;
                     }
-                } else if (delta.y == 1) {
+                } else if (move.y == 1) {
                     if (index == itemCount - 1) {
                         index = 0;
                     } else {
@@ -391,7 +446,9 @@ pub const UiManager = struct {
         const menu = this.deployMenu.getChild(.menu);
         if (menu) |_menu| {
             const menuData = &_menu.data.menu;
-            return menuData.menuItems.items[menuData.index].data;
+            if (menuData.menuItems.items.len > 0) {
+                return menuData.menuItems.items[menuData.index].data;
+            }
         }
         return null;
     }

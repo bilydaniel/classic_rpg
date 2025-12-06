@@ -16,16 +16,6 @@ const c = @cImport({
 
 //TODO: add an optiom to "look around", get info on enemies, etc.
 pub fn updatePlayer(ctx: *Game.Context) !void {
-    //TODO: remove, just test
-    if (c.IsKeyPressed(c.KEY_B)) {
-        //TODO: finish
-        if (ctx.uiManager.deployMenu.visible) {
-            ctx.uiManager.hideDeployMenu();
-        } else {
-            ctx.uiManager.showDeployMenu();
-        }
-    }
-
     switch (ctx.player.data.player.state) {
         //TODO: go through everything, make more functions, messy
         //TODO: fix state management, state transitions(use funcitons?)
@@ -440,46 +430,44 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     }
 }
 pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
-
-    //TODO: finish later
-    //ctx.uiManager.deployMenu.visible = true;
-    //ctx.uiManager.showDeployMenu();
-
-    //TODO: pick a puppet to deploy first in ui
     if (ctx.gamestate.selectedPupId == null) {
-        if (!ctx.uiManager.deployMenu.visible) {
-            ctx.uiManager.showDeployMenu();
-        } else {
-            const input = ctx.inputManager.takePositionInput();
-            if (input) |in| {
-                ctx.uiManager.updateActiveMenu(in);
-            }
+        //TODO: add this to enterDeployingPuppets
+        ctx.gamestate.showPupDeployMenu = true;
 
-            if (ctx.inputManager.takeConfirmInput()) {
-                const selectedItem = ctx.uiManager.getSelectedItem();
-                if (selectedItem) |selected_item| {
-                    std.debug.print("selected_item: {}\n", .{selected_item.puppet_id});
-                    //TODO: what should I do about puppet_id? its enum, check
-                    //const selectedPup = getEntityById(ctx.entities.*, @intCast(selected_item.puppet_id));
-                    ctx.gamestate.selectedPupId = selected_item.puppet_id;
-                }
+        if (ctx.uiCommand.menuSelect) |menu_item| {
+            switch (menu_item) {
+                .puppet_id => |pid| {
+                    ctx.gamestate.selectedPupId = pid;
+                },
+                .action => {
+                    std.debug.print("menu_item is .action instead of .puppet_id", .{});
+                },
             }
         }
+
+        //  else {
+        //     const input = ctx.inputManager.takePositionInput();
+        //     if (input) |in| {
+        //         ctx.uiManager.updateActiveMenu(in);
+        //     }
+        //
+        //     if (ctx.inputManager.takeConfirmInput()) {
+        //         const selectedItem = ctx.uiManager.getSelectedItem();
+        //         if (selectedItem) |selected_item| {
+        //             std.debug.print("selected_item: {}\n", .{selected_item.puppet_id});
+        //             //TODO: what should I do about puppet_id? its enum, check
+        //             //const selectedPup = getEntityById(ctx.entities.*, @intCast(selected_item.puppet_id));
+        //             ctx.gamestate.selectedPupId = selected_item.puppet_id;
+        //         }
+        //     }
+        // }
+
     }
 
-    if (ctx.gamestate.selectedPupId) |selected_pup_id| {
-        if (ctx.uiManager.deployMenu.visible) {
-            ctx.uiManager.hideDeployMenu();
-        }
-        if (ctx.inputManager.takeConfirmInput()) {
-            if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
-                //TODO: change deployPuppet
-                try deployPuppet(ctx, selected_pup_id);
-            }
-        }
-        //TODO: fix for new way of deploying
-        ctx.gamestate.makeCursor(ctx.player.pos);
-        ctx.gamestate.updateCursor(); //TODO: use inputManager
+    if (ctx.gamestate.selectedPupId) |selected_pup| {
+        ctx.gamestate.showPupDeployMenu = false;
+        ctx.gamestate.makeUpdateCursor(ctx.player.pos);
+
         if (ctx.gamestate.deployableCells == null) {
             const neighbours = neighboursAll(ctx.player.pos);
             ctx.gamestate.deployableCells = neighbours;
@@ -492,6 +480,11 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
                         ctx.gamestate.deployHighlighted = true;
                     }
                 }
+            }
+        }
+        if (ctx.uiCommand.confirm) {
+            if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
+                try deployPuppet(ctx, selected_pup);
             }
         }
     }
@@ -749,4 +742,57 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
     }
 
     return null;
+}
+
+//TODO: maybe add more states to the enum?
+//should things like picking a puppet from the menu has its own state?
+pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !void {
+    const oldState = ctx.player.data.player.state;
+    if (oldState == newState) {
+        //state is the same
+        return;
+    }
+
+    //exit previous state
+    switch (oldState) {
+        .walking => exitWalking(ctx),
+        .deploying_puppets => exitDeployingPuppets(),
+        .in_combat => exitCombat(),
+    }
+
+    //change state
+    //TODO: should I first switch the state or call enter and then switch?
+    ctx.player.data.player.state = newState;
+
+    //enter new state
+    switch (newState) {
+        .walking => enterWalking(ctx),
+        .deploying_puppets => enterDeployingPuppets(ctx),
+        .in_combat => enterCombat(ctx),
+    }
+}
+
+pub fn enterWalking(ctx: *Game.Context) !void {
+    _ = ctx;
+    //TODO:
+}
+pub fn exitWalking(ctx: *Game.Context) !void {
+    _ = ctx;
+    //TODO:
+}
+pub fn enterDeployingPuppets(ctx: *Game.Context) !void {
+    _ = ctx;
+    //TODO:
+}
+pub fn exitDeployingPuppets(ctx: *Game.Context) !void {
+    _ = ctx;
+    //TODO:
+}
+pub fn enterCombat(ctx: *Game.Context) !void {
+    _ = ctx;
+    //TODO:
+}
+pub fn exitCombat(ctx: *Game.Context) !void {
+    _ = ctx;
+    //TODO:
 }

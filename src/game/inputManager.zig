@@ -16,6 +16,9 @@ pub const InputManager = struct {
     left: c_int = c.KEY_H,
     right: c_int = c.KEY_L,
     confirm: c_int = c.KEY_ENTER,
+    cancel: c_int = c.KEY_Q,
+
+    quickSelect: [5]u8 = .{ c.KEY_ONE, c.KEY_TWO, c.KEY_THREE, c.KEY_FOUR, c.KEY_FIVE },
 
     pub fn init(allocator: std.mem.Allocator) !*InputManager {
         const input_manager = try allocator.create(InputManager);
@@ -46,8 +49,20 @@ pub const InputManager = struct {
         }
         return false;
     }
-};
 
-//TODO: make unified function for inputs
-//
-//return whether it moved
+    pub fn takeCancelInput(this: *InputManager) bool {
+        if (c.IsKeyPressed(this.cancel)) {
+            return true;
+        }
+        return false;
+    }
+
+    pub fn takeQuickSelectInput(this: *InputManager) ?u8 {
+        for (0.., this.quickSelect) |k, v| {
+            if (c.IsKeyPressed(v)) {
+                return @intCast(k);
+            }
+        }
+        return null;
+    }
+};

@@ -31,6 +31,7 @@ pub const Context = struct {
     shaderManager: *ShaderManager.ShaderManager,
     uiManager: *UiManager.UiManager,
     inputManager: *InputManager.InputManager,
+    uiCommand: UiManager.UiCommand = UiManager.UiCommand{},
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -145,7 +146,10 @@ pub const Game = struct {
         //TODO take UIintent out of this
         //uiintent = intent.init()
         //-> send &uiintent into uimanager.update, use it in update
-        try this.uiManager.update(this.context);
+
+        const uiCommand = try this.uiManager.update(this.context);
+        this.context.uiCommand = uiCommand;
+        //std.debug.print("ui_command: {}\n", .{uiCommand});
 
         if (this.context.gamestate.currentTurn == .player) {
             try Systems.updatePlayer(this.context);

@@ -61,6 +61,8 @@ pub const gameState = struct {
     selectedPupId: ?u32 = null,
     selectedAction: ?UiManager.ActionType = null,
 
+    showPupDeployMenu: bool = false,
+
     pub fn init(allocator: std.mem.Allocator) !*gameState {
         const highlighted_tiles = std.ArrayList(highlight).init(allocator);
         const movable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
@@ -132,6 +134,11 @@ pub const gameState = struct {
                 }
             }
         }
+    }
+
+    pub fn makeUpdateCursor(this: *gameState, pos: Types.Vector2Int) void {
+        this.makeCursor(pos);
+        this.updateCursor();
     }
 
     pub fn highlightMovement(this: *gameState, entity: *Entity.Entity) !void {
