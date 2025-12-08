@@ -414,7 +414,6 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     const moveDelta = ctx.inputManager.takePositionInput() orelse return;
 
     var new_pos = Types.vector2IntAdd(ctx.player.pos, moveDelta);
-
     if (!canMove(ctx.grid.*, new_pos, ctx.entities.*)) {
         return;
     }
@@ -423,7 +422,6 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
 
     ctx.player.move(new_pos, ctx.grid);
     ctx.player.movementCooldown = 0;
-
     ctx.gamestate.currentTurn = .enemy;
 }
 pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
