@@ -20,6 +20,9 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
         //TODO: go through everything, make more functions, messy
         //TODO: fix state management, state transitions(use funcitons?)
         .walking => {
+            if (try preWalkingTransitions(ctx)) {
+                return;
+            }
             try handlePlayerWalking(ctx);
         },
         .deploying_puppets => {
@@ -34,6 +37,21 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
     for (ctx.player.data.player.puppets.items) |pup| {
         try pup.update(ctx);
     }
+}
+
+pub fn preWalkingTransitions(ctx: *Game.Context) !bool {
+    if (ctx.uiCommand.combatToggle) {
+        //TODO: check in enemies are around, if it makes sense to even go to combat
+        try playerChangeState(ctx, .deploying_puppets);
+        return true;
+    }
+
+    if (checkCombatStart(ctx.player, ctx.entities)) {
+        try playerChangeState(ctx, .deploying_puppets);
+        return true;
+    }
+
+    return false;
 }
 
 pub fn deployPuppet(ctx: *Game.Context, pupId: u32) !void {
@@ -389,45 +407,24 @@ pub fn removeEntitiesType(entities: *std.ArrayList(*Entity.Entity), entityType: 
 
 pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     ctx.player.movementCooldown += ctx.delta;
-    //TODO: test the movement duration value
     if (ctx.player.movementCooldown < Config.movement_animation_duration) {
         return;
     }
-    var new_pos = ctx.player.pos;
-    var moved = false;
 
-    const deltaVector = ctx.inputManager.takePositionInput();
-    if (deltaVector) |delta_vector| {
-        //TODO: make a function that works with the delta
-        moved = true;
-        new_pos = Types.vector2IntAdd(new_pos, delta_vector);
-    }
-    //moved = InputManager.takePositionInput(&new_pos);
+    const moveDelta = ctx.inputManager.takePositionInput() orelse return;
 
-    if (c.IsKeyPressed(c.KEY_F)) {
-        try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
+    var new_pos = Types.vector2IntAdd(ctx.player.pos, moveDelta);
+
+    if (!canMove(ctx.grid.*, new_pos, ctx.entities.*)) {
+        return;
     }
 
-    if (moved and canMove(ctx.world.currentLevel.grid, new_pos, ctx.entities.*)) {
-        if (isStaircase(ctx.world, new_pos)) {
-            const levelLocation = getStaircaseDestination(ctx.world, new_pos);
-            if (levelLocation) |lvllocation| {
-                switchLevel(ctx.world, lvllocation.level);
-                new_pos = lvllocation.pos;
-            }
-        }
-        ctx.player.move(new_pos, ctx.grid);
-        ctx.player.movementCooldown = 0;
+    new_pos = staircaseTransition(ctx, new_pos);
 
-        const combat = checkCombatStart(ctx.player, ctx.entities);
-        if (combat and ctx.player.data.player.state != .in_combat) {
-            try ctx.player.startCombatSetup(ctx.entities, ctx.grid.*);
-        }
+    ctx.player.move(new_pos, ctx.grid);
+    ctx.player.movementCooldown = 0;
 
-        if (!combat) {
-            ctx.gamestate.currentTurn = .enemy;
-        }
-    }
+    ctx.gamestate.currentTurn = .enemy;
 }
 pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
     if (ctx.gamestate.selectedPupId == null) {
@@ -444,24 +441,6 @@ pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
                 },
             }
         }
-
-        //  else {
-        //     const input = ctx.inputManager.takePositionInput();
-        //     if (input) |in| {
-        //         ctx.uiManager.updateActiveMenu(in);
-        //     }
-        //
-        //     if (ctx.inputManager.takeConfirmInput()) {
-        //         const selectedItem = ctx.uiManager.getSelectedItem();
-        //         if (selectedItem) |selected_item| {
-        //             std.debug.print("selected_item: {}\n", .{selected_item.puppet_id});
-        //             //TODO: what should I do about puppet_id? its enum, check
-        //             //const selectedPup = getEntityById(ctx.entities.*, @intCast(selected_item.puppet_id));
-        //             ctx.gamestate.selectedPupId = selected_item.puppet_id;
-        //         }
-        //     }
-        // }
-
     }
 
     if (ctx.gamestate.selectedPupId) |selected_pup| {
@@ -744,6 +723,19 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
     return null;
 }
 
+pub fn staircaseTransition(ctx: *Game.Context, newPos: Types.Vector2Int) Types.Vector2Int {
+    if (!isStaircase(ctx.world, newPos)) {
+        return newPos;
+    }
+
+    if (getStaircaseDestination(ctx.world, newPos)) |lvllocation| {
+        switchLevel(ctx.world, lvllocation.level);
+        return lvllocation.pos;
+    }
+
+    return newPos;
+}
+
 //TODO: maybe add more states to the enum?
 //should things like picking a puppet from the menu has its own state?
 pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !void {
@@ -755,9 +747,9 @@ pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !
 
     //exit previous state
     switch (oldState) {
-        .walking => exitWalking(ctx),
-        .deploying_puppets => exitDeployingPuppets(),
-        .in_combat => exitCombat(),
+        .walking => try exitWalking(ctx),
+        .deploying_puppets => try exitDeployingPuppets(ctx),
+        .in_combat => try exitCombat(ctx),
     }
 
     //change state
@@ -766,9 +758,9 @@ pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !
 
     //enter new state
     switch (newState) {
-        .walking => enterWalking(ctx),
-        .deploying_puppets => enterDeployingPuppets(ctx),
-        .in_combat => enterCombat(ctx),
+        .walking => try enterWalking(ctx),
+        .deploying_puppets => try enterDeployingPuppets(ctx),
+        .in_combat => try enterCombat(ctx),
     }
 }
 
@@ -781,8 +773,17 @@ pub fn exitWalking(ctx: *Game.Context) !void {
     //TODO:
 }
 pub fn enterDeployingPuppets(ctx: *Game.Context) !void {
-    _ = ctx;
-    //TODO:
+    //TODO: filter out entities that are supposed to be in the combat
+    // could be some mechanic around attention/stealth
+    // smarter entities shout at other to help etc...
+
+    ctx.player.inCombat = true;
+
+    for (ctx.entities.items) |entity| {
+        try ctx.player.data.player.inCombatWith.append(entity);
+        entity.resetPathing();
+        entity.inCombat = true;
+    }
 }
 pub fn exitDeployingPuppets(ctx: *Game.Context) !void {
     _ = ctx;

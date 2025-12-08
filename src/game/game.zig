@@ -42,6 +42,7 @@ pub const Context = struct {
         grid: *[]Level.Tile,
         cameraManager: *CameraManager.CamManager,
         pathfinder: *Pathfinder.Pathfinder,
+        //TODO: entities should be just an arraylist of *entity
         entities: *std.ArrayList(*Entity.Entity),
         shadermanager: *ShaderManager.ShaderManager,
         uimanager: *UiManager.UiManager,

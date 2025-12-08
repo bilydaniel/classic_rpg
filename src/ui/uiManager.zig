@@ -273,6 +273,7 @@ pub const UiCommand = struct {
     move: ?Types.Vector2Int = null,
     menuSelect: ?MenuItemData = null,
     quickSelect: ?u8 = null,
+    combatToggle: bool = false,
 };
 
 pub const UiManager = struct {
@@ -338,12 +339,16 @@ pub const UiManager = struct {
         //quick select
         const quickSelect = ctx.inputManager.takeQuickSelectInput();
 
+        //combat toggle
+        const combatToggle = ctx.inputManager.takeCombatToggle();
+
         return UiCommand{
             .confirm = confirm,
             .cancel = cancel,
             .move = move,
             .menuSelect = menuSelect,
             .quickSelect = quickSelect,
+            .combatToggle = combatToggle,
         };
     }
 

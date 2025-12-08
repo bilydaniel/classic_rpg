@@ -142,25 +142,6 @@ pub const Entity = struct {
         }
     }
 
-    pub fn startCombatSetup(this: *Entity, entities: *std.ArrayList(*Entity), grid: []Level.Tile) !void {
-        if (this.data == .player) {
-            //TODO: filter out entities that are supposed to be in the combat
-            // could be some mechanic around attention/stealth
-            // smarter entities shout at other to help etc...
-
-            this.data.player.state = .deploying_puppets;
-            this.inCombat = true;
-
-            for (entities.items) |entity| {
-                try this.data.player.inCombatWith.append(entity);
-                entity.resetPathing();
-                entity.inCombat = true;
-            }
-            _ = grid;
-            //try Systems.deployPuppets(&this.data.player.puppets, entities, grid);
-        }
-    }
-
     pub fn endCombat(this: *Entity) void {
         if (this.data == .player) {
             this.data.player.state = .walking;

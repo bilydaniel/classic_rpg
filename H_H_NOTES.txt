@@ -1,2 +1,6 @@
-Day 26, 54 minutes onwards:
-    
+Day 26:
+    immediate mode vs retained mode - api is the important part, lifetimes
+    update dependencies, i have a shitty update loop
+
+Day 27:
+    exploration based architecture

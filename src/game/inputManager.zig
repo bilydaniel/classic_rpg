@@ -17,6 +17,7 @@ pub const InputManager = struct {
     right: c_int = c.KEY_L,
     confirm: c_int = c.KEY_ENTER,
     cancel: c_int = c.KEY_Q,
+    combatToggle: c_int = c.KEY_F,
 
     quickSelect: [5]u8 = .{ c.KEY_ONE, c.KEY_TWO, c.KEY_THREE, c.KEY_FOUR, c.KEY_FIVE },
 
@@ -64,5 +65,12 @@ pub const InputManager = struct {
             }
         }
         return null;
+    }
+
+    pub fn takeCombatToggle(this: *InputManager) bool {
+        if (c.IsKeyPressed(this.combatToggle)) {
+            return true;
+        }
+        return false;
     }
 };
