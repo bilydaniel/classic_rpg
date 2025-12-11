@@ -6,22 +6,7 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-//TODO:
-// gameplay => ui communication
-//ctx.gamestate.showDeployMenu = true;
-//
-// ui => gameplay communication
-// pub const UIIntent = struct {
-//     confirm: bool,
-//     cancel: bool,
-//     move_dir: ?Types.Vector2Int, // input direction
-//     menu_select: ?usize,
-//     quick_select_entity_idx: ?u8, // for pressing keys 1..n
-//     //TODO: reset each frame after consumed, at the end of the update function
-// };
-
 //TODO: how to make some lines / additional graphics?
-
 pub const updatefunction = *const fn (*Element, *Game.Context) MenuError!void;
 
 pub const Element = struct {
@@ -181,6 +166,7 @@ pub const ElementMenuData = struct {
 //TODO: no idea if I should do it this way, maybe just use the commandType???
 // its 1:1 anyway
 pub const MenuType = enum {
+    none,
     puppet_select,
     action_select,
     skill_select,
@@ -196,11 +182,16 @@ pub const ElementMenuItem = struct {
 
     //TODO: @continue @finish
 
-    pub fn initPupItem(
-        text: []const u8,
-        puppet_id: u32,
-    ) ElementMenuItem {
+    pub fn initPupItem(text: []const u8, puppet_id: u32) ElementMenuItem {
         const elementData = MenuItemData{ .puppet_id = puppet_id };
+        return ElementMenuItem{
+            .text = text,
+            .data = elementData,
+        };
+    }
+
+    pub fn initActionItem(text: []const u8, action: ActionType) ElementMenuItem {
+        const elementData = MenuItemData{ .action = action };
         return ElementMenuItem{
             .text = text,
             .data = elementData,
@@ -282,12 +273,16 @@ pub const UiManager = struct {
     commands: std.ArrayList(Command),
     //TODO: pointer to active element or have active value in elements?
     //accessing certain elements that are needed, maybe do this in another way?
+    menus: std.AutoHashMap(MenuType, *Element),
     deployMenu: *Element,
     actionMenu: *Element,
     activeMenu: ?*Element = null,
 
     pub fn init(allocator: std.mem.Allocator) !*UiManager {
         const uimanager = try allocator.create(UiManager);
+
+        const menus = std.AutoHashMap(MenuType, *Element).init(allocator);
+        uimanager.menus = menus;
 
         const elements = try uimanager.makeUIElements(allocator);
         const commands = std.ArrayList(Command).init(allocator);
@@ -301,16 +296,36 @@ pub const UiManager = struct {
             .commands = commands,
             .deployMenu = uimanager.deployMenu,
             .actionMenu = uimanager.actionMenu,
+            .menus = uimanager.menus,
         };
         return uimanager;
     }
 
     pub fn update(this: *UiManager, ctx: *Game.Context) !UiCommand {
-        if (ctx.gamestate.showPupDeployMenu) {
-            this.showDeployMenu();
+        if (ctx.gamestate.showMenu == .none) {
+            if (this.activeMenu != null) {
+                this.activeMenu.?.visible = false;
+                this.activeMenu = null;
+            }
         } else {
-            this.hideDeployMenu();
+            if (this.activeMenu == null) {
+                this.activeMenu = this.menus.get(ctx.gamestate.showMenu);
+                this.activeMenu.?.visible = true;
+            }
         }
+        //
+        // if (ctx.gamestate.showPupDeployMenu) {
+        //     //this.showDeployMenu();
+        // } else {
+        //     //this.hideDeployMenu();
+        //     //TODO: @continue cant just put it to null, bug with action menu
+        // }
+        //
+        // if (ctx.gamestate.showActionMenu) {
+        //     //this.showActionMenu();
+        // } else {
+        //     //this.hideActionMenu();
+        // }
 
         //TODO: @continue add items into menu based on the context
         for (this.elements.items) |element| {
@@ -389,6 +404,9 @@ pub const UiManager = struct {
         actionMenu.visible = false;
         try elements.append(actionMenu);
         this.actionMenu = actionMenu;
+
+        try this.menus.put(.puppet_select, deployMenu);
+        try this.menus.put(.action_select, actionMenu);
 
         return elements;
     }
@@ -495,12 +513,7 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
     return characterPlate;
 }
 
-pub fn makeChoiceMenu(
-    allocator: std.mem.Allocator,
-    pos: c.Vector2,
-    title: []const u8,
-    updateFunction: updatefunction,
-) !*Element {
+pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []const u8, updateFunction: updatefunction) !*Element {
     const backgroundRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
@@ -558,13 +571,12 @@ pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) MenuError!void {
 }
 
 pub fn updateActionMenu(this: *Element, ctx: *Game.Context) MenuError!void {
+    _ = ctx;
     this.data.menu.menuItems.clearRetainingCapacity();
 
-    //TODO: this is ridicolous, maybe make a getter or something?
-    for (ctx.player.data.player.puppets.items) |pup| {
-        if (!pup.data.puppet.deployed) {
-            const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-            try this.data.menu.menuItems.append(item);
-        }
-    }
+    const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
+    try this.data.menu.menuItems.append(itemMove);
+
+    const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
+    try this.data.menu.menuItems.append(itemAttack);
 }
