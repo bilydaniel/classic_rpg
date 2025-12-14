@@ -265,6 +265,42 @@ pub const UiCommand = struct {
     menuSelect: ?MenuItemData = null,
     quickSelect: ?u8 = null,
     combatToggle: bool = false,
+
+    pub fn getConfirm(this: *UiCommand) bool {
+        const confirm = this.confirm;
+        this.confirm = false;
+        return confirm;
+    }
+
+    pub fn getCancel(this: *UiCommand) bool {
+        const cancel = this.cancel;
+        this.cancel = false;
+        return cancel;
+    }
+
+    pub fn getMove(this: *UiCommand) ?Types.Vector2Int {
+        const move = this.move;
+        this.move = null;
+        return move;
+    }
+
+    pub fn getMenuSelect(this: *UiCommand) ?MenuItemData {
+        const item = this.menuSelect;
+        this.menuSelect = null;
+        return item;
+    }
+
+    pub fn getQuickSelect(this: *UiCommand) ?u8 {
+        const item = this.quickSelect;
+        this.quickSelect = null;
+        return item;
+    }
+
+    pub fn getCombatToggle(this: *UiCommand) bool {
+        const combat = this.combatToggle;
+        this.combatToggle = false;
+        return combat;
+    }
 };
 
 pub const UiManager = struct {
@@ -333,7 +369,7 @@ pub const UiManager = struct {
         }
 
         //confirm
-        const confirm = ctx.inputManager.takeConfirmInput();
+        var confirm = ctx.inputManager.takeConfirmInput();
 
         //cancel
         const cancel = ctx.inputManager.takeCancelInput();
@@ -349,6 +385,9 @@ pub const UiManager = struct {
         var menuSelect: ?MenuItemData = null;
         if (confirm) {
             menuSelect = this.getSelectedItem();
+            if (menuSelect != null) {
+                confirm = false;
+            }
         }
 
         //quick select
@@ -466,11 +505,13 @@ pub const UiManager = struct {
     }
 
     pub fn getSelectedItem(this: *UiManager) ?MenuItemData {
-        const menu = this.deployMenu.getChild(.menu);
-        if (menu) |_menu| {
-            const menuData = &_menu.data.menu;
-            if (menuData.menuItems.items.len > 0) {
-                return menuData.menuItems.items[menuData.index].data;
+        if (this.activeMenu) |active_menu| {
+            const menu = active_menu.getChild(.menu);
+            if (menu) |_menu| {
+                const menuData = &_menu.data.menu;
+                if (menuData.menuItems.items.len > 0) {
+                    return menuData.menuItems.items[menuData.index].data;
+                }
             }
         }
         return null;
@@ -571,12 +612,17 @@ pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) MenuError!void {
 }
 
 pub fn updateActionMenu(this: *Element, ctx: *Game.Context) MenuError!void {
-    _ = ctx;
     this.data.menu.menuItems.clearRetainingCapacity();
 
-    const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
-    try this.data.menu.menuItems.append(itemMove);
+    if (ctx.gamestate.selectedEntity) |selected_entity| {
+        if (!selected_entity.hasMoved) {
+            const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
+            try this.data.menu.menuItems.append(itemMove);
+        }
 
-    const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
-    try this.data.menu.menuItems.append(itemAttack);
+        if (!selected_entity.hasAttacked) {
+            const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
+            try this.data.menu.menuItems.append(itemAttack);
+        }
+    }
 }

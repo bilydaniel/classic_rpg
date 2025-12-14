@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     const actual_optimize = if (fast_debug) std.builtin.OptimizeMode.ReleaseFast else optimize;
 
     const game = b.addExecutable(.{
-        .name = "rpg-game",
+        .name = "classic_rpg",
         .root_source_file = .{ .cwd_relative = "src/main.zig" },
         .target = target,
         .optimize = actual_optimize,
@@ -60,4 +60,19 @@ pub fn build(b: *std.Build) void {
     const run_editor_fast = b.addRunArtifact(editor);
     b.step("run-game-fast", "Run the game with fast debug").dependOn(&run_game_fast.step);
     b.step("run-editor-fast", "Run the editor with fast debug").dependOn(&run_editor_fast.step);
+
+    //debug build
+    const game_debug = b.addExecutable(.{
+        .name = "classic_rpg",
+        .root_source_file = .{ .cwd_relative = "src/main.zig" },
+        .target = target,
+        .optimize = std.builtin.OptimizeMode.Debug,
+    });
+    game_debug.root_module.strip = false;
+    game_debug.linkLibC();
+    game_debug.linkSystemLibrary("raylib");
+    b.installArtifact(game_debug);
+
+    const run_game_debug = b.addRunArtifact(game_debug);
+    b.step("run-game-debug", "Run debug build of game").dependOn(&run_game_debug.step);
 }

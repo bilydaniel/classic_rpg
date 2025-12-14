@@ -46,8 +46,7 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
 }
 
 pub fn preWalkingTransitions(ctx: *Game.Context) !bool {
-    if (ctx.uiCommand.combatToggle) {
-        ctx.uiCommand.combatToggle = false;
+    if (ctx.uiCommand.getCombatToggle()) {
         //TODO: check in enemies are around, if it makes sense to even go to combat
         try playerChangeState(ctx, .deploying_puppets);
         return true;
@@ -62,8 +61,7 @@ pub fn preWalkingTransitions(ctx: *Game.Context) !bool {
 }
 
 pub fn preDeployingTransitions(ctx: *Game.Context) !bool {
-    if (ctx.uiCommand.combatToggle) {
-        ctx.uiCommand.combatToggle = false;
+    if (ctx.uiCommand.getCombatToggle()) {
         try playerChangeState(ctx, .walking);
         return true;
     }
@@ -77,8 +75,8 @@ pub fn preDeployingTransitions(ctx: *Game.Context) !bool {
 }
 
 pub fn preCombatTransitions(ctx: *Game.Context) !bool {
-    if (ctx.uiCommand.combatToggle) {
-        ctx.uiCommand.combatToggle = false;
+    if (ctx.uiCommand.getCombatToggle()) {
+        //TODO: check can end combat?
         try playerChangeState(ctx, .walking);
         return true;
     }
@@ -246,6 +244,7 @@ pub fn highlightTile(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !vo
     });
 }
 
+//TODO: put this somwhere else
 pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level) void {
     _ = currentLevel;
     if (gamestate.highlightedTiles.items.len > 0) {
@@ -260,7 +259,7 @@ pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level
         }
     }
 
-    if (gamestate.highlightedEntity) |highlight| {
+    if (gamestate.selectedEntityHighlight) |highlight| {
         if (highlight.type == .circle) {
             var highColor = c.RED;
             if (highlight.type == .entity) {
@@ -278,7 +277,7 @@ pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level
 }
 
 pub fn highlightEntity(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) void {
-    gamestate.highlightedEntity = Gamestate.highlight{
+    gamestate.selectedEntityHighlight = Gamestate.highlight{
         .pos = pos,
         .type = .circle,
     };
@@ -476,7 +475,7 @@ pub fn handlePlayerCombat(ctx: *Game.Context) !void {
 }
 
 pub fn entitySelect(ctx: *Game.Context) void {
-    const entityIndex = ctx.uiCommand.quickSelect orelse return;
+    const entityIndex = ctx.uiCommand.getQuickSelect() orelse return;
 
     ctx.gamestate.resetMovementHighlight();
     //TODO: make a menu for swapping puppets in the array(different index => different keybind)
@@ -484,6 +483,7 @@ pub fn entitySelect(ctx: *Game.Context) void {
         //Player
         ctx.gamestate.selectedEntity = ctx.player;
     } else {
+        //Puppets
         if (ctx.player.data.player.puppets.items.len >= entityIndex) {
             ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[entityIndex - 1];
         }
@@ -492,8 +492,8 @@ pub fn entitySelect(ctx: *Game.Context) void {
     if (ctx.gamestate.selectedEntity) |selected_entity| {
         ctx.cameraManager.targetEntity = selected_entity;
         ctx.gamestate.removeCursor();
-        ctx.gamestate.selectedEntityMode = .none;
         highlightEntity(ctx.gamestate, selected_entity.pos);
+        ctx.gamestate.selectedAction = null;
     }
 }
 pub fn entityAction(ctx: *Game.Context) !void {
@@ -501,7 +501,7 @@ pub fn entityAction(ctx: *Game.Context) !void {
         if (ctx.gamestate.selectedAction == null) {
             ctx.gamestate.showMenu = .action_select;
 
-            if (ctx.uiCommand.menuSelect) |menu_item| {
+            if (ctx.uiCommand.getMenuSelect()) |menu_item| {
                 switch (menu_item) {
                     .puppet_id => {
                         std.debug.print("menu_item is .puppet_id instead of .action", .{});
@@ -513,81 +513,63 @@ pub fn entityAction(ctx: *Game.Context) !void {
             }
         }
 
-        switch (ctx.gamestate.selectedEntityMode) {
-            .none => {
-                if (!entity.hasMoved and c.IsKeyPressed(c.KEY_Q)) {
-                    ctx.gamestate.selectedEntityMode = .moving;
-                    if (ctx.gamestate.selectedEntity) |selected_entity| {
-                        ctx.gamestate.makeCursor(selected_entity.pos);
-                    }
-                } else if (c.IsKeyPressed(c.KEY_W)) {
-                    ctx.gamestate.selectedEntityMode = .attacking;
-                    if (ctx.gamestate.selectedEntity) |selected_entity| {
-                        ctx.gamestate.makeCursor(selected_entity.pos);
-                    }
-                }
-            },
-            .moving => {
-                if (c.IsKeyPressed(c.KEY_Q)) {
-                    ctx.gamestate.selectedEntityMode = .none;
-                    ctx.gamestate.removeCursor();
-                    ctx.gamestate.resetMovementHighlight();
-                }
-            },
-            .attacking => {
-                //TODO: finish
-                if (c.IsKeyPressed(c.KEY_W)) {
-                    ctx.gamestate.selectedEntityMode = .none;
-                    ctx.gamestate.removeCursor();
-                    //TODO: attack highlight?
-                    ctx.gamestate.resetAttackHighlight();
-                }
-            },
-        }
-        switch (ctx.gamestate.selectedEntityMode) {
-            .none => {
-                if (!entity.hasMoved and c.IsKeyPressed(c.KEY_Q)) {
-                    ctx.gamestate.selectedEntityMode = .moving;
-                    if (ctx.gamestate.selectedEntity) |selected_entity| {
-                        ctx.gamestate.makeCursor(selected_entity.pos);
-                    }
-                } else if (c.IsKeyPressed(c.KEY_W)) {
-                    ctx.gamestate.selectedEntityMode = .attacking;
-                    if (ctx.gamestate.selectedEntity) |selected_entity| {
-                        ctx.gamestate.makeCursor(selected_entity.pos);
-                    }
-                }
-            },
-            .moving => {
-                if (c.IsKeyPressed(c.KEY_Q)) {
-                    ctx.gamestate.selectedEntityMode = .none;
-                    ctx.gamestate.removeCursor();
-                    ctx.gamestate.resetMovementHighlight();
-                }
-            },
-            .attacking => {
-                //TODO: finish
-                if (c.IsKeyPressed(c.KEY_W)) {
-                    ctx.gamestate.selectedEntityMode = .none;
-                    ctx.gamestate.removeCursor();
-                    //TODO: attack highlight?
-                    ctx.gamestate.resetAttackHighlight();
-                }
-            },
-        }
+        const selectedAction = ctx.gamestate.selectedAction orelse return;
+        switch (selectedAction) {
+            .move => {
+                ctx.gamestate.showMenu = .none;
+                ctx.gamestate.makeUpdateCursor(entity.pos);
+                try ctx.gamestate.highlightMovement(entity);
 
-        if (ctx.gamestate.selectedEntityMode == .moving) {
-            ctx.gamestate.updateCursor();
-            try selectedEntityMove(ctx, entity);
-            if (c.IsKeyPressed(c.KEY_SPACE)) {
-                skipMovement(ctx);
-            }
-        } else if (ctx.gamestate.selectedEntityMode == .attacking) {
-            ctx.gamestate.updateCursor();
-            try selectedEntityAttack(ctx, entity);
-            if (c.IsKeyPressed(c.KEY_SPACE)) {
-                skipAttack(ctx);
-            }
+                if (ctx.uiCommand.getConfirm()) {
+                    if (ctx.gamestate.cursor) |cur| {
+                        if (ctx.gamestate.isinMovable(cur)) {
+                            entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, cur, ctx.entities.*);
+                            entity.hasMoved = true;
+                            ctx.gamestate.resetMovementHighlight();
+                            ctx.gamestate.removeCursor();
+                            ctx.gamestate.selectedAction = null;
+                        }
+                    }
+                }
+
+                if (c.IsKeyPressed(c.KEY_SPACE)) {
+                    //TODO: manage state after skip
+                    skipMovement(ctx);
+                }
+            },
+            .attack => {
+                ctx.gamestate.showMenu = .none;
+                ctx.gamestate.makeUpdateCursor(entity.pos);
+                try ctx.gamestate.highlightAttack(entity);
+
+                if (ctx.uiCommand.getConfirm()) {
+                    if (ctx.gamestate.cursor) |cur| {
+                        if (ctx.gamestate.isinAttackable(cur)) {
+                            const attackedEntity = getEntityByPos(ctx.entities.*, cur);
+                            try ctx.shaderManager.spawnSlash(entity.pos, cur);
+                            try ctx.shaderManager.spawnImpact(cur);
+
+                            //TODO: change attack(), horrible
+                            attack(ctx, entity, attackedEntity);
+                            ctx.gamestate.resetAttackHighlight();
+                            ctx.gamestate.removeCursor();
+                            entity.hasAttacked = true;
+                        }
+                    }
+                }
+
+                if (c.IsKeyPressed(c.KEY_SPACE)) {
+                    //TODO: manage state after skip
+                    skipAttack(ctx);
+                }
+                // ctx.gamestate.showMenu = .none;
+                // std.debug.print("attacking\n", .{});
+                // ctx.gamestate.updateCursor();
+                // try selectedEntityAttack(ctx, entity);
+                // if (c.IsKeyPressed(c.KEY_SPACE)) {
+                //     skipAttack(ctx);
+                // }
+            },
         }
 
         if (entity.hasMoved and !entity.canAttack(ctx)) {
@@ -606,6 +588,7 @@ pub fn resolveTurnTaken(ctx: *Game.Context) void {
             // finished turn
             ctx.gamestate.currentTurn = .enemy;
             ctx.player.resetTurnTakens();
+            ctx.gamestate.reset();
         }
     }
 }
@@ -614,7 +597,6 @@ pub fn skipMovement(ctx: *Game.Context) void {
     if (ctx.gamestate.selectedEntity) |entity| {
         entity.hasMoved = true;
     }
-    ctx.gamestate.selectedEntityMode = .none;
     ctx.gamestate.resetMovementHighlight();
     ctx.gamestate.removeCursor();
 }
@@ -623,12 +605,12 @@ pub fn skipAttack(ctx: *Game.Context) void {
     if (ctx.gamestate.selectedEntity) |entity| {
         entity.hasAttacked = true;
     }
-    ctx.gamestate.selectedEntityMode = .none;
     ctx.gamestate.resetAttackHighlight();
     ctx.gamestate.removeCursor();
 }
 
 pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
+    //TODO: absolutely change this
     try ctx.gamestate.highlightMovement(entity);
 
     if (c.IsKeyPressed(c.KEY_A)) {
@@ -636,9 +618,9 @@ pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
             if (ctx.gamestate.isinMovable(cur)) {
                 entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, cur, ctx.entities.*);
                 entity.hasMoved = true;
-                ctx.gamestate.selectedEntityMode = .none;
                 ctx.gamestate.resetMovementHighlight();
                 ctx.gamestate.removeCursor();
+                ctx.gamestate.selectedAction = null;
             }
         }
     }
@@ -661,7 +643,6 @@ pub fn selectedEntityAttack(ctx: *Game.Context, entity: *Entity.Entity) !void {
                 ctx.gamestate.resetAttackHighlight();
                 ctx.gamestate.removeCursor();
                 entity.hasAttacked = true;
-                ctx.gamestate.selectedEntityMode = .none;
             }
         }
     }
@@ -688,7 +669,7 @@ pub fn puppetSelection(ctx: *Game.Context) !void {
     if (ctx.gamestate.selectedPupId == null) {
         ctx.gamestate.showMenu = .puppet_select;
 
-        if (ctx.uiCommand.menuSelect) |menu_item| {
+        if (ctx.uiCommand.getMenuSelect()) |menu_item| {
             switch (menu_item) {
                 .puppet_id => |pid| {
                     ctx.gamestate.selectedPupId = pid;
@@ -721,7 +702,7 @@ pub fn puppetDeployment(ctx: *Game.Context) !void {
                 }
             }
         }
-        if (ctx.uiCommand.confirm) {
+        if (ctx.uiCommand.getConfirm()) {
             if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
                 try deployPuppet(ctx, selected_pup);
             }
@@ -800,6 +781,7 @@ pub fn exitDeployingPuppets(ctx: *Game.Context) !void {
 pub fn enterCombat(ctx: *Game.Context) !void {
     ctx.gamestate.reset();
     ctx.gamestate.showMenu = .none;
+    ctx.player.movementCooldown = 0;
 }
 pub fn exitCombat(ctx: *Game.Context) !void {
     _ = ctx;

@@ -157,6 +157,7 @@ pub const Game = struct {
         }
         try this.world.Update(this.context);
         this.cameraManager.Update(delta);
+        this.gameState.update();
 
         this.shaderManager.update(delta);
     }

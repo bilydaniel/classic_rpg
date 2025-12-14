@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Zig Program",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/zig-out/bin/${workspaceFolderBasename}",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {},
+      "console": "integratedTerminal",
+      "sourceLanguages": ["zig"],
+      "stopOnEntry": false
+    }
+  ]
+}

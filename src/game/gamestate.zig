@@ -48,6 +48,7 @@ pub const gameState = struct {
 
     selectedEntity: ?*Entity.Entity,
     selectedEntityMode: EntityModeEnum,
+    selectedEntityHighlight: ?highlight = null,
 
     movableTiles: std.ArrayList(Types.Vector2Int),
     movementHighlighted: bool,
@@ -88,6 +89,14 @@ pub const gameState = struct {
         return gamestate;
     }
 
+    pub fn update(this: *gameState) void {
+        //TODO: maybe update the cursor through this function????
+
+        if (this.selectedEntity != null and this.selectedEntityHighlight != null) {
+            this.selectedEntityHighlight.?.pos = this.selectedEntity.?.pos;
+        }
+    }
+
     pub fn reset(this: *gameState) void {
         this.cursor = null;
 
@@ -99,9 +108,10 @@ pub const gameState = struct {
         this.movementHighlighted = false;
 
         this.highlightedEntity = null;
-        this.currentTurn = .player;
         this.selectedEntity = null;
+        this.selectedEntityHighlight = null;
         this.selectedEntityMode = .none;
+        this.selectedAction = null;
     }
 
     pub fn makeCursor(this: *gameState, pos: Types.Vector2Int) void {
@@ -179,7 +189,6 @@ pub const gameState = struct {
     }
 
     pub fn removeHighlightOfType(this: *gameState, highType: highlightTypeEnum) void {
-        //TODO: @continue, dies on swapremove, no idea how, fix
         var i: usize = 0;
         while (i < this.highlightedTiles.items.len) {
             const tile = this.highlightedTiles.items[i];

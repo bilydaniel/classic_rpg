@@ -17,6 +17,7 @@ pub const EntityType = enum {
     enemy,
     item,
 };
+
 pub var entity_id: u32 = 0;
 
 pub const EntityData = union(EntityType) {
@@ -155,6 +156,10 @@ pub const Entity = struct {
             pup.visible = false;
             pup.targetable = false;
             pup.data.puppet.deployed = false;
+
+            //TODO: hack, probably should add an extra variable like targetable or something
+            pup.pos.x = -1;
+            pup.pos.y = -1;
         }
     }
 
@@ -183,7 +188,6 @@ pub const Entity = struct {
             true => {
                 const left = Types.Vector2Int.init(-1, 0);
                 this.wander(Types.vector2IntAdd(this.pos, left), ctx);
-                std.debug.print("wandering\n", .{});
             },
             false => {},
         }
@@ -211,8 +215,12 @@ pub const Entity = struct {
                 return;
             }
 
-            this.movementAnimationCooldown += ctx.delta;
-            this.movementAnimationCooldown = 0;
+            this.movementCooldown += ctx.delta;
+            if (this.movementCooldown < Config.movement_animation_duration) {
+                return;
+            }
+
+            this.movementCooldown = 0;
             this.path.?.currIndex += 1;
             const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
             const new_pos_entity = Systems.getEntityByPos(ctx.entities.*, new_pos);
@@ -311,21 +319,21 @@ pub const PlayerData = struct {
         var puppet = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
         puppet.visible = false;
         puppet.name = "Pamama";
-        var puppet2 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
-        puppet2.visible = false;
-        puppet2.name = "Igor";
-
-        var puppet3 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
-        puppet3.visible = false;
-        puppet3.name = "R2D2";
-
         puppet.setTextureID(50);
-        puppet2.setTextureID(51);
-        puppet3.setTextureID(51);
-
         try puppets.append(puppet);
-        try puppets.append(puppet2);
-        try puppets.append(puppet3);
+
+        // var puppet2 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+        // puppet2.visible = false;
+        // puppet2.name = "Igor";
+        // puppet2.setTextureID(51);
+        // try puppets.append(puppet2);
+        //
+        // var puppet3 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
+        // puppet3.visible = false;
+        // puppet3.name = "R2D2";
+        // puppet3.setTextureID(51);
+        // try puppets.append(puppet3);
+
         return PlayerData{
             .state = .walking,
             .inCombatWith = inCombatWith,

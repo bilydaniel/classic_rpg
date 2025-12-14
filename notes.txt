@@ -1,0 +1,2 @@
+ if a functions gets inlined out of debugging use this:
+    @setRuntimeSafety(true);
