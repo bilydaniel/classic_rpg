@@ -33,6 +33,7 @@ pub const Entity = struct {
     health: i32,
     mana: i32,
     tp: i32,
+    attack: i32,
     pos: Types.Vector2Int,
     levelID: u32,
     path: ?Pathfinder.Path,
@@ -75,6 +76,7 @@ pub const Entity = struct {
             .health = 10,
             .mana = 10,
             .tp = 0,
+            .attack = 3,
             .pos = pos,
             .levelID = levelID,
             .isAscii = Config.ascii_mode,
@@ -179,66 +181,13 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn updateEnemy(this: *Entity, ctx: *Game.Context) !void {
-        if (ctx.gamestate.currentTurn != .enemy) {
-            return;
-        }
-
-        switch (this.inCombat) {
-            true => {
-                const left = Types.Vector2Int.init(-1, 0);
-                this.wander(Types.vector2IntAdd(this.pos, left), ctx);
-            },
-            false => {},
-        }
-
-        if (this.data == .enemy and ctx.gamestate.currentTurn == .enemy) {
-            if (this.data.enemy.goal) |goal| {
-                if (this.path == null) {
-                    //TODO: @continue fix pathing, take moving entities into account, thing about how to do it
-                    this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
-                }
-            }
-        }
-    }
-
     pub fn update(this: *Entity, ctx: *Game.Context) !void {
-        if (this.data == .enemy) {
-            try this.updateEnemy(ctx);
-        }
-        if (this.data == .player and ctx.gamestate.currentTurn != .player) {
-            return;
-        }
-
-        if (this.path) |path| {
-            if (path.nodes.items.len < 2) {
-                return;
-            }
-
-            this.movementCooldown += ctx.delta;
-            if (this.movementCooldown < Config.movement_animation_duration) {
-                return;
-            }
-
-            this.movementCooldown = 0;
-            this.path.?.currIndex += 1;
-            const new_pos = this.path.?.nodes.items[this.path.?.currIndex];
-            const new_pos_entity = Systems.getEntityByPos(ctx.entities.*, new_pos);
-
-            if (new_pos_entity) |_| {
-                // position has entity, recalculate
-                if (this.data.enemy.goal) |goal| {
-                    this.path = try ctx.pathfinder.findPath(ctx.grid.*, this.pos, goal, ctx.entities.*);
-                }
-            } else {
-                this.move(new_pos, ctx.grid);
-            }
-
-            if (this.path) |path_| {
-                if (path_.currIndex >= this.path.?.nodes.items.len - 1) {
-                    this.path = null;
-                }
-            }
+        switch (this.data) {
+            //TODO: see if it needs to be separated or not, change later
+            .player => try Systems.updatePlayerEntity(this, ctx),
+            .puppet => try Systems.updatePuppetEntity(this, ctx),
+            .enemy => try Systems.updateEnemyEntity(this, ctx),
+            .item => {}, //TODO: later
         }
     }
 

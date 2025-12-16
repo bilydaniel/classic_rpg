@@ -5,7 +5,7 @@
       "name": "Debug Zig Program",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/zig-out/bin/${workspaceFolderBasename}",
+      "program": "${workspaceFolder}/zig-out/bin/${workspaceFolderBasename}_debug",
       "args": [],
       "cwd": "${workspaceFolder}",
       "env": {},

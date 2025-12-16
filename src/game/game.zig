@@ -152,9 +152,6 @@ pub const Game = struct {
         this.context.uiCommand = uiCommand;
         //std.debug.print("ui_command: {}\n", .{uiCommand});
 
-        if (this.context.gamestate.currentTurn == .player) {
-            try Systems.updatePlayer(this.context);
-        }
         try this.world.Update(this.context);
         this.cameraManager.Update(delta);
         this.gameState.update();

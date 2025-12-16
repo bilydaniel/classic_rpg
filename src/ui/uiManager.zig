@@ -477,13 +477,13 @@ pub const UiManager = struct {
                 }
 
                 if (move.y == -1) {
-                    if (index == 0) {
+                    if (index <= 0) {
                         index = itemCount - 1;
                     } else {
                         index -= 1;
                     }
                 } else if (move.y == 1) {
-                    if (index == itemCount - 1) {
+                    if (index >= itemCount - 1) {
                         index = 0;
                     } else {
                         index += 1;

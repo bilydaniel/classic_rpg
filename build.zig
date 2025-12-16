@@ -63,16 +63,26 @@ pub fn build(b: *std.Build) void {
 
     //debug build
     const game_debug = b.addExecutable(.{
-        .name = "classic_rpg",
+        .name = "classic_rpg_debug",
         .root_source_file = .{ .cwd_relative = "src/main.zig" },
         .target = target,
-        .optimize = std.builtin.OptimizeMode.Debug,
+        .optimize = .Debug,
+        .single_threaded = true,
     });
+    game_debug.root_module.omit_frame_pointer = false;
     game_debug.root_module.strip = false;
+    game_debug.root_module.red_zone = false;
     game_debug.linkLibC();
     game_debug.linkSystemLibrary("raylib");
+
+    // Install the debug artifact
     b.installArtifact(game_debug);
 
+    // Add a dedicated install step for debug
+    const install_debug = b.step("install-debug", "Install debug build to zig-out/bin");
+    install_debug.dependOn(&b.addInstallArtifact(game_debug, .{}).step);
+
+    // Run step
     const run_game_debug = b.addRunArtifact(game_debug);
     b.step("run-game-debug", "Run debug build of game").dependOn(&run_game_debug.step);
 }

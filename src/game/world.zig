@@ -6,6 +6,7 @@ const std = @import("std");
 const Game = @import("game.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
+const Systems = @import("Systems.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -98,19 +99,17 @@ pub const World = struct {
     }
 
     pub fn Update(this: *World, ctx: *Game.Context) !void {
-        //TODO: how do I want the order of the update?
-        //std.debug.print("current_turn: {}\n", .{ctx.gamestate.currentTurn});
-
-        if (ctx.gamestate.currentTurn == .enemy) {
-            for (this.entities.items) |entity| {
-                if (entity.data == .enemy) {
-                    try entity.update(ctx);
+        switch (ctx.gamestate.currentTurn) {
+            .player => try Systems.updatePlayer(ctx),
+            .enemy => {
+                //TODO: should I make an entity manager??
+                for (this.entities.items) |entity| {
+                    if (entity.data == .enemy) {
+                        try Systems.updateEnemyEntity(entity, ctx);
+                    }
                 }
-            }
-            ctx.gamestate.currentTurn = .player;
-        }
-        for (this.levels.items) |lvl| {
-            lvl.Update(ctx.pathfinder);
+                ctx.gamestate.currentTurn = .player;
+            },
         }
     }
 };
