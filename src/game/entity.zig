@@ -55,6 +55,8 @@ pub const Entity = struct {
     hasAttacked: bool,
     movementAnimationCooldown: f32,
     inCombat: bool,
+    aiBehaviourWalking: ?*const fn (*Entity, *Game.Context) anyerror!void = null,
+    aiBehaviourCombat: ?*const fn (*Entity, *Game.Context) anyerror!void = null,
     data: EntityData,
 
     pub fn init(
@@ -299,11 +301,30 @@ pub const PlayerData = struct {
         return true;
     }
 };
+
 pub const EnemyData = struct {
     //TODO: add a callback for enemy ai, call from the main update function in entity i think ??
+
     goal: ?Types.Vector2Int,
+
+    // lastSeenPlayerPos: ?Types.Vector2Int,
+    // aggressionRange: u32, //do i want this or should you just always fight everyone?
 };
+
 pub const ItemData = struct {};
+
 pub const PuppetData = struct {
     deployed: bool,
 };
+
+//TODO: maybe put into another file?
+pub fn aiBehaviourAggresiveMellee(entity: *Entity, ctx: *Game.Context) anyerror!void {
+    _ = entity;
+    _ = ctx;
+}
+
+pub fn aiBehaviourWander(entity: *Entity, ctx: *Game.Context) anyerror!void {
+    _ = entity;
+    const position = Systems.getRandomValidPosition(ctx);
+    std.debug.print("position: {}\n", .{position});
+}

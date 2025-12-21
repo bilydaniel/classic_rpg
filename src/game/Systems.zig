@@ -814,9 +814,12 @@ pub fn updateEnemyEntity(enemy: *Entity.Entity, ctx: *Game.Context) !void {
     }
 
     if (enemy.inCombat) {
-        enemyCombatBehaviour(enemy, ctx);
+        if (enemy.aiBehaviourWalking == null) {
+            return error.value_missing;
+        }
+        try enemy.aiBehaviourWalking.?(enemy, ctx);
     } else {
-        enemyWanderBehaviour(enemy, ctx);
+        //enemyWanderBehaviour(enemy, ctx);
     }
     try updateEntityMovement(enemy, ctx);
 }
@@ -874,4 +877,12 @@ fn wanderTowards(enemy: *Entity.Entity, target: Types.Vector2Int, ctx: *Game.Con
             }
         }
     }
+}
+
+pub fn getRandomValidPosition(ctx: *Game.Context) Types.Vector2Int {
+    const position = Types.Vector2Int.init(0, 0);
+    _ = ctx;
+    const randomx = std.crypto.random.intRangeAtMost(i32, 0, Config.level_width);
+    std.debug.print("random_x: {}\n", .{randomx});
+    return position;
 }

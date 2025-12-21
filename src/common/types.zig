@@ -4,6 +4,10 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+const ErrorSet = error{
+    value_missing,
+};
+
 pub const Vector2Int = struct {
     x: i32,
     y: i32,
