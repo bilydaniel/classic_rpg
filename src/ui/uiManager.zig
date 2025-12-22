@@ -338,6 +338,9 @@ pub const UiManager = struct {
     }
 
     pub fn update(this: *UiManager, ctx: *Game.Context) !UiCommand {
+        if (ctx.gamestate.currentTurn != .player) {
+            return;
+        }
         if (ctx.gamestate.showMenu == .none) {
             if (this.activeMenu != null) {
                 this.activeMenu.?.visible = false;

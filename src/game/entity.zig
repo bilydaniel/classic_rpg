@@ -36,6 +36,7 @@ pub const Entity = struct {
     attack: i32,
     pos: Types.Vector2Int,
     levelID: u32,
+    goal: ?Types.Vector2Int = null,
     path: ?Pathfinder.Path,
     speed: f32,
     movementCooldown: f32, //TODO: probably do a different way
@@ -55,8 +56,8 @@ pub const Entity = struct {
     hasAttacked: bool,
     movementAnimationCooldown: f32,
     inCombat: bool,
-    aiBehaviourWalking: ?*const fn (*Entity, *Game.Context) anyerror!void = null,
-    aiBehaviourCombat: ?*const fn (*Entity, *Game.Context) anyerror!void = null,
+    aiBehaviourWalking: ?*const fn (*Entity, *Game.Context) anyerror!void = aiBehaviourWander,
+    aiBehaviourCombat: ?*const fn (*Entity, *Game.Context) anyerror!void = aiBehaviourWander,
     data: EntityData,
 
     pub fn init(
@@ -213,7 +214,7 @@ pub const Entity = struct {
 
     pub fn resetPathing(this: *Entity) void {
         if (this.data == .enemy) {
-            this.data.enemy.goal = null;
+            this.goal = null;
         }
         this.path = null;
     }
@@ -305,7 +306,9 @@ pub const PlayerData = struct {
 pub const EnemyData = struct {
     //TODO: add a callback for enemy ai, call from the main update function in entity i think ??
 
-    goal: ?Types.Vector2Int,
+    //TODO: move goal to base entity
+    //goal: ?Types.Vector2Int,
+    asd: bool,
 
     // lastSeenPlayerPos: ?Types.Vector2Int,
     // aggressionRange: u32, //do i want this or should you just always fight everyone?
@@ -324,7 +327,8 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, ctx: *Game.Context) anyerror!
 }
 
 pub fn aiBehaviourWander(entity: *Entity, ctx: *Game.Context) anyerror!void {
-    _ = entity;
-    const position = Systems.getRandomValidPosition(ctx);
-    std.debug.print("position: {}\n", .{position});
+    if (entity.goal == null) {
+        const position = Systems.getRandomValidPosition(ctx.grid.*);
+        entity.goal = position;
+    }
 }

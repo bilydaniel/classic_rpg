@@ -114,24 +114,35 @@ pub fn canDeploy(player: *Entity.Entity, gamestate: *Gamestate.gameState, grid: 
         if (entity) |_| {
             return false;
         }
-        const index = posToIndex(dep_pos);
-        if (index) |idx| {
-            const deploy_tile = grid[idx];
-            if (deploy_tile.solid) {
-                return false;
-            }
-            if (!deploy_tile.walkable) {
-                return false;
-            }
-            if (gamestate.deployableCells) |deployable_cells| {
-                if (!isDeployable(dep_pos, &deployable_cells)) {
-                    return false;
-                }
-            }
-            return true;
+
+        if (!isTileWalkable(grid, dep_pos)) {
+            return false;
         }
+
+        if (gamestate.deployableCells) |deployable_cells| {
+            if (!isDeployable(dep_pos, &deployable_cells)) {
+                return false;
+            }
+        }
+
+        return true;
     }
     return false;
+}
+
+pub fn isTileWalkable(grid: []Level.Tile, pos: Types.Vector2Int) bool {
+    const index = posToIndex(pos) orelse return false;
+    const tile = grid[index];
+
+    if (tile.solid) {
+        return false;
+    }
+
+    if (!tile.walkable) {
+        return false;
+    }
+
+    return true;
 }
 
 pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) bool {
@@ -502,7 +513,6 @@ pub fn entityAction(ctx: *Game.Context) !void {
     if (ctx.gamestate.selectedEntity) |entity| {
         if (ctx.gamestate.selectedAction == null) {
             ctx.gamestate.showMenu = .action_select;
-            std.debug.print("selecting_action\n", .{});
 
             if (ctx.uiCommand.getMenuSelect()) |menu_item| {
                 switch (menu_item) {
@@ -812,28 +822,35 @@ pub fn updateEnemyEntity(enemy: *Entity.Entity, ctx: *Game.Context) !void {
     if (ctx.gamestate.currentTurn != .enemy) {
         return;
     }
+    std.debug.print("updating_enemy\n", .{});
 
     if (enemy.inCombat) {
+        //TODO:
+    } else {
+        std.debug.print("non_combat\n", .{});
         if (enemy.aiBehaviourWalking == null) {
             return error.value_missing;
         }
         try enemy.aiBehaviourWalking.?(enemy, ctx);
-    } else {
         //enemyWanderBehaviour(enemy, ctx);
     }
     try updateEntityMovement(enemy, ctx);
 }
 
 pub fn updateEntityMovement(entity: *Entity.Entity, ctx: *Game.Context) !void {
+    if (entity.path == null and entity.goal != null) {
+        entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, entity.goal.?, ctx.entities.*);
+    }
     if (entity.path) |path| {
         if (path.nodes.items.len < 2) {
             return;
         }
 
-        entity.movementCooldown += ctx.delta;
-        if (entity.movementCooldown < Config.movement_animation_duration) {
-            return;
-        }
+        //TODO: gonna have to make some animation state, wait for animation to finish
+        // entity.movementCooldown += ctx.delta;
+        // if (entity.movementCooldown < Config.movement_animation_duration) {
+        //     return;
+        // }
 
         entity.movementCooldown = 0;
         entity.path.?.currIndex += 1;
@@ -842,7 +859,7 @@ pub fn updateEntityMovement(entity: *Entity.Entity, ctx: *Game.Context) !void {
 
         if (new_pos_entity) |_| {
             // position has entity, recalculate
-            if (entity.data.enemy.goal) |goal| {
+            if (entity.goal) |goal| {
                 entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, goal, ctx.entities.*);
             }
         } else {
@@ -878,11 +895,22 @@ fn wanderTowards(enemy: *Entity.Entity, target: Types.Vector2Int, ctx: *Game.Con
         }
     }
 }
+pub fn getRandomPosition() Types.Vector2Int {
+    const x = std.crypto.random.intRangeAtMost(i32, 0, Config.level_width);
+    const y = std.crypto.random.intRangeAtMost(i32, 0, Config.level_height);
+    return Types.Vector2Int.init(x, y);
+}
 
-pub fn getRandomValidPosition(ctx: *Game.Context) Types.Vector2Int {
-    const position = Types.Vector2Int.init(0, 0);
-    _ = ctx;
-    const randomx = std.crypto.random.intRangeAtMost(i32, 0, Config.level_width);
-    std.debug.print("random_x: {}\n", .{randomx});
+pub fn getRandomValidPosition(grid: []Level.Tile) Types.Vector2Int {
+    var valid: bool = false;
+    var position: Types.Vector2Int = undefined;
+
+    while (!valid) {
+        position = getRandomPosition();
+        if (isTileWalkable(grid, position)) {
+            valid = true;
+        }
+    }
+
     return position;
 }
