@@ -338,8 +338,9 @@ pub const UiManager = struct {
     }
 
     pub fn update(this: *UiManager, ctx: *Game.Context) !UiCommand {
+        var uicommand = UiCommand{};
         if (ctx.gamestate.currentTurn != .player) {
-            return;
+            return uicommand;
         }
         if (ctx.gamestate.showMenu == .none) {
             if (this.activeMenu != null) {
@@ -399,7 +400,7 @@ pub const UiManager = struct {
         //combat toggle
         const combatToggle = ctx.inputManager.takeCombatToggle();
 
-        return UiCommand{
+        uicommand = .{
             .confirm = confirm,
             .cancel = cancel,
             .move = move,
@@ -407,6 +408,7 @@ pub const UiManager = struct {
             .quickSelect = quickSelect,
             .combatToggle = combatToggle,
         };
+        return uicommand;
     }
 
     pub fn draw(this: *UiManager) void {

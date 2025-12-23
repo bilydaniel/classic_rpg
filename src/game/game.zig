@@ -6,6 +6,7 @@ const CameraManager = @import("cameraManager.zig");
 const TilesetManager = @import("tilesetManager.zig");
 const Gamestate = @import("gamestate.zig");
 const Entity = @import("entity.zig");
+const EntityManager = @import("entityManager.zig");
 const Tileset = @import("../game/tileset.zig");
 const Window = @import("../game/window.zig");
 const Config = @import("../common/config.zig");
@@ -32,6 +33,7 @@ pub const Context = struct {
     uiManager: *UiManager.UiManager,
     inputManager: *InputManager.InputManager,
     uiCommand: UiManager.UiCommand = UiManager.UiCommand{},
+    entityManager: *EntityManager.EntityManager,
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -47,6 +49,7 @@ pub const Context = struct {
         shadermanager: *ShaderManager.ShaderManager,
         uimanager: *UiManager.UiManager,
         inputManager: *InputManager.InputManager,
+        entityManager: *EntityManager.EntityManager,
     ) !*Context {
         const context = try allocator.create(Context);
         context.* = .{
@@ -61,6 +64,7 @@ pub const Context = struct {
             .shaderManager = shadermanager,
             .uiManager = uimanager,
             .inputManager = inputManager,
+            .entityManager = entityManager,
         };
         return context;
     }
@@ -78,6 +82,7 @@ pub const Game = struct {
     uiManager: *UiManager.UiManager,
     inputManager: *InputManager.InputManager,
     shaderManager: *ShaderManager.ShaderManager,
+    entityManager: *EntityManager.EntityManager,
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
@@ -85,9 +90,10 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
         const gamestate = try Gamestate.gameState.init(allocator);
-        const playerData = try Entity.PlayerData.init(allocator);
-        var player = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 0, 1, Entity.EntityData{ .player = playerData }, "@");
-        player.setTextureID(76);
+
+        const entitymanager = try EntityManager.EntityManager.init(allocator);
+        const player = try entitymanager.fillEntities();
+
         const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         const cameraManager = try CameraManager.CamManager.init(allocator, player);
@@ -114,6 +120,7 @@ pub const Game = struct {
             shadermanager,
             uimanager,
             inputManager,
+            entitymanager,
         );
 
         game.* = .{
@@ -128,6 +135,7 @@ pub const Game = struct {
             .uiManager = uimanager,
             .shaderManager = shadermanager,
             .inputManager = inputManager,
+            .entityManager = entitymanager,
         };
 
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);

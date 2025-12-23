@@ -4,3 +4,5 @@ Day 26:
 
 Day 27:
     exploration based architecture
+
+

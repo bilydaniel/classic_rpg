@@ -1,4 +1,5 @@
 
+STOP SENDING CTX EVERYWHERE, GONNA HAVE to FIX SOME APIS
 0. UI final fantasy like ui, only use keyboard, dont do mouse
 1. Refactor state machine, split out functions a lillte bit more(handle funcitons are too big), refactor input system
 2. Mouse input
