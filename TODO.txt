@@ -1,4 +1,19 @@
 
+gonna need to refactor the whole game / context mess, research jblow first
+    hardcode ui?
+    use file scope
+    use global scope
+
+
+
+
+have a look at how jblow codes, see what i can learn from it, make notes:
+    most bugs are because the state isnt what you think it is, thats why its a good idea to not split into smaller functions(you cant call them)
+
+start using the entitymanager
+do an overall refactor 
+start using the profiller that i made in computer enhance, start to make decisions based on actual numbers
+
 STOP SENDING CTX EVERYWHERE, GONNA HAVE to FIX SOME APIS
 0. UI final fantasy like ui, only use keyboard, dont do mouse
 1. Refactor state machine, split out functions a lillte bit more(handle funcitons are too big), refactor input system

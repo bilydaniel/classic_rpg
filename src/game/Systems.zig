@@ -471,6 +471,9 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     ctx.gamestate.currentTurn = .enemy;
 }
 pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
+    //TODO: should I put all the code just in the handleplayerdeploying?
+    //j_blow says so, have a look into it, kinda makes sense
+    //maybe should try to stop only changing the ctx values and have some local variables / returns, feels kinda wierd
     try puppetSelection(ctx);
     try puppetDeployment(ctx);
 }

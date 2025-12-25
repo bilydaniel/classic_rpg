@@ -28,7 +28,6 @@ pub const Context = struct {
     grid: *[]Level.Tile,
     cameraManager: *CameraManager.CamManager,
     pathfinder: *Pathfinder.Pathfinder,
-    entities: *std.ArrayList(*Entity.Entity),
     shaderManager: *ShaderManager.ShaderManager,
     uiManager: *UiManager.UiManager,
     inputManager: *InputManager.InputManager,
@@ -44,8 +43,6 @@ pub const Context = struct {
         grid: *[]Level.Tile,
         cameraManager: *CameraManager.CamManager,
         pathfinder: *Pathfinder.Pathfinder,
-        //TODO: entities should be just an arraylist of *entity
-        entities: *std.ArrayList(*Entity.Entity),
         shadermanager: *ShaderManager.ShaderManager,
         uimanager: *UiManager.UiManager,
         inputManager: *InputManager.InputManager,
@@ -60,7 +57,6 @@ pub const Context = struct {
             .grid = grid,
             .cameraManager = cameraManager,
             .pathfinder = pathfinder,
-            .entities = entities,
             .shaderManager = shadermanager,
             .uiManager = uimanager,
             .inputManager = inputManager,
@@ -98,15 +94,12 @@ pub const Game = struct {
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         const cameraManager = try CameraManager.CamManager.init(allocator, player);
         const world = try World.World.init(allocator);
-        try world.entities.append(player);
-        for (player.data.player.puppets.items) |pup| {
-            try world.entities.append(pup);
-        }
         const shadermanager = try ShaderManager.ShaderManager.init(allocator);
 
         const uimanager = try UiManager.UiManager.init(allocator);
         const inputManager = try InputManager.InputManager.init(allocator);
 
+        //TODO: refactor this, dont need game and context
         const context = try Context.init(
             allocator,
             gamestate,
@@ -116,7 +109,6 @@ pub const Game = struct {
             &world.currentLevel.grid,
             cameraManager,
             pathfinder,
-            &world.entities,
             shadermanager,
             uimanager,
             inputManager,
@@ -160,7 +152,6 @@ pub const Game = struct {
         this.context.uiCommand = uiCommand;
         //std.debug.print("ui_command: {}\n", .{uiCommand});
 
-        try this.world.Update(this.context);
         this.cameraManager.Update(delta);
         this.gameState.update();
 
