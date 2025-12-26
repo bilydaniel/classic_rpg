@@ -3,6 +3,8 @@ gonna need to refactor the whole game / context mess, research jblow first
     hardcode ui?
     use file scope
     use global scope
+    add time meassurements (ingame, wallclock), always use ingame for mechanics stuff(pause exploit)
+    make things proper immidietly, dont put it off like i always do(how jblow made menu)
 
 
 
