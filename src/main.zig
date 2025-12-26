@@ -7,6 +7,7 @@ const c = @cImport({
 });
 
 pub fn main() !void {
+    //TODO: !!! do an overall refactor !!!
     c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE);
     //c.SetConfigFlags(c.FLAG_FULLSCREEN_MODE);
     c.InitWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
