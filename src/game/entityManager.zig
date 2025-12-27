@@ -71,7 +71,7 @@ pub fn addEntity(entity: Entity.Entity) !void {
     try entities.append(entity);
 }
 
-pub fn update(ctx: *Game.Context) !void {
+pub fn update(ctx: *Game.Game) !void {
     for (entities.items) |*entity| {
         entity.update(ctx);
     }

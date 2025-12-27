@@ -36,30 +36,30 @@ pub const EntityModeEnum = enum {
     attacking,
 };
 
-var cursor: ?Types.Vector2Int = null;
+pub var cursor: ?Types.Vector2Int = null;
 
-var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
-var deployHighlighted: bool = false;
+pub var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
+pub var deployHighlighted: bool = false;
 
-var currentTurn: CurrentTurnEnum = .player;
+pub var currentTurn: CurrentTurnEnum = .player;
 
-var selectedEntity: ?*Entity.Entity = null;
-var selectedEntityMode: EntityModeEnum = .none;
-var selectedEntityHighlight: ?Highlight = null;
+pub var selectedEntity: ?*Entity.Entity = null;
+pub var selectedEntityMode: EntityModeEnum = .none;
+pub var selectedEntityHighlight: ?Highlight = null;
 
-var movableTiles: std.ArrayList(Types.Vector2Int) = undefined;
-var movementHighlighted: bool = false;
+pub var movableTiles: std.ArrayList(Types.Vector2Int) = undefined;
+pub var movementHighlighted: bool = false;
 
-var highlightedEntity: ?Highlight = null;
-var highlightedTiles: std.ArrayList(Highlight) = undefined;
+pub var highlightedEntity: ?Highlight = null;
+pub var highlightedTiles: std.ArrayList(Highlight) = undefined;
 
-var attackableTiles: std.ArrayList(Types.Vector2Int) = undefined;
-var attackHighlighted: bool = false;
+pub var attackableTiles: std.ArrayList(Types.Vector2Int) = undefined;
+pub var attackHighlighted: bool = false;
 
-var selectedPupId: ?u32 = null;
-var selectedAction: ?UiManager.ActionType = null;
+pub var selectedPupId: ?u32 = null;
+pub var selectedAction: ?UiManager.ActionType = null;
 
-var showMenu: UiManager.MenuType = .none;
+pub var showMenu: UiManager.MenuType = .none;
 
 pub fn init(allocator: std.mem.Allocator) void {
     const highlighted_tiles = std.ArrayList(Highlight).init(allocator);

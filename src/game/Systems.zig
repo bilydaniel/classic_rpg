@@ -16,91 +16,91 @@ const c = @cImport({
 });
 
 //TODO: add an optiom to "look around", get info on enemies, etc.
-pub fn updatePlayer(player: *Entity.Entity, ctx: *Game.Context) !void {
+pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
     switch (player.data.player.state) {
         // TODO: go through everything, make more functions, messy
         // TODO: go through all the state management, make some fool proof system
         // of writing the state transitions / resets of variables
         // RESETING OF VARIABLES IS IMPORTANT, THATS WHERE I MAKE MISTAKES
         .walking => {
-            if (try preWalkingTransitions(ctx)) {
+            if (try preWalkingTransitions(game)) {
                 return;
             }
-            try handlePlayerWalking(ctx);
+            try handlePlayerWalking(game);
         },
         .deploying_puppets => {
-            if (try preDeployingTransitions(ctx)) {
+            if (try preDeployingTransitions(game)) {
                 return;
             }
-            try handlePlayerDeploying(ctx);
+            try handlePlayerDeploying(game);
         },
         .in_combat => {
-            if (try preCombatTransitions(ctx)) {
+            if (try preCombatTransitions(game)) {
                 return;
             }
-            try handlePlayerCombat(ctx);
+            try handlePlayerCombat(game);
         },
     }
 
-    if (ctx.gamestate.currentTurn != .player) {
+    if (game.gamestate.currentTurn != .player) {
         return;
     }
 
-    try updateEntityMovement(player, ctx);
+    try updateEntityMovement(player, game);
 }
 
-pub fn preWalkingTransitions(ctx: *Game.Context) !bool {
-    if (ctx.uiCommand.getCombatToggle()) {
+pub fn preWalkingTransitions(game: *Game.Game) !bool {
+    if (game.uiCommand.getCombatToggle()) {
         //TODO: check in enemies are around, if it makes sense to even go to combat
-        try playerChangeState(ctx, .deploying_puppets);
+        try playerChangeState(game, .deploying_puppets);
         return true;
     }
 
-    if (checkCombatStart(ctx.player, EntityManager.entities)) {
-        try playerChangeState(ctx, .deploying_puppets);
-        return true;
-    }
-
-    return false;
-}
-
-pub fn preDeployingTransitions(ctx: *Game.Context) !bool {
-    if (ctx.uiCommand.getCombatToggle()) {
-        try playerChangeState(ctx, .walking);
-        return true;
-    }
-
-    if (ctx.player.data.player.allPupsDeployed()) {
-        try playerChangeState(ctx, .in_combat);
+    if (checkCombatStart(game.player, EntityManager.entities)) {
+        try playerChangeState(game, .deploying_puppets);
         return true;
     }
 
     return false;
 }
 
-pub fn preCombatTransitions(ctx: *Game.Context) !bool {
-    if (ctx.uiCommand.getCombatToggle()) {
+pub fn preDeployingTransitions(game: *Game.Game) !bool {
+    if (game.uiCommand.getCombatToggle()) {
+        try playerChangeState(game, .walking);
+        return true;
+    }
+
+    if (game.player.data.player.allPupsDeployed()) {
+        try playerChangeState(game, .in_combat);
+        return true;
+    }
+
+    return false;
+}
+
+pub fn preCombatTransitions(game: *Game.Game) !bool {
+    if (game.uiCommand.getCombatToggle()) {
         //TODO: check can end combat?
-        try playerChangeState(ctx, .walking);
+        try playerChangeState(game, .walking);
         return true;
     }
 
-    if (ctx.player.data.player.inCombatWith.items.len == 0) {
-        try playerChangeState(ctx, .walking);
+    if (game.player.data.player.inCombatWith.items.len == 0) {
+        try playerChangeState(game, .walking);
         return true;
     }
     return false;
 }
 
-pub fn deployPuppet(ctx: *Game.Context, pupId: u32) !void {
-    const puppet = getPupById(ctx.player.data.player.puppets, pupId);
+pub fn deployPuppet(game: *Game.Game, pupId: u32) !void {
+    const puppet = getPupById(game.player.data.player.puppets, pupId);
     if (puppet) |pup| {
         if (!pup.data.puppet.deployed) {
-            if (ctx.gamestate.cursor) |curs| {
+            if (game.gamestate.cursor) |curs| {
                 pup.pos = curs;
                 pup.data.puppet.deployed = true;
                 pup.visible = true;
-                ctx.gamestate.selectedPupId = null; //TODO: maybe wrong, check
+                game.gamestate.selectedPupId = null; //TODO: maybe wrong, check
                 return;
             }
         }
@@ -160,8 +160,8 @@ pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) boo
     return false;
 }
 
-pub fn getEntityByPos(entities: std.ArrayList(*Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
-    for (entities.items) |entity| {
+pub fn getEntityByPos(entities: std.ArrayList(Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
+    for (entities.items) |*entity| {
         if (Types.vector2IntCompare(entity.pos, pos)) {
             return entity;
         }
@@ -178,10 +178,10 @@ pub fn getEntityById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.
     return null;
 }
 
-pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize) void {
+pub fn calculateFOV(grid: []Level.Tile, center: Types.Vector2Int, radius: usize) void {
     var idx: usize = 0;
     while (idx < grid.len) : (idx += 1) {
-        grid.*[idx].visible = false;
+        grid[idx].visible = false;
     }
 
     const rays = radius * 8;
@@ -197,7 +197,7 @@ pub fn calculateFOV(grid: *[]Level.Tile, center: Types.Vector2Int, radius: usize
     }
 }
 
-pub fn castRay(grid: *[]Level.Tile, center: Types.Vector2Int, target: Types.Vector2Int) void {
+pub fn castRay(grid: []Level.Tile, center: Types.Vector2Int, target: Types.Vector2Int) void {
     const dx = @as(i32, @intCast(@abs(target.x - center.x)));
     const dy = @as(i32, @intCast(@abs(target.y - center.y)));
     var current_pos = center;
@@ -209,10 +209,10 @@ pub fn castRay(grid: *[]Level.Tile, center: Types.Vector2Int, target: Types.Vect
     while (true) {
         const tileIndex = posToIndex(current_pos);
         if (tileIndex) |tile_index| {
-            grid.*[tile_index].visible = true;
-            grid.*[tile_index].seen = true;
+            grid[tile_index].visible = true;
+            grid[tile_index].seen = true;
 
-            if (grid.*[tile_index].solid == true) {
+            if (grid[tile_index].solid == true) {
                 break;
             }
 
@@ -234,10 +234,11 @@ pub fn castRay(grid: *[]Level.Tile, center: Types.Vector2Int, target: Types.Vect
     }
 }
 
-pub fn switchLevel(world: *World.World, levelID: u32) void {
-    for (world.levels.items) |level| {
+//TODO: @refactor put into world
+pub fn switchLevel(levelID: u32) void {
+    for (World.levels.items) |level| {
         if (level.id == levelID) {
-            world.currentLevel = level;
+            World.currentLevel = level;
         }
     }
 }
@@ -298,26 +299,27 @@ pub fn highlightEntity(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) v
     };
 }
 
-pub fn isStaircase(world: *World.World, pos: Types.Vector2Int) bool {
+//TODO: put into world / probably gonna remove links anyway
+pub fn isStaircase(pos: Types.Vector2Int) bool {
     //TODO: probably should add a check for the tile type
-    for (world.levelLinks.items) |levelLink| {
-        if (levelLink.from.level == world.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
+    for (World.levelLinks.items) |levelLink| {
+        if (levelLink.from.level == World.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
             return true;
         }
     }
     return false;
 }
 
-pub fn getStaircaseDestination(world: *World.World, pos: Types.Vector2Int) ?Level.Location {
-    for (world.levelLinks.items) |levelLink| {
-        if (levelLink.from.level == world.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
+pub fn getStaircaseDestination(pos: Types.Vector2Int) ?Level.Location {
+    for (World.levelLinks.items) |levelLink| {
+        if (levelLink.from.level == World.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
             return levelLink.to;
         }
     }
     return null;
 }
 
-pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int, entities: std.ArrayList(*Entity.Entity)) bool {
+pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int, entities: std.ArrayList(Entity.Entity)) bool {
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
         if (index < grid.len) {
@@ -416,7 +418,7 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
     }
 }
 
-pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) bool {
+pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.Entity)) bool {
     for (entities.items) |entity| {
         if (entity.data == .enemy) {
             const distance = Types.vector2Distance(player.pos, entity.pos);
@@ -454,9 +456,9 @@ pub fn removeEntitiesType(entities: *std.ArrayList(*Entity.Entity), entityType: 
     }
 }
 
-pub fn handlePlayerWalking(ctx: *Game.Context) !void {
-    ctx.player.movementCooldown += ctx.delta;
-    if (ctx.player.movementCooldown < Config.movement_animation_duration) {
+pub fn handlePlayerWalking(game: *Game.Game) !void {
+    game.player.movementCooldown += game.delta;
+    if (game.player.movementCooldown < Config.movement_animation_duration) {
         return;
     }
 
@@ -464,136 +466,136 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
     const moveDelta = InputManager.takePositionInput() orelse return;
     std.debug.print("move: {}\n", .{moveDelta});
 
-    var new_pos = Types.vector2IntAdd(ctx.player.pos, moveDelta);
-    if (!canMove(ctx.grid.*, new_pos, ctx.entities.*)) {
+    var new_pos = Types.vector2IntAdd(game.player.pos, moveDelta);
+    if (!canMove(World.currentLevel.grid, new_pos, EntityManager.entities)) {
         return;
     }
 
-    new_pos = staircaseTransition(ctx, new_pos);
+    new_pos = staircaseTransition(game, new_pos);
 
-    ctx.player.move(new_pos, ctx.grid);
-    ctx.player.movementCooldown = 0;
-    ctx.gamestate.currentTurn = .enemy;
+    game.player.move(new_pos, World.currentLevel.grid);
+    game.player.movementCooldown = 0;
+    Gamestate.currentTurn = .enemy;
 }
-pub fn handlePlayerDeploying(ctx: *Game.Context) !void {
+pub fn handlePlayerDeploying(game: *Game.Game) !void {
     //TODO: should I put all the code just in the handleplayerdeploying?
     //j_blow says so, have a look into it, kinda makes sense
-    //maybe should try to stop only changing the ctx values and have some local variables / returns, feels kinda wierd
-    try puppetSelection(ctx);
-    try puppetDeployment(ctx);
+    //maybe should try to stop only changing the game values and have some local variables / returns, feels kinda wierd
+    try puppetSelection(game);
+    try puppetDeployment(game);
 }
-pub fn handlePlayerCombat(ctx: *Game.Context) !void {
-    switch (ctx.gamestate.currentTurn) {
+pub fn handlePlayerCombat(game: *Game.Game) !void {
+    switch (game.gamestate.currentTurn) {
         .player => {
-            entitySelect(ctx);
-            try entityAction(ctx);
-            resolveTurnTaken(ctx);
+            entitySelect(game);
+            try entityAction(game);
+            resolveTurnTaken(game);
         },
 
         .enemy => {},
     }
 }
 
-pub fn entitySelect(ctx: *Game.Context) void {
-    const entityIndex = ctx.uiCommand.getQuickSelect() orelse return;
+pub fn entitySelect(game: *Game.Game) void {
+    const entityIndex = game.uiCommand.getQuickSelect() orelse return;
 
-    ctx.gamestate.resetMovementHighlight();
-    ctx.gamestate.resetAttackHighlight();
+    game.gamestate.resetMovementHighlight();
+    game.gamestate.resetAttackHighlight();
     //TODO: make a menu for swapping puppets in the array(different index => different keybind)
     if (entityIndex == 0) {
         //Player
-        ctx.gamestate.selectedEntity = ctx.player;
+        game.gamestate.selectedEntity = game.player;
     } else {
         //Puppets
-        if (ctx.player.data.player.puppets.items.len >= entityIndex) {
-            ctx.gamestate.selectedEntity = ctx.player.data.player.puppets.items[entityIndex - 1];
+        if (game.player.data.player.puppets.items.len >= entityIndex) {
+            game.gamestate.selectedEntity = game.player.data.player.puppets.items[entityIndex - 1];
         }
     }
 
-    if (ctx.gamestate.selectedEntity) |selected_entity| {
-        ctx.cameraManager.targetEntity = selected_entity;
-        ctx.gamestate.removeCursor();
-        highlightEntity(ctx.gamestate, selected_entity.pos);
-        ctx.gamestate.selectedAction = null;
+    if (game.gamestate.selectedEntity) |selected_entity| {
+        game.cameraManager.targetEntity = selected_entity;
+        game.gamestate.removeCursor();
+        highlightEntity(game.gamestate, selected_entity.pos);
+        game.gamestate.selectedAction = null;
     }
 }
-pub fn entityAction(ctx: *Game.Context) !void {
-    if (ctx.gamestate.selectedEntity) |entity| {
-        if (ctx.gamestate.selectedAction == null) {
-            ctx.gamestate.showMenu = .action_select;
+pub fn entityAction(game: *Game.Game) !void {
+    if (game.gamestate.selectedEntity) |entity| {
+        if (game.gamestate.selectedAction == null) {
+            game.gamestate.showMenu = .action_select;
 
-            if (ctx.uiCommand.getMenuSelect()) |menu_item| {
+            if (game.uiCommand.getMenuSelect()) |menu_item| {
                 switch (menu_item) {
                     .puppet_id => {
                         std.debug.print("menu_item is .puppet_id instead of .action", .{});
                     },
                     .action => |action| {
-                        ctx.gamestate.selectedAction = action;
+                        game.gamestate.selectedAction = action;
                     },
                 }
             }
         }
 
-        const selectedAction = ctx.gamestate.selectedAction orelse return;
+        const selectedAction = game.gamestate.selectedAction orelse return;
         switch (selectedAction) {
             .move => {
-                ctx.gamestate.showMenu = .none;
-                ctx.gamestate.makeUpdateCursor(entity.pos);
-                try ctx.gamestate.highlightMovement(entity);
+                game.gamestate.showMenu = .none;
+                game.gamestate.makeUpdateCursor(entity.pos);
+                try game.gamestate.highlightMovement(entity);
 
-                if (ctx.uiCommand.getConfirm()) {
-                    if (ctx.gamestate.cursor) |cur| {
-                        if (ctx.gamestate.isinMovable(cur)) {
-                            entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, cur, ctx.entities.*);
+                if (game.uiCommand.getConfirm()) {
+                    if (game.gamestate.cursor) |cur| {
+                        if (game.gamestate.isinMovable(cur)) {
+                            entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
                             entity.hasMoved = true;
-                            ctx.gamestate.resetMovementHighlight();
-                            ctx.gamestate.removeCursor();
-                            ctx.gamestate.selectedAction = null;
+                            game.gamestate.resetMovementHighlight();
+                            game.gamestate.removeCursor();
+                            game.gamestate.selectedAction = null;
                         }
                     }
                 }
 
                 if (c.IsKeyPressed(c.KEY_SPACE)) {
                     //TODO: manage state after skip
-                    skipMovement(ctx);
+                    skipMovement(game);
                 }
             },
             .attack => {
-                ctx.gamestate.showMenu = .none;
-                ctx.gamestate.makeUpdateCursor(entity.pos);
-                try ctx.gamestate.highlightAttack(entity);
+                game.gamestate.showMenu = .none;
+                game.gamestate.makeUpdateCursor(entity.pos);
+                try game.gamestate.highlightAttack(entity);
 
-                if (ctx.uiCommand.getConfirm()) {
-                    if (ctx.gamestate.cursor) |cur| {
-                        if (ctx.gamestate.isinAttackable(cur)) {
-                            const attackedEntity = getEntityByPos(ctx.entities.*, cur);
-                            try ctx.shaderManager.spawnSlash(entity.pos, cur);
-                            try ctx.shaderManager.spawnImpact(cur);
+                if (game.uiCommand.getConfirm()) {
+                    if (game.gamestate.cursor) |cur| {
+                        if (game.gamestate.isinAttackable(cur)) {
+                            const attackedEntity = getEntityByPos(game.entities.*, cur);
+                            try game.shaderManager.spawnSlash(entity.pos, cur);
+                            try game.shaderManager.spawnImpact(cur);
 
-                            attack(ctx, entity, attackedEntity);
-                            ctx.gamestate.resetAttackHighlight();
-                            ctx.gamestate.removeCursor();
+                            attack(game, entity, attackedEntity);
+                            game.gamestate.resetAttackHighlight();
+                            game.gamestate.removeCursor();
                             entity.hasAttacked = true;
-                            ctx.gamestate.selectedAction = null;
+                            game.gamestate.selectedAction = null;
                         }
                     }
                 }
 
                 if (c.IsKeyPressed(c.KEY_SPACE)) {
                     //TODO: manage state after skip
-                    skipAttack(ctx);
+                    skipAttack(game);
                 }
-                // ctx.gamestate.showMenu = .none;
+                // game.gamestate.showMenu = .none;
                 // std.debug.print("attacking\n", .{});
-                // ctx.gamestate.updateCursor();
-                // try selectedEntityAttack(ctx, entity);
+                // game.gamestate.updateCursor();
+                // try selectedEntityAttack(game, entity);
                 // if (c.IsKeyPressed(c.KEY_SPACE)) {
-                //     skipAttack(ctx);
+                //     skipAttack(game);
                 // }
             },
         }
 
-        if (entity.hasMoved and !entity.canAttack(ctx)) {
+        if (entity.hasMoved and !entity.canAttack(game)) {
             //TODO:
         }
 
@@ -603,75 +605,75 @@ pub fn entityAction(ctx: *Game.Context) !void {
     }
 }
 
-pub fn resolveTurnTaken(ctx: *Game.Context) void {
-    if (ctx.player.data.player.inCombatWith.items.len > 0) {
-        if (ctx.player.turnTaken or ctx.player.allPupsTurnTaken()) {
+pub fn resolveTurnTaken(game: *Game.Game) void {
+    if (game.player.data.player.inCombatWith.items.len > 0) {
+        if (game.player.turnTaken or game.player.allPupsTurnTaken()) {
             // finished turn
-            ctx.gamestate.currentTurn = .enemy;
-            ctx.player.resetTurnTakens();
-            ctx.gamestate.reset();
+            game.gamestate.currentTurn = .enemy;
+            game.player.resetTurnTakens();
+            game.gamestate.reset();
         }
     }
 }
 
-pub fn skipMovement(ctx: *Game.Context) void {
-    if (ctx.gamestate.selectedEntity) |entity| {
+pub fn skipMovement(game: *Game.Game) void {
+    if (game.gamestate.selectedEntity) |entity| {
         entity.hasMoved = true;
     }
-    ctx.gamestate.resetMovementHighlight();
-    ctx.gamestate.removeCursor();
-    ctx.gamestate.selectedAction = null;
+    game.gamestate.resetMovementHighlight();
+    game.gamestate.removeCursor();
+    game.gamestate.selectedAction = null;
 }
 
-pub fn skipAttack(ctx: *Game.Context) void {
-    if (ctx.gamestate.selectedEntity) |entity| {
+pub fn skipAttack(game: *Game.Game) void {
+    if (game.gamestate.selectedEntity) |entity| {
         entity.hasAttacked = true;
     }
-    ctx.gamestate.resetAttackHighlight();
-    ctx.gamestate.removeCursor();
-    ctx.gamestate.selectedAction = null;
+    game.gamestate.resetAttackHighlight();
+    game.gamestate.removeCursor();
+    game.gamestate.selectedAction = null;
 }
 
-pub fn selectedEntityMove(ctx: *Game.Context, entity: *Entity.Entity) !void {
+pub fn selectedEntityMove(game: *Game.Game, entity: *Entity.Entity) !void {
     //TODO: absolutely change this
-    try ctx.gamestate.highlightMovement(entity);
+    try game.gamestate.highlightMovement(entity);
 
     if (c.IsKeyPressed(c.KEY_A)) {
-        if (ctx.gamestate.cursor) |cur| {
-            if (ctx.gamestate.isinMovable(cur)) {
-                entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, cur, ctx.entities.*);
+        if (game.gamestate.cursor) |cur| {
+            if (game.gamestate.isinMovable(cur)) {
+                entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
                 entity.hasMoved = true;
-                ctx.gamestate.resetMovementHighlight();
-                ctx.gamestate.removeCursor();
-                ctx.gamestate.selectedAction = null;
+                game.gamestate.resetMovementHighlight();
+                game.gamestate.removeCursor();
+                game.gamestate.selectedAction = null;
             }
         }
     }
 }
-pub fn selectedEntityAttack(ctx: *Game.Context, entity: *Entity.Entity) !void {
-    try ctx.gamestate.highlightAttack(entity);
+pub fn selectedEntityAttack(game: *Game.Game, entity: *Entity.Entity) !void {
+    try game.gamestate.highlightAttack(entity);
 
     if (c.IsKeyPressed(c.KEY_A)) {
-        if (ctx.gamestate.cursor) |cur| {
-            //try ctx.shaderManager.spawnSlash(entity.pos, cur);
-            //try ctx.shaderManager.spawnExplosion(entity.pos);
-            //try ctx.shaderManager.spawnImpact(cur);
-            if (ctx.gamestate.isinAttackable(cur)) {
-                const attackedEntity = getEntityByPos(ctx.entities.*, cur);
+        if (game.gamestate.cursor) |cur| {
+            //try game.shaderManager.spawnSlash(entity.pos, cur);
+            //try game.shaderManager.spawnExplosion(entity.pos);
+            //try game.shaderManager.spawnImpact(cur);
+            if (game.gamestate.isinAttackable(cur)) {
+                const attackedEntity = getEntityByPos(game.entities.*, cur);
 
-                try ctx.shaderManager.spawnSlash(entity.pos, cur);
-                try ctx.shaderManager.spawnImpact(cur);
+                try game.shaderManager.spawnSlash(entity.pos, cur);
+                try game.shaderManager.spawnImpact(cur);
 
-                attack(ctx, entity, attackedEntity);
-                ctx.gamestate.resetAttackHighlight();
-                ctx.gamestate.removeCursor();
+                attack(game, entity, attackedEntity);
+                game.gamestate.resetAttackHighlight();
+                game.gamestate.removeCursor();
                 entity.hasAttacked = true;
             }
         }
     }
 }
-pub fn attack(ctx: *Game.Context, entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
-    _ = ctx;
+pub fn attack(game: *Game.Game, entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
+    _ = game;
     if (attackedEntity) |attacked_entity| {
         attacked_entity.health -= entity.attack;
         std.debug.print("DMG: {}\n", .{entity.attack});
@@ -688,14 +690,14 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
     return null;
 }
 
-pub fn puppetSelection(ctx: *Game.Context) !void {
-    if (ctx.gamestate.selectedPupId == null) {
-        ctx.gamestate.showMenu = .puppet_select;
+pub fn puppetSelection(game: *Game.Game) !void {
+    if (game.gamestate.selectedPupId == null) {
+        game.gamestate.showMenu = .puppet_select;
 
-        if (ctx.uiCommand.getMenuSelect()) |menu_item| {
+        if (game.uiCommand.getMenuSelect()) |menu_item| {
             switch (menu_item) {
                 .puppet_id => |pid| {
-                    ctx.gamestate.selectedPupId = pid;
+                    game.gamestate.selectedPupId = pid;
                 },
                 .action => {
                     std.debug.print("menu_item is .action instead of .puppet_id", .{});
@@ -705,41 +707,41 @@ pub fn puppetSelection(ctx: *Game.Context) !void {
     }
 }
 
-pub fn puppetDeployment(ctx: *Game.Context) !void {
-    if (ctx.gamestate.selectedPupId) |selected_pup| {
-        ctx.gamestate.showMenu = .none;
-        ctx.gamestate.makeUpdateCursor(ctx.player.pos);
+pub fn puppetDeployment(game: *Game.Game) !void {
+    if (game.gamestate.selectedPupId) |selected_pup| {
+        game.gamestate.showMenu = .none;
+        game.gamestate.makeUpdateCursor(game.player.pos);
 
         //TODO: put deploycells / highlight  into function
-        if (ctx.gamestate.deployableCells == null) {
-            const neighbours = neighboursAll(ctx.player.pos);
-            ctx.gamestate.deployableCells = neighbours;
+        if (game.gamestate.deployableCells == null) {
+            const neighbours = neighboursAll(game.player.pos);
+            game.gamestate.deployableCells = neighbours;
         }
-        if (ctx.gamestate.deployableCells) |cells| {
-            if (!ctx.gamestate.deployHighlighted) {
+        if (game.gamestate.deployableCells) |cells| {
+            if (!game.gamestate.deployHighlighted) {
                 for (cells) |value| {
                     if (value) |val| {
-                        try highlightTile(ctx.gamestate, val);
-                        ctx.gamestate.deployHighlighted = true;
+                        try highlightTile(game.gamestate, val);
+                        game.gamestate.deployHighlighted = true;
                     }
                 }
             }
         }
-        if (ctx.uiCommand.getConfirm()) {
-            if (canDeploy(ctx.player, ctx.gamestate, ctx.grid.*, ctx.entities)) {
-                try deployPuppet(ctx, selected_pup);
+        if (game.uiCommand.getConfirm()) {
+            if (canDeploy(game.player, game.gamestate, game.grid.*, game.entities)) {
+                try deployPuppet(game, selected_pup);
             }
         }
     }
 }
 
-pub fn staircaseTransition(ctx: *Game.Context, newPos: Types.Vector2Int) Types.Vector2Int {
-    if (!isStaircase(ctx.world, newPos)) {
+pub fn staircaseTransition(game: *Game.Game, newPos: Types.Vector2Int) Types.Vector2Int {
+    if (!isStaircase(newPos)) {
         return newPos;
     }
 
-    if (getStaircaseDestination(ctx.world, newPos)) |lvllocation| {
-        switchLevel(ctx.world, lvllocation.level);
+    if (getStaircaseDestination(newPos)) |lvllocation| {
+        switchLevel(game.world, lvllocation.level);
         return lvllocation.pos;
     }
 
@@ -748,7 +750,7 @@ pub fn staircaseTransition(ctx: *Game.Context, newPos: Types.Vector2Int) Types.V
 
 //TODO: maybe add more states to the enum?
 //should things like picking a puppet from the menu has its own state?
-pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !void {
+pub fn playerChangeState(game: *Game.Game, newState: Entity.playerStateEnum) !void {
     var player = EntityManager.getPlayer();
     const oldState = player.data.player.state;
     if (oldState == newState) {
@@ -758,9 +760,9 @@ pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !
 
     //exit previous state
     switch (oldState) {
-        .walking => try exitWalking(ctx),
-        .deploying_puppets => try exitDeployingPuppets(ctx),
-        .in_combat => try exitCombat(ctx),
+        .walking => try exitWalking(game),
+        .deploying_puppets => try exitDeployingPuppets(game),
+        .in_combat => try exitCombat(game),
     }
 
     //change state
@@ -769,58 +771,58 @@ pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !
 
     //enter new state
     switch (newState) {
-        .walking => try enterWalking(ctx),
-        .deploying_puppets => try enterDeployingPuppets(ctx),
-        .in_combat => try enterCombat(ctx),
+        .walking => try enterWalking(game),
+        .deploying_puppets => try enterDeployingPuppets(game),
+        .in_combat => try enterCombat(game),
     }
 }
 
-pub fn enterWalking(ctx: *Game.Context) !void {
-    if (canEndCombat(ctx.player)) {
-        ctx.gamestate.reset(); //TODO: make more reset functions depending on the state?
-        ctx.player.endCombat();
-        ctx.gamestate.showMenu = .none;
+pub fn enterWalking(game: *Game.Game) !void {
+    if (canEndCombat(game.player)) {
+        Gamestate.reset(); //TODO: make more reset functions depending on the state?
+        game.player.endCombat();
+        Gamestate.showMenu = .none;
     }
 }
-pub fn exitWalking(ctx: *Game.Context) !void {
-    _ = ctx;
+pub fn exitWalking(game: *Game.Game) !void {
+    _ = game;
     //TODO:
 }
-pub fn enterDeployingPuppets(ctx: *Game.Context) !void {
+pub fn enterDeployingPuppets(game: *Game.Game) !void {
     //TODO: filter out entities that are supposed to be in the combat
     // could be some mechanic around attention/stealth
     // smarter entities shout at other to help etc...
 
-    ctx.player.inCombat = true;
+    game.player.inCombat = true;
 
-    for (EntityManager.entities) |entity| {
-        try ctx.player.data.player.inCombatWith.append(entity);
+    for (EntityManager.entities.items) |*entity| {
+        try game.player.data.player.inCombatWith.append(entity.id);
         entity.resetPathing();
         entity.inCombat = true;
     }
 }
-pub fn exitDeployingPuppets(ctx: *Game.Context) !void {
-    _ = ctx;
+pub fn exitDeployingPuppets(game: *Game.Game) !void {
+    _ = game;
 }
-pub fn enterCombat(ctx: *Game.Context) !void {
-    ctx.gamestate.reset();
-    ctx.gamestate.showMenu = .none;
-    ctx.player.movementCooldown = 0;
+pub fn enterCombat(game: *Game.Game) !void {
+    Gamestate.reset();
+    Gamestate.showMenu = .none;
+    game.player.movementCooldown = 0;
 }
-pub fn exitCombat(ctx: *Game.Context) !void {
-    _ = ctx;
+pub fn exitCombat(game: *Game.Game) !void {
+    _ = game;
     //TODO:
 }
 
-pub fn updatePuppet(puppet: *Entity.Entity, ctx: *Game.Context) !void {
-    if (ctx.gamestate.currentTurn != .player) {
+pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
+    if (game.gamestate.currentTurn != .player) {
         return;
     }
-    try updateEntityMovement(puppet, ctx);
+    try updateEntityMovement(puppet, game);
 }
 
-pub fn updateEnemy(enemy: *Entity.Entity, ctx: *Game.Context) !void {
-    if (ctx.gamestate.currentTurn != .enemy) {
+pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
+    if (game.gamestate.currentTurn != .enemy) {
         return;
     }
     std.debug.print("updating_enemy\n", .{});
@@ -832,15 +834,15 @@ pub fn updateEnemy(enemy: *Entity.Entity, ctx: *Game.Context) !void {
         if (enemy.aiBehaviourWalking == null) {
             return error.value_missing;
         }
-        try enemy.aiBehaviourWalking.?(enemy, ctx);
-        //enemyWanderBehaviour(enemy, ctx);
+        try enemy.aiBehaviourWalking.?(enemy, game);
+        //enemyWanderBehaviour(enemy, game);
     }
-    try updateEntityMovement(enemy, ctx);
+    try updateEntityMovement(enemy, game);
 }
 
-pub fn updateEntityMovement(entity: *Entity.Entity, ctx: *Game.Context) !void {
+pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path == null and entity.goal != null) {
-        entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, entity.goal.?, ctx.entities.*);
+        entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, entity.goal.?, game.entities.*);
     }
     if (entity.path) |path| {
         if (path.nodes.items.len < 2) {
@@ -848,7 +850,7 @@ pub fn updateEntityMovement(entity: *Entity.Entity, ctx: *Game.Context) !void {
         }
 
         //TODO: gonna have to make some animation state, wait for animation to finish
-        // entity.movementCooldown += ctx.delta;
+        // entity.movementCooldown += game.delta;
         // if (entity.movementCooldown < Config.movement_animation_duration) {
         //     return;
         // }
@@ -856,15 +858,15 @@ pub fn updateEntityMovement(entity: *Entity.Entity, ctx: *Game.Context) !void {
         entity.movementCooldown = 0;
         entity.path.?.currIndex += 1;
         const new_pos = entity.path.?.nodes.items[entity.path.?.currIndex];
-        const new_pos_entity = getEntityByPos(ctx.entities.*, new_pos);
+        const new_pos_entity = getEntityByPos(game.entities.*, new_pos);
 
         if (new_pos_entity) |_| {
             // position has entity, recalculate
             if (entity.goal) |goal| {
-                entity.path = try ctx.pathfinder.findPath(ctx.grid.*, entity.pos, goal, ctx.entities.*);
+                entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, goal, game.entities.*);
             }
         } else {
-            entity.move(new_pos, ctx.grid);
+            entity.move(new_pos, game.grid);
         }
 
         if (entity.path) |path_| {
@@ -875,22 +877,22 @@ pub fn updateEntityMovement(entity: *Entity.Entity, ctx: *Game.Context) !void {
     }
 }
 
-pub fn enemyCombatBehaviour(enemy: *Entity.Entity, ctx: *Game.Context) void {
+pub fn enemyCombatBehaviour(enemy: *Entity.Entity, game: *Game.Game) void {
     const left = Types.Vector2Int.init(-1, 0);
     const target = Types.vector2IntAdd(enemy.pos, left);
-    wanderTowards(enemy, target, ctx);
+    wanderTowards(enemy, target, game);
 }
 
-pub fn enemyWanderBehaviour(enemy: *Entity.Entity, ctx: *Game.Context) void {
+pub fn enemyWanderBehaviour(enemy: *Entity.Entity, game: *Game.Game) void {
     _ = enemy;
-    _ = ctx;
+    _ = game;
 }
 
-fn wanderTowards(enemy: *Entity.Entity, target: Types.Vector2Int, ctx: *Game.Context) void {
+fn wanderTowards(enemy: *Entity.Entity, target: Types.Vector2Int, game: *Game.Game) void {
     if (posToIndex(target)) |idx| {
-        const tile = ctx.grid.*[idx];
+        const tile = game.grid.*[idx];
         if (!tile.solid) {
-            if (getEntityByPos(ctx.entities.*, target) == null) {
+            if (getEntityByPos(game.entities.*, target) == null) {
                 enemy.pos = target;
             }
         }

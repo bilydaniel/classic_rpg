@@ -21,7 +21,7 @@ pub fn main() !void {
 
     const running = true;
     while (!c.WindowShouldClose() and running) {
-        try game.Update();
-        game.Draw();
+        try game.update();
+        game.draw();
     }
 }

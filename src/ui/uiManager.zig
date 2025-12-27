@@ -1,6 +1,7 @@
 const std = @import("std");
 const Game = @import("../game/game.zig");
 const Window = @import("../game/window.zig");
+const Gamestate = @import("../game/gamestate.zig");
 const Types = @import("../common/types.zig");
 const InputManager = @import("../game/inputManager.zig");
 const c = @cImport({
@@ -8,7 +9,10 @@ const c = @cImport({
 });
 
 //TODO: how to make some lines / additional graphics?
-pub const updatefunction = *const fn (*Element, *Game.Context) MenuError!void;
+pub const updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
+
+//TODO: @finish
+pub var uiCommand: UiCommand = undefined;
 
 pub const Element = struct {
     //TODO: add stuff like margin etc. will check in the future what is needed
@@ -83,9 +87,9 @@ pub const Element = struct {
         return null;
     }
 
-    pub fn update(this: *Element, ctx: *Game.Context, rect: ?c.Rectangle) !void {
+    pub fn update(this: *Element, game: *Game.Game, rect: ?c.Rectangle) !void {
         if (this.updateFn) |_fn| {
-            try _fn(this, ctx);
+            try _fn(this, game);
         }
         //TODO: make logic for extracting data from ctx
         if (rect) |r| {
@@ -93,7 +97,7 @@ pub const Element = struct {
         }
 
         for (this.elements.items) |item| {
-            try item.update(ctx, null);
+            try item.update(game, null);
         }
     }
 
@@ -338,19 +342,19 @@ pub const UiManager = struct {
         return uimanager;
     }
 
-    pub fn update(this: *UiManager, ctx: *Game.Context) !UiCommand {
-        var uicommand = UiCommand{};
-        if (ctx.gamestate.currentTurn != .player) {
-            return uicommand;
+    pub fn update(this: *UiManager, game: *Game.Game) !void {
+        uiCommand = UiCommand{};
+        if (Gamestate.currentTurn != .player) {
+            return;
         }
-        if (ctx.gamestate.showMenu == .none) {
+        if (Gamestate.showMenu == .none) {
             if (this.activeMenu != null) {
                 this.activeMenu.?.visible = false;
                 this.activeMenu = null;
             }
         } else {
             if (this.activeMenu == null) {
-                this.activeMenu = this.menus.get(ctx.gamestate.showMenu);
+                this.activeMenu = this.menus.get(Gamestate.showMenu);
                 this.activeMenu.?.visible = true;
             }
         }
@@ -370,7 +374,7 @@ pub const UiManager = struct {
 
         //TODO: @continue add items into menu based on the context
         for (this.elements.items) |element| {
-            try element.update(ctx, null);
+            try element.update(game, null);
         }
 
         //confirm
@@ -401,7 +405,7 @@ pub const UiManager = struct {
         //combat toggle
         const combatToggle = InputManager.takeCombatToggle();
 
-        uicommand = .{
+        const uicommand = UiCommand{
             .confirm = confirm,
             .cancel = cancel,
             .move = move,
@@ -409,7 +413,7 @@ pub const UiManager = struct {
             .quickSelect = quickSelect,
             .combatToggle = combatToggle,
         };
-        return uicommand;
+        uiCommand = uicommand;
     }
 
     pub fn draw(this: *UiManager) void {
@@ -604,7 +608,7 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []con
     return menuBackground;
 }
 
-pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) MenuError!void {
+pub fn updatePuppetMenu(this: *Element, ctx: *Game.Game) MenuError!void {
     //TODO: update every frame for now, probably can make it better
     this.data.menu.menuItems.clearRetainingCapacity();
 
@@ -617,7 +621,7 @@ pub fn updatePuppetMenu(this: *Element, ctx: *Game.Context) MenuError!void {
     }
 }
 
-pub fn updateActionMenu(this: *Element, ctx: *Game.Context) MenuError!void {
+pub fn updateActionMenu(this: *Element, ctx: *Game.Game) MenuError!void {
     this.data.menu.menuItems.clearRetainingCapacity();
 
     if (ctx.gamestate.selectedEntity) |selected_entity| {

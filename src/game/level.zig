@@ -205,7 +205,7 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn Draw(this: @This(), entities: std.ArrayList(*Entity.Entity), tilesetManager: *TilesetManager.TilesetManager) void {
+    pub fn draw(this: @This(), entities: std.ArrayList(*Entity.Entity), tilesetManager: *TilesetManager.TilesetManager) void {
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
             //const pos_y = your_position.y;
@@ -284,7 +284,7 @@ pub const Level = struct {
         }
     }
 
-    pub fn Update(this: *Level, pathfinder: *Pathfinder.Pathfinder) void {
+    pub fn update(this: *Level, pathfinder: *Pathfinder.Pathfinder) void {
         _ = this;
         _ = pathfinder;
     }

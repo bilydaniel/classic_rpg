@@ -12,13 +12,13 @@ const c = @cImport({
 });
 
 //TODO: probably should completely rewrite, links are bullshit, make it like casey???
-var currentLevel: *Level.Level = null; //TODO: mabe switch to id? if i need to delete levels, might be e problem
-var levels: std.ArrayList(*Level.Level) = undefined;
-var levelLinks: std.ArrayList(Level.Link) = undefined;
+pub var currentLevel: *Level.Level = undefined; //TODO: mabe switch to id? if i need to delete levels, might be e problem
+pub var levels: std.ArrayList(*Level.Level) = undefined;
+pub var levelLinks: std.ArrayList(Level.Link) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     //TODO: test if i can do this, arraylist of just Level, not Level.Level
-    levels = std.ArrayList(*Level).init(allocator);
+    levels = std.ArrayList(*Level.Level).init(allocator);
 
     var level1 = try Level.Level.init(allocator, 0);
     level1.generateInterestingLevel();
@@ -27,7 +27,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try levels.append(level1);
     try levels.append(level2);
 
-    var levelLinks = std.ArrayList(Level.Link).init(allocator);
+    levelLinks = std.ArrayList(Level.Link).init(allocator);
     const link1 = Level.Link{
         .from = Level.Location{
             .level = 0,
@@ -52,19 +52,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     try levelLinks.append(link1);
     try levelLinks.append(link2);
-
-    world.* = .{
-        .currentLevel = level1,
-        .allocator = allocator,
-        .levels = levels,
-        .levelLinks = levelLinks,
-    };
-
-    return world;
 }
 
-pub fn draw(this: *World, tilesetManager: *TilesetManager.TilesetManager) void {
-    this.currentLevel.Draw(tilesetManager);
+pub fn draw(tilesetManager: *TilesetManager.TilesetManager) void {
+    currentLevel.draw(tilesetManager);
 }
 
 pub fn update() void {}

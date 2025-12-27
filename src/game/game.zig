@@ -23,7 +23,6 @@ pub const Game = struct {
     delta: f32,
     allocator: std.mem.Allocator,
     player: *Entity.Entity,
-    world: *World.World,
     pathfinder: *Pathfinder.Pathfinder,
     tilesetManager: *TilesetManager.TilesetManager,
     uiManager: *UiManager.UiManager,
@@ -35,37 +34,37 @@ pub const Game = struct {
         //probably a file with some sort of templates?
 
         const game = try allocator.create(Game);
-        try Gamestate.init(allocator);
+        Gamestate.init(allocator);
 
         EntityManager.init(allocator);
-        const player = try EntityManager.fillEntities();
+        var player = try EntityManager.fillEntities();
 
         const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
         try CameraManager.init(allocator, player.id);
-        const world = try World.World.init(allocator);
+        try World.init(allocator);
         const shadermanager = try ShaderManager.ShaderManager.init(allocator);
 
         const uimanager = try UiManager.UiManager.init(allocator);
 
         game.* = .{
+            .delta = 0,
             .allocator = allocator,
-            .world = world,
-            .player = player,
+            .player = &player,
             .pathfinder = pathfinder,
             .tilesetManager = tilesetmanager,
             .uiManager = uimanager,
             .shaderManager = shadermanager,
         };
 
-        Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
+        Systems.calculateFOV(World.currentLevel.grid, player.pos, 8);
         return game;
     }
 
     pub fn update(this: *Game) !void {
         const delta = c.GetFrameTime();
         this.player = EntityManager.getPlayer();
-        this.context.delta = delta;
+        this.delta = delta;
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
 
@@ -77,11 +76,10 @@ pub const Game = struct {
         //uiintent = intent.init()
         //-> send &uiintent into uimanager.update, use it in update
 
-        const uiCommand = try this.uiManager.update(this.context);
-        this.context.uiCommand = uiCommand;
+        try this.uiManager.update(this);
         //std.debug.print("ui_command: {}\n", .{uiCommand});
         //this.world.update(this.context);
-        EntityManager.update(this.context);
+        EntityManager.update(this);
 
         CameraManager.update(delta);
         Gamestate.update();

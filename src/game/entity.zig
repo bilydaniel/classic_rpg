@@ -1,4 +1,5 @@
 const std = @import("std");
+const World = @import("world.zig");
 const TilesetManager = @import("tilesetManager.zig");
 const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
@@ -56,8 +57,8 @@ pub const Entity = struct {
     hasAttacked: bool,
     movementAnimationCooldown: f32,
     inCombat: bool,
-    aiBehaviourWalking: ?*const fn (*Entity, *Game.Context) anyerror!void = aiBehaviourWander,
-    aiBehaviourCombat: ?*const fn (*Entity, *Game.Context) anyerror!void = aiBehaviourWander,
+    aiBehaviourWalking: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourWander,
+    aiBehaviourCombat: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourWander,
     data: EntityData,
 
     pub fn init(
@@ -185,7 +186,7 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn update(this: *Entity, ctx: *Game.Context) !void {
+    pub fn update(this: *Entity, ctx: *Game.Game) !void {
         switch (this.data) {
             //TODO: see if it needs to be separated or not, change later
             .player => try Systems.updatePlayer(this, ctx),
@@ -195,7 +196,7 @@ pub const Entity = struct {
         }
     }
 
-    pub fn move(this: *Entity, pos: Types.Vector2Int, grid: *[]Level.Tile) void {
+    pub fn move(this: *Entity, pos: Types.Vector2Int, grid: []Level.Tile) void {
         this.pos = pos;
         Systems.calculateFOV(grid, pos, 8);
     }
@@ -303,14 +304,15 @@ pub const PuppetData = struct {
 };
 
 //TODO: maybe put into another file?
-pub fn aiBehaviourAggresiveMellee(entity: *Entity, ctx: *Game.Context) anyerror!void {
+pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Context) anyerror!void {
     _ = entity;
-    _ = ctx;
+    _ = game;
 }
 
-pub fn aiBehaviourWander(entity: *Entity, ctx: *Game.Context) anyerror!void {
+pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
+    _ = game;
     if (entity.goal == null) {
-        const position = Systems.getRandomValidPosition(ctx.grid.*);
+        const position = Systems.getRandomValidPosition(World.currentLevel.grid);
         entity.goal = position;
     }
 }
