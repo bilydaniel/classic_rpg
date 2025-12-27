@@ -10,15 +10,18 @@ const std = @import("std");
 const Pathfinder = @import("../game/pathfinder.zig");
 const InputManager = @import("../game/inputManager.zig");
 const Game = @import("game.zig");
+const EntityManager = @import("entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
 
 //TODO: add an optiom to "look around", get info on enemies, etc.
-pub fn updatePlayer(ctx: *Game.Context) !void {
-    switch (ctx.player.data.player.state) {
-        //TODO: go through everything, make more functions, messy
-        //TODO: fix state management, state transitions(use funcitons?)
+pub fn updatePlayer(player: *Entity.Entity, ctx: *Game.Context) !void {
+    switch (player.data.player.state) {
+        // TODO: go through everything, make more functions, messy
+        // TODO: go through all the state management, make some fool proof system
+        // of writing the state transitions / resets of variables
+        // RESETING OF VARIABLES IS IMPORTANT, THATS WHERE I MAKE MISTAKES
         .walking => {
             if (try preWalkingTransitions(ctx)) {
                 return;
@@ -39,10 +42,11 @@ pub fn updatePlayer(ctx: *Game.Context) !void {
         },
     }
 
-    try ctx.player.update(ctx);
-    for (ctx.player.data.player.puppets.items) |pup| {
-        try pup.update(ctx);
+    if (ctx.gamestate.currentTurn != .player) {
+        return;
     }
+
+    try updateEntityMovement(player, ctx);
 }
 
 pub fn preWalkingTransitions(ctx: *Game.Context) !bool {
@@ -52,7 +56,7 @@ pub fn preWalkingTransitions(ctx: *Game.Context) !bool {
         return true;
     }
 
-    if (checkCombatStart(ctx.player, ctx.entities)) {
+    if (checkCombatStart(ctx.player, EntityManager.entities)) {
         try playerChangeState(ctx, .deploying_puppets);
         return true;
     }
@@ -424,9 +428,8 @@ pub fn checkCombatStart(player: *Entity.Entity, entities: *std.ArrayList(*Entity
     return false;
 }
 
-pub fn canEndCombat(player: *Entity.Entity, entities: *std.ArrayList(*Entity.Entity)) bool {
+pub fn canEndCombat(player: *Entity.Entity) bool {
     _ = player;
-    _ = entities;
     //TODO: end of combat rules
     return true;
 }
@@ -457,7 +460,9 @@ pub fn handlePlayerWalking(ctx: *Game.Context) !void {
         return;
     }
 
-    const moveDelta = ctx.inputManager.takePositionInput() orelse return;
+    //TODO: take input from uimanager?
+    const moveDelta = InputManager.takePositionInput() orelse return;
+    std.debug.print("move: {}\n", .{moveDelta});
 
     var new_pos = Types.vector2IntAdd(ctx.player.pos, moveDelta);
     if (!canMove(ctx.grid.*, new_pos, ctx.entities.*)) {
@@ -744,7 +749,8 @@ pub fn staircaseTransition(ctx: *Game.Context, newPos: Types.Vector2Int) Types.V
 //TODO: maybe add more states to the enum?
 //should things like picking a puppet from the menu has its own state?
 pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !void {
-    const oldState = ctx.player.data.player.state;
+    var player = EntityManager.getPlayer();
+    const oldState = player.data.player.state;
     if (oldState == newState) {
         //state is the same
         return;
@@ -759,7 +765,7 @@ pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !
 
     //change state
     //TODO: should I first switch the state or call enter and then switch?
-    ctx.player.data.player.state = newState;
+    player.data.player.state = newState;
 
     //enter new state
     switch (newState) {
@@ -770,7 +776,7 @@ pub fn playerChangeState(ctx: *Game.Context, newState: Entity.playerStateEnum) !
 }
 
 pub fn enterWalking(ctx: *Game.Context) !void {
-    if (canEndCombat(ctx.player, ctx.entities)) {
+    if (canEndCombat(ctx.player)) {
         ctx.gamestate.reset(); //TODO: make more reset functions depending on the state?
         ctx.player.endCombat();
         ctx.gamestate.showMenu = .none;
@@ -787,7 +793,7 @@ pub fn enterDeployingPuppets(ctx: *Game.Context) !void {
 
     ctx.player.inCombat = true;
 
-    for (ctx.entities.items) |entity| {
+    for (EntityManager.entities) |entity| {
         try ctx.player.data.player.inCombatWith.append(entity);
         entity.resetPathing();
         entity.inCombat = true;
@@ -806,22 +812,14 @@ pub fn exitCombat(ctx: *Game.Context) !void {
     //TODO:
 }
 
-pub fn updatePlayerEntity(player: *Entity.Entity, ctx: *Game.Context) !void {
-    if (ctx.gamestate.currentTurn != .player) {
-        return;
-    }
-
-    try updateEntityMovement(player, ctx);
-}
-
-pub fn updatePuppetEntity(puppet: *Entity.Entity, ctx: *Game.Context) !void {
+pub fn updatePuppet(puppet: *Entity.Entity, ctx: *Game.Context) !void {
     if (ctx.gamestate.currentTurn != .player) {
         return;
     }
     try updateEntityMovement(puppet, ctx);
 }
 
-pub fn updateEnemyEntity(enemy: *Entity.Entity, ctx: *Game.Context) !void {
+pub fn updateEnemy(enemy: *Entity.Entity, ctx: *Game.Context) !void {
     if (ctx.gamestate.currentTurn != .enemy) {
         return;
     }

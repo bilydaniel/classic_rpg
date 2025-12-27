@@ -14,128 +14,57 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
-const InputManager = @import("inputManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub const Context = struct {
-    gamestate: *Gamestate.gameState,
-    player: *Entity.Entity,
-    delta: f32,
-    world: *World.World,
-    grid: *[]Level.Tile,
-    cameraManager: *CameraManager.CamManager,
-    pathfinder: *Pathfinder.Pathfinder,
-    shaderManager: *ShaderManager.ShaderManager,
-    uiManager: *UiManager.UiManager,
-    inputManager: *InputManager.InputManager,
-    uiCommand: UiManager.UiCommand = UiManager.UiCommand{},
-    entityManager: *EntityManager.EntityManager,
-
-    pub fn init(
-        allocator: std.mem.Allocator,
-        gamestate: *Gamestate.gameState,
-        player: *Entity.Entity,
-        delta: f32,
-        world: *World.World,
-        grid: *[]Level.Tile,
-        cameraManager: *CameraManager.CamManager,
-        pathfinder: *Pathfinder.Pathfinder,
-        shadermanager: *ShaderManager.ShaderManager,
-        uimanager: *UiManager.UiManager,
-        inputManager: *InputManager.InputManager,
-        entityManager: *EntityManager.EntityManager,
-    ) !*Context {
-        const context = try allocator.create(Context);
-        context.* = .{
-            .gamestate = gamestate,
-            .player = player,
-            .delta = delta,
-            .world = world,
-            .grid = grid,
-            .cameraManager = cameraManager,
-            .pathfinder = pathfinder,
-            .shaderManager = shadermanager,
-            .uiManager = uimanager,
-            .inputManager = inputManager,
-            .entityManager = entityManager,
-        };
-        return context;
-    }
-};
-
 pub const Game = struct {
+    delta: f32,
     allocator: std.mem.Allocator,
-    gameState: *Gamestate.gameState,
     player: *Entity.Entity,
     world: *World.World,
-    cameraManager: *CameraManager.CamManager,
     pathfinder: *Pathfinder.Pathfinder,
     tilesetManager: *TilesetManager.TilesetManager,
-    context: *Context,
     uiManager: *UiManager.UiManager,
-    inputManager: *InputManager.InputManager,
     shaderManager: *ShaderManager.ShaderManager,
-    entityManager: *EntityManager.EntityManager,
+    uiCommand: UiManager.UiCommand = UiManager.UiCommand{},
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
         //probably a file with some sort of templates?
 
         const game = try allocator.create(Game);
-        const gamestate = try Gamestate.gameState.init(allocator);
+        try Gamestate.init(allocator);
 
-        const entitymanager = try EntityManager.EntityManager.init(allocator);
-        const player = try entitymanager.fillEntities();
+        EntityManager.init(allocator);
+        const player = try EntityManager.fillEntities();
 
         const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
         const pathfinder = try Pathfinder.Pathfinder.init(allocator);
-        const cameraManager = try CameraManager.CamManager.init(allocator, player);
+        try CameraManager.init(allocator, player.id);
         const world = try World.World.init(allocator);
         const shadermanager = try ShaderManager.ShaderManager.init(allocator);
 
         const uimanager = try UiManager.UiManager.init(allocator);
-        const inputManager = try InputManager.InputManager.init(allocator);
-
-        //TODO: refactor this, dont need game and context
-        const context = try Context.init(
-            allocator,
-            gamestate,
-            player,
-            0,
-            world,
-            &world.currentLevel.grid,
-            cameraManager,
-            pathfinder,
-            shadermanager,
-            uimanager,
-            inputManager,
-            entitymanager,
-        );
 
         game.* = .{
             .allocator = allocator,
-            .gameState = gamestate,
             .world = world,
             .player = player,
             .pathfinder = pathfinder,
             .tilesetManager = tilesetmanager,
-            .cameraManager = cameraManager,
-            .context = context,
             .uiManager = uimanager,
             .shaderManager = shadermanager,
-            .inputManager = inputManager,
-            .entityManager = entitymanager,
         };
 
         Systems.calculateFOV(&game.world.currentLevel.grid, player.pos, 8);
         return game;
     }
 
-    pub fn Update(this: *Game) !void {
+    pub fn update(this: *Game) !void {
         const delta = c.GetFrameTime();
+        this.player = EntityManager.getPlayer();
         this.context.delta = delta;
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
@@ -151,24 +80,27 @@ pub const Game = struct {
         const uiCommand = try this.uiManager.update(this.context);
         this.context.uiCommand = uiCommand;
         //std.debug.print("ui_command: {}\n", .{uiCommand});
+        //this.world.update(this.context);
+        EntityManager.update(this.context);
 
-        this.cameraManager.Update(delta);
-        this.gameState.update();
+        CameraManager.update(delta);
+        Gamestate.update();
 
         this.shaderManager.update(delta);
     }
 
-    pub fn Draw(this: *Game) void {
+    pub fn draw(this: *Game) void {
         c.BeginDrawing();
         c.ClearBackground(c.BLACK);
         c.DrawFPS(0, 0);
-        c.BeginMode2D(this.cameraManager.camera.*);
+        c.BeginMode2D(CameraManager.camera.*);
         this.world.Draw(this.tilesetManager);
         this.player.Draw(this.tilesetManager);
         this.shaderManager.draw();
 
         //TODO: @conitnue put draw in gamestate
         Systems.drawGameState(this.gameState, this.world.currentLevel);
+        Gamestate.draw(this.world.currentLevel);
 
         c.EndMode2D();
         this.uiManager.draw();

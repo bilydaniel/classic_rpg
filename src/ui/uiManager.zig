@@ -2,6 +2,7 @@ const std = @import("std");
 const Game = @import("../game/game.zig");
 const Window = @import("../game/window.zig");
 const Types = @import("../common/types.zig");
+const InputManager = @import("../game/inputManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -373,13 +374,13 @@ pub const UiManager = struct {
         }
 
         //confirm
-        var confirm = ctx.inputManager.takeConfirmInput();
+        var confirm = InputManager.takeConfirmInput();
 
         //cancel
-        const cancel = ctx.inputManager.takeCancelInput();
+        const cancel = InputManager.takeCancelInput();
 
         //move
-        const move = ctx.inputManager.takePositionInput();
+        const move = InputManager.takePositionInput();
 
         //menu select
         if (move) |_move| {
@@ -395,10 +396,10 @@ pub const UiManager = struct {
         }
 
         //quick select
-        const quickSelect = ctx.inputManager.takeQuickSelectInput();
+        const quickSelect = InputManager.takeQuickSelectInput();
 
         //combat toggle
-        const combatToggle = ctx.inputManager.takeCombatToggle();
+        const combatToggle = InputManager.takeCombatToggle();
 
         uicommand = .{
             .confirm = confirm,

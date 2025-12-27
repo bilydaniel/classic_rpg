@@ -10,14 +10,12 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-pub const currentTurnEnum = enum {
-    // TODO: for now only player and enemy, I want to have grups of enemies that will fight
-    // amongst each other, will do later
+pub const CurrentTurnEnum = enum {
     player,
     enemy,
 };
 
-pub const highlightTypeEnum = enum {
+pub const HighlightTypeEnum = enum {
     cursor,
     pup_deploy,
     square,
@@ -27,9 +25,9 @@ pub const highlightTypeEnum = enum {
     entity,
 };
 
-pub const highlight = struct {
+pub const Highlight = struct {
     pos: Types.Vector2Int,
-    type: highlightTypeEnum,
+    type: HighlightTypeEnum,
 };
 
 pub const EntityModeEnum = enum {
@@ -38,183 +36,194 @@ pub const EntityModeEnum = enum {
     attacking,
 };
 
-pub const gameState = struct {
-    cursor: ?Types.Vector2Int,
+var cursor: ?Types.Vector2Int = null;
 
-    deployableCells: ?[8]?Types.Vector2Int, //TODO: maybe more than 8?, after some power up
-    deployHighlighted: bool,
+var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
+var deployHighlighted: bool = false;
 
-    currentTurn: currentTurnEnum,
+var currentTurn: CurrentTurnEnum = .player;
 
-    selectedEntity: ?*Entity.Entity,
-    selectedEntityMode: EntityModeEnum,
-    selectedEntityHighlight: ?highlight = null,
+var selectedEntity: ?*Entity.Entity = null;
+var selectedEntityMode: EntityModeEnum = .none;
+var selectedEntityHighlight: ?Highlight = null;
 
-    movableTiles: std.ArrayList(Types.Vector2Int),
-    movementHighlighted: bool,
+var movableTiles: std.ArrayList(Types.Vector2Int) = undefined;
+var movementHighlighted: bool = false;
 
-    highlightedEntity: ?highlight,
-    highlightedTiles: std.ArrayList(highlight),
+var highlightedEntity: ?Highlight = null;
+var highlightedTiles: std.ArrayList(Highlight) = undefined;
 
-    attackableTiles: std.ArrayList(Types.Vector2Int),
-    attackHighlighted: bool,
+var attackableTiles: std.ArrayList(Types.Vector2Int) = undefined;
+var attackHighlighted: bool = false;
 
-    selectedPupId: ?u32 = null,
-    selectedAction: ?UiManager.ActionType = null,
+var selectedPupId: ?u32 = null;
+var selectedAction: ?UiManager.ActionType = null;
 
-    showMenu: UiManager.MenuType = .none,
+var showMenu: UiManager.MenuType = .none;
 
-    pub fn init(allocator: std.mem.Allocator) !*gameState {
-        const highlighted_tiles = std.ArrayList(highlight).init(allocator);
-        const movable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
-        const attackable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
-        const gamestate = try allocator.create(gameState);
+pub fn init(allocator: std.mem.Allocator) void {
+    const highlighted_tiles = std.ArrayList(Highlight).init(allocator);
+    highlightedTiles = highlighted_tiles;
 
-        gamestate.* = .{
-            .cursor = null,
-            .deployableCells = null,
-            .movableTiles = movable_tiles,
-            .currentTurn = .player,
-            .selectedEntity = null,
-            .selectedEntityMode = .none,
-            .highlightedTiles = highlighted_tiles,
-            .highlightedEntity = null,
-            .deployHighlighted = false,
-            .movementHighlighted = false,
+    const movable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
+    movableTiles = movable_tiles;
 
-            .attackableTiles = attackable_tiles,
-            .attackHighlighted = false,
-        };
+    const attackable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
+    attackableTiles = attackable_tiles;
+}
 
-        return gamestate;
+pub fn update() void {
+    //TODO: maybe update the cursor through this function????
+
+    if (selectedEntity != null and selectedEntityHighlight != null) {
+        selectedEntityHighlight.?.pos = selectedEntity.?.pos;
     }
+}
 
-    pub fn update(this: *gameState) void {
-        //TODO: maybe update the cursor through this function????
+pub fn reset() void {
+    cursor = null;
 
-        if (this.selectedEntity != null and this.selectedEntityHighlight != null) {
-            this.selectedEntityHighlight.?.pos = this.selectedEntity.?.pos;
-        }
+    highlightedTiles.clearRetainingCapacity();
+    movableTiles.clearRetainingCapacity();
+    deployableCells = null;
+
+    movementHighlighted = false;
+
+    highlightedEntity = null;
+    selectedEntity = null;
+    selectedEntityHighlight = null;
+    selectedEntityMode = .none;
+    selectedAction = null;
+}
+
+pub fn makeCursor(pos: Types.Vector2Int) void {
+    if (cursor == null) {
+        cursor = pos;
     }
-
-    pub fn reset(this: *gameState) void {
-        this.cursor = null;
-
-        this.highlightedTiles.clearRetainingCapacity();
-        this.movableTiles.clearRetainingCapacity();
-        this.deployableCells = null;
-
-        this.deployHighlighted = false;
-        this.movementHighlighted = false;
-
-        this.highlightedEntity = null;
-        this.selectedEntity = null;
-        this.selectedEntityHighlight = null;
-        this.selectedEntityMode = .none;
-        this.selectedAction = null;
-    }
-
-    pub fn makeCursor(this: *gameState, pos: Types.Vector2Int) void {
-        if (this.cursor == null) {
-            this.cursor = pos;
-        }
-    }
-    pub fn removeCursor(this: *gameState) void {
-        if (this.cursor != null) {
-            this.cursor = null;
-        }
-    }
-    pub fn updateCursor(this: *gameState) void {
-        if (this.cursor) |cursor| {
-            if (c.IsKeyPressed(c.KEY_H)) {
-                if (cursor.x > 0) {
-                    this.cursor.?.x -= 1;
-                }
-            } else if (c.IsKeyPressed(c.KEY_L)) {
-                if (cursor.x < Config.level_width) {
-                    this.cursor.?.x += 1;
-                }
-            } else if (c.IsKeyPressed(c.KEY_J)) {
-                if (cursor.y < Config.level_height) {
-                    this.cursor.?.y += 1;
-                }
-            } else if (c.IsKeyPressed(c.KEY_K)) {
-                if (cursor.y > 0) {
-                    this.cursor.?.y -= 1;
-                }
+}
+pub fn removeCursor() void {
+    cursor = null;
+}
+pub fn updateCursor() void {
+    if (cursor) |curs| {
+        if (c.IsKeyPressed(c.KEY_H)) {
+            if (curs.x > 0) {
+                cursor.?.x -= 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_L)) {
+            if (curs.x < Config.level_width) {
+                cursor.?.x += 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_J)) {
+            if (curs.y < Config.level_height) {
+                cursor.?.y += 1;
+            }
+        } else if (c.IsKeyPressed(c.KEY_K)) {
+            if (curs.y > 0) {
+                cursor.?.y -= 1;
             }
         }
     }
+}
 
-    pub fn makeUpdateCursor(this: *gameState, pos: Types.Vector2Int) void {
-        this.makeCursor(pos);
-        this.updateCursor();
+pub fn makeUpdateCursor(pos: Types.Vector2Int) void {
+    makeCursor(pos);
+    updateCursor();
+}
+
+pub fn highlightMovement(entity: *Entity.Entity) !void {
+    if (!movementHighlighted) {
+        try Systems.neighboursDistance(entity.pos, entity.movementDistance, &movableTiles);
+        try highlightTiles(movableTiles, .movable);
+        movementHighlighted = true;
     }
+}
 
-    pub fn highlightMovement(this: *gameState, entity: *Entity.Entity) !void {
-        if (!this.movementHighlighted) {
-            try Systems.neighboursDistance(entity.pos, entity.movementDistance, &this.movableTiles);
-            try this.highlightTiles(this.movableTiles, .movable);
-            this.movementHighlighted = true;
+pub fn highlightAttack(entity: *Entity.Entity) !void {
+    if (!attackHighlighted) {
+        try Systems.neighboursDistance(entity.pos, entity.attackDistance, &attackableTiles);
+        try highlightTiles(attackableTiles, .attackable);
+        attackHighlighted = true;
+    }
+}
+
+pub fn highlightTiles(tiles: std.ArrayList(Types.Vector2Int), highType: HighlightTypeEnum) !void {
+    for (tiles.items) |tile| {
+        try highlightedTiles.append(Highlight{
+            .pos = Types.Vector2Int.init(tile.x, tile.y),
+            .type = highType,
+        });
+    }
+}
+
+pub fn resetMovementHighlight() void {
+    movementHighlighted = false;
+    movableTiles.clearRetainingCapacity();
+    removeHighlightOfType(.movable);
+}
+
+pub fn resetAttackHighlight() void {
+    attackHighlighted = false;
+    attackableTiles.clearRetainingCapacity();
+    removeHighlightOfType(.attackable);
+}
+
+pub fn removeHighlightOfType(highType: HighlightTypeEnum) void {
+    var i: usize = 0;
+    while (i < highlightedTiles.items.len) {
+        const tile = highlightedTiles.items[i];
+        if (tile.type == highType) {
+            _ = highlightedTiles.swapRemove(i);
+        } else {
+            i += 1;
         }
     }
+}
 
-    pub fn highlightAttack(this: *gameState, entity: *Entity.Entity) !void {
-        if (!this.attackHighlighted) {
-            try Systems.neighboursDistance(entity.pos, entity.attackDistance, &this.attackableTiles);
-            try this.highlightTiles(this.attackableTiles, .attackable);
-            this.attackHighlighted = true;
+pub fn isinMovable(pos: Types.Vector2Int) bool {
+    for (movableTiles.items) |item| {
+        if (Types.vector2IntCompare(item, pos)) {
+            return true;
         }
     }
+    return false;
+}
 
-    pub fn highlightTiles(this: *gameState, tiles: std.ArrayList(Types.Vector2Int), highType: highlightTypeEnum) !void {
-        for (tiles.items) |tile| {
-            try this.highlightedTiles.append(highlight{
-                .pos = Types.Vector2Int.init(tile.x, tile.y),
-                .type = highType,
-            });
+pub fn isinAttackable(pos: Types.Vector2Int) bool {
+    for (attackableTiles.items) |item| {
+        if (Types.vector2IntCompare(item, pos)) {
+            return true;
         }
     }
+    return false;
+}
 
-    pub fn resetMovementHighlight(this: *gameState) void {
-        this.movementHighlighted = false;
-        this.movableTiles.clearRetainingCapacity();
-        this.removeHighlightOfType(.movable);
-    }
+pub fn draw() void {
+    if (highlightedTiles.items.len > 0) {
+        for (highlightedTiles.items) |highlight| {
+            var highlightColor = c.RED;
 
-    pub fn resetAttackHighlight(this: *gameState) void {
-        this.attackHighlighted = false;
-        this.attackableTiles.clearRetainingCapacity();
-        this.removeHighlightOfType(.attackable);
-    }
-
-    pub fn removeHighlightOfType(this: *gameState, highType: highlightTypeEnum) void {
-        var i: usize = 0;
-        while (i < this.highlightedTiles.items.len) {
-            const tile = this.highlightedTiles.items[i];
-            if (tile.type == highType) {
-                _ = this.highlightedTiles.swapRemove(i);
-            } else {
-                i += 1;
+            if (highlight.type == .movable) {
+                highlightColor = c.BLUE;
             }
+
+            c.DrawRectangleLines(highlight.pos.x * Config.tile_width, highlight.pos.y * Config.tile_height, Config.tile_width, Config.tile_height, highlightColor);
         }
     }
 
-    pub fn isinMovable(this: *gameState, pos: Types.Vector2Int) bool {
-        for (this.movableTiles.items) |item| {
-            if (Types.vector2IntCompare(item, pos)) {
-                return true;
+    if (selectedEntityHighlight) |highlight| {
+        if (highlight.type == .circle) {
+            var highColor = c.RED;
+            if (highlight.type == .entity) {
+                highColor = c.YELLOW;
             }
+            c.DrawCircleLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, highColor);
+            //c.DrawEllipseLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height, Config.tile_width / 2, Config.tile_height / 3, highlight.color);
+            //TODO: figure out the elipse, circle for now
         }
-        return false;
     }
 
-    pub fn isinAttackable(this: *gameState, pos: Types.Vector2Int) bool {
-        for (this.attackableTiles.items) |item| {
-            if (Types.vector2IntCompare(item, pos)) {
-                return true;
-            }
-        }
-        return false;
+    if (cursor) |cur| {
+        c.DrawRectangleLines(cur.x * Config.tile_width, cur.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
     }
-};
+}

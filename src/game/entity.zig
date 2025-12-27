@@ -67,14 +67,15 @@ pub const Entity = struct {
         speed: f32,
         entityData: anytype,
         asciiChar: []const u8,
-    ) !*Entity {
-        const entity = try allocator.create(Entity);
+    ) !Entity {
+        //const entity = try allocator.create(Entity);
+        _ = allocator;
         var ascii_array: [4]u8 = .{ 0, 0, 0, 0 };
         const len = @min(asciiChar.len, 3);
         for (0..len) |i| {
             ascii_array[i] = asciiChar[i];
         }
-        entity.* = .{
+        const entity = Entity{
             .id = entity_id,
             .health = 10,
             .mana = 10,
@@ -187,9 +188,9 @@ pub const Entity = struct {
     pub fn update(this: *Entity, ctx: *Game.Context) !void {
         switch (this.data) {
             //TODO: see if it needs to be separated or not, change later
-            .player => try Systems.updatePlayerEntity(this, ctx),
-            .puppet => try Systems.updatePuppetEntity(this, ctx),
-            .enemy => try Systems.updateEnemyEntity(this, ctx),
+            .player => try Systems.updatePlayer(this, ctx),
+            .puppet => try Systems.updatePuppet(this, ctx),
+            .enemy => try Systems.updateEnemy(this, ctx),
             .item => {}, //TODO: later
         }
     }
@@ -259,32 +260,13 @@ pub const PlayerData = struct {
     //Butchering enemies, destroying stuff like chairs and crafting
     // dark magic like fear to protect the puppetmaster from enemies
 
-    inCombatWith: std.ArrayList(*Entity),
+    inCombatWith: std.ArrayList(u32),
     state: playerStateEnum,
-    puppets: std.ArrayList(*Entity), //TODO: you can actually loose a puppet
+    puppets: std.ArrayList(u32), //TODO: you can actually loose a puppet
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
-        const inCombatWith = std.ArrayList(*Entity).init(allocator);
-        var puppets = std.ArrayList(*Entity).init(allocator);
-
-        const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
-        var puppet = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "&");
-        puppet.visible = false;
-        puppet.name = "Pamama";
-        puppet.setTextureID(50);
-        try puppets.append(puppet);
-
-        // var puppet2 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
-        // puppet2.visible = false;
-        // puppet2.name = "Igor";
-        // puppet2.setTextureID(51);
-        // try puppets.append(puppet2);
-        //
-        // var puppet3 = try Entity.init(allocator, pup_pos, 0, 1.0, EntityData{ .puppet = .{ .deployed = false } }, "%");
-        // puppet3.visible = false;
-        // puppet3.name = "R2D2";
-        // puppet3.setTextureID(51);
-        // try puppets.append(puppet3);
+        const inCombatWith = std.ArrayList(u32).init(allocator);
+        const puppets = std.ArrayList(u32).init(allocator);
 
         return PlayerData{
             .state = .walking,
