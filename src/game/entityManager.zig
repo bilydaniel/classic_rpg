@@ -79,7 +79,9 @@ pub fn update(ctx: *Game.Game) !void {
 
     //TODO: when to switch current_turn to enemy?
     //gonna have to be more complicated than this
-    Gamestate.currentTurn = .enemy;
+    if (Gamestate.currentTurn != .player) {
+        Gamestate.switchTurn(.player);
+    }
 }
 
 pub fn getPlayer() *Entity.Entity {

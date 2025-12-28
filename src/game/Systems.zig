@@ -17,6 +17,7 @@ const c = @cImport({
 
 //TODO: add an optiom to "look around", get info on enemies, etc.
 pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
+    std.debug.print("updating_player\n", .{});
     switch (player.data.player.state) {
         // TODO: go through everything, make more functions, messy
         // TODO: go through all the state management, make some fool proof system
@@ -439,7 +440,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
 
     game.player.move(new_pos);
     game.player.movementCooldown = 0;
-    Gamestate.currentTurn = .enemy;
+    Gamestate.switchTurn(.enemy);
 }
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
     //TODO: should I put all the code just in the handleplayerdeploying?
@@ -574,7 +575,7 @@ pub fn resolveTurnTaken(game: *Game.Game) void {
     if (game.player.data.player.inCombatWith.items.len > 0) {
         if (game.player.turnTaken or game.player.allPupsTurnTaken()) {
             // finished turn
-            Gamestate.currentTurn = .enemy;
+            Gamestate.switchTurn(.enemy);
             game.player.resetTurnTakens();
             Gamestate.reset();
         }
@@ -787,10 +788,10 @@ pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
+    std.debug.print("updating_enemy\n", .{});
     if (Gamestate.currentTurn != .enemy) {
         return;
     }
-    std.debug.print("updating_enemy\n", .{});
 
     if (enemy.inCombat) {
         //TODO:

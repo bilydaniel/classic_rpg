@@ -42,6 +42,7 @@ pub var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8
 pub var deployHighlighted: bool = false;
 
 pub var currentTurn: CurrentTurnEnum = .player;
+pub var turnNumber: i32 = 0;
 
 pub var selectedEntity: ?*Entity.Entity = null; //TODO: maybe switch to id?
 pub var selectedEntityMode: EntityModeEnum = .none;
@@ -198,7 +199,7 @@ pub fn isinAttackable(pos: Types.Vector2Int) bool {
     return false;
 }
 
-pub fn draw() void {
+pub fn draw() !void {
     if (highlightedTiles.items.len > 0) {
         for (highlightedTiles.items) |highlight| {
             var highlightColor = c.RED;
@@ -226,4 +227,11 @@ pub fn draw() void {
     if (cursor) |cur| {
         c.DrawRectangleLines(cur.x * Config.tile_width, cur.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
     }
+}
+
+pub fn switchTurn(to: CurrentTurnEnum) void {
+    if (to == .player) {
+        turnNumber += 1;
+    }
+    currentTurn = to;
 }

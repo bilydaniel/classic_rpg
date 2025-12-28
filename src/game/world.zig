@@ -52,6 +52,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     try levelLinks.append(link1);
     try levelLinks.append(link2);
+
+    currentLevel = level1;
 }
 
 pub fn draw(tilesetManager: *TilesetManager.TilesetManager) void {

@@ -5,6 +5,7 @@ const Gamestate = @import("../game/gamestate.zig");
 const Types = @import("../common/types.zig");
 const InputManager = @import("../game/inputManager.zig");
 const EntityManager = @import("../game/entityManager.zig");
+const Config = @import("../common/config.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -418,10 +419,15 @@ pub const UiManager = struct {
         uiCommand = uicommand;
     }
 
-    pub fn draw(this: *UiManager) void {
+    pub fn draw(this: *UiManager) !void {
         for (this.elements.items) |element| {
             element.draw();
         }
+
+        var buffer: [64:0]u8 = undefined;
+        const text = try std.fmt.bufPrintZ(&buffer, "Turn: {}", .{Gamestate.turnNumber});
+
+        c.DrawText(text.ptr, Config.window_width - 200, 10, 15, c.RED);
     }
 
     pub fn push(this: *UiManager, command: Command) !void {

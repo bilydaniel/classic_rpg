@@ -88,7 +88,7 @@ pub const Game = struct {
         this.shaderManager.update(delta);
     }
 
-    pub fn draw(this: *Game) void {
+    pub fn draw(this: *Game) !void {
         c.BeginDrawing();
         c.ClearBackground(c.BLACK);
         c.DrawFPS(0, 0);
@@ -97,11 +97,10 @@ pub const Game = struct {
         this.player.draw(this.tilesetManager);
         this.shaderManager.draw();
 
-        //TODO: @conitnue put draw in gamestate
-        Gamestate.draw();
+        try Gamestate.draw();
 
         c.EndMode2D();
-        this.uiManager.draw();
+        try this.uiManager.draw();
 
         c.EndDrawing();
     }
