@@ -4,6 +4,7 @@ const Entity = @import("../game/entity.zig");
 const Window = @import("../game/window.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
+const Gamestate = @import("gamestate.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -73,12 +74,12 @@ pub fn addEntity(entity: Entity.Entity) !void {
 
 pub fn update(ctx: *Game.Game) !void {
     for (entities.items) |*entity| {
-        entity.update(ctx);
+        try entity.update(ctx);
     }
 
     //TODO: when to switch current_turn to enemy?
     //gonna have to be more complicated than this
-    ctx.gamestate.currentTurn = .enemy;
+    Gamestate.currentTurn = .enemy;
 }
 
 pub fn getPlayer() *Entity.Entity {
@@ -93,9 +94,18 @@ pub fn getPlayer() *Entity.Entity {
     return &entities.items[PLAYER_INDEX];
 }
 
-pub fn genEntityID(id: u32) ?*Entity.Entity {
+pub fn getEntityID(id: u32) ?*Entity.Entity {
     for (entities.items) |*entity| {
         if (entity.id == id) {
+            return entity;
+        }
+    }
+    return null;
+}
+
+pub fn getEntityByPos(pos: Types.Vector2Int) ?*Entity.Entity {
+    for (entities.items) |*entity| {
+        if (Types.vector2IntCompare(entity.pos, pos)) {
             return entity;
         }
     }

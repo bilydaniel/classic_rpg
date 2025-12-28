@@ -42,7 +42,7 @@ pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
         },
     }
 
-    if (game.gamestate.currentTurn != .player) {
+    if (Gamestate.currentTurn != .player) {
         return;
     }
 
@@ -92,38 +92,39 @@ pub fn preCombatTransitions(game: *Game.Game) !bool {
     return false;
 }
 
-pub fn deployPuppet(game: *Game.Game, pupId: u32) !void {
-    const puppet = getPupById(game.player.data.player.puppets, pupId);
+pub fn deployPuppet(pupId: u32) !void {
+    const puppet = EntityManager.getEntityID(pupId);
     if (puppet) |pup| {
         if (!pup.data.puppet.deployed) {
-            if (game.gamestate.cursor) |curs| {
+            if (Gamestate.cursor) |curs| {
                 pup.pos = curs;
                 pup.data.puppet.deployed = true;
                 pup.visible = true;
-                game.gamestate.selectedPupId = null; //TODO: maybe wrong, check
+                Gamestate.selectedPupId = null; //TODO: maybe wrong, check
                 return;
             }
         }
     }
 }
 
-pub fn canDeploy(player: *Entity.Entity, gamestate: *Gamestate.gameState, grid: []Level.Tile, entities: *std.ArrayList(*Entity.Entity)) bool {
-    const deploy_pos = gamestate.cursor;
+pub fn canDeploy(player: *Entity.Entity) bool {
+    const deploy_pos = Gamestate.cursor;
     if (deploy_pos) |dep_pos| {
         if (Types.vector2IntCompare(player.pos, dep_pos)) {
             return false;
         }
 
-        const entity = getEntityByPos(entities.*, dep_pos);
+        const entity = EntityManager.getEntityByPos(dep_pos);
         if (entity) |_| {
             return false;
         }
 
+        const grid = World.currentLevel.grid;
         if (!isTileWalkable(grid, dep_pos)) {
             return false;
         }
 
-        if (gamestate.deployableCells) |deployable_cells| {
+        if (Gamestate.deployableCells) |deployable_cells| {
             if (!isDeployable(dep_pos, &deployable_cells)) {
                 return false;
             }
@@ -160,15 +161,6 @@ pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) boo
     return false;
 }
 
-pub fn getEntityByPos(entities: std.ArrayList(Entity.Entity), pos: Types.Vector2Int) ?*Entity.Entity {
-    for (entities.items) |*entity| {
-        if (Types.vector2IntCompare(entity.pos, pos)) {
-            return entity;
-        }
-    }
-    return null;
-}
-
 pub fn getEntityById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Entity {
     for (entities.items) |entity| {
         if (entity.id == id) {
@@ -178,7 +170,8 @@ pub fn getEntityById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.
     return null;
 }
 
-pub fn calculateFOV(grid: []Level.Tile, center: Types.Vector2Int, radius: usize) void {
+pub fn calculateFOV(center: Types.Vector2Int, radius: usize) void {
+    var grid = World.currentLevel.grid;
     var idx: usize = 0;
     while (idx < grid.len) : (idx += 1) {
         grid[idx].visible = false;
@@ -253,47 +246,17 @@ pub fn old_highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Col
     }
 }
 
-pub fn highlightTile(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) !void {
-    try gamestate.highlightedTiles.append(Gamestate.highlight{
+//TODO: @refactor put into gamestate
+pub fn highlightTile(pos: Types.Vector2Int) !void {
+    try Gamestate.highlightedTiles.append(Gamestate.Highlight{
         .pos = pos,
         .type = .pup_deploy,
     });
 }
 
-//TODO: put this somwhere else
-pub fn drawGameState(gamestate: *Gamestate.gameState, currentLevel: *Level.Level) void {
-    _ = currentLevel;
-    if (gamestate.highlightedTiles.items.len > 0) {
-        for (gamestate.highlightedTiles.items) |highlight| {
-            var highlightColor = c.RED;
-
-            if (highlight.type == .movable) {
-                highlightColor = c.BLUE;
-            }
-
-            c.DrawRectangleLines(highlight.pos.x * Config.tile_width, highlight.pos.y * Config.tile_height, Config.tile_width, Config.tile_height, highlightColor);
-        }
-    }
-
-    if (gamestate.selectedEntityHighlight) |highlight| {
-        if (highlight.type == .circle) {
-            var highColor = c.RED;
-            if (highlight.type == .entity) {
-                highColor = c.YELLOW;
-            }
-            c.DrawCircleLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, highColor);
-            //c.DrawEllipseLines(highlight.pos.x * Config.tile_width + Config.tile_width / 2, highlight.pos.y * Config.tile_height + Config.tile_height, Config.tile_width / 2, Config.tile_height / 3, highlight.color);
-            //TODO: figure out the elipse, circle for now
-        }
-    }
-
-    if (gamestate.cursor) |cur| {
-        c.DrawRectangleLines(cur.x * Config.tile_width, cur.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
-    }
-}
-
-pub fn highlightEntity(gamestate: *Gamestate.gameState, pos: Types.Vector2Int) void {
-    gamestate.selectedEntityHighlight = Gamestate.highlight{
+//TODO: @refactor put into gamestate
+pub fn highlightEntity(pos: Types.Vector2Int) void {
+    Gamestate.selectedEntityHighlight = Gamestate.Highlight{
         .pos = pos,
         .type = .circle,
     };
@@ -319,7 +282,8 @@ pub fn getStaircaseDestination(pos: Types.Vector2Int) ?Level.Location {
     return null;
 }
 
-pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int, entities: std.ArrayList(Entity.Entity)) bool {
+pub fn canMove(pos: Types.Vector2Int) bool {
+    const grid = World.currentLevel.grid;
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
         if (index < grid.len) {
@@ -329,7 +293,7 @@ pub fn canMove(grid: []Level.Tile, pos: Types.Vector2Int, entities: std.ArrayLis
             }
         }
     }
-    const entity = getEntityByPos(entities, pos);
+    const entity = EntityManager.getEntityByPos(pos);
     if (entity == null) {
         return true;
     }
@@ -467,13 +431,13 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     std.debug.print("move: {}\n", .{moveDelta});
 
     var new_pos = Types.vector2IntAdd(game.player.pos, moveDelta);
-    if (!canMove(World.currentLevel.grid, new_pos, EntityManager.entities)) {
+    if (!canMove(new_pos)) {
         return;
     }
 
-    new_pos = staircaseTransition(game, new_pos);
+    new_pos = staircaseTransition(new_pos);
 
-    game.player.move(new_pos, World.currentLevel.grid);
+    game.player.move(new_pos);
     game.player.movementCooldown = 0;
     Gamestate.currentTurn = .enemy;
 }
@@ -485,7 +449,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     try puppetDeployment(game);
 }
 pub fn handlePlayerCombat(game: *Game.Game) !void {
-    switch (game.gamestate.currentTurn) {
+    switch (Gamestate.currentTurn) {
         .player => {
             entitySelect(game);
             try entityAction(game);
@@ -499,30 +463,31 @@ pub fn handlePlayerCombat(game: *Game.Game) !void {
 pub fn entitySelect(game: *Game.Game) void {
     const entityIndex = game.uiCommand.getQuickSelect() orelse return;
 
-    game.gamestate.resetMovementHighlight();
-    game.gamestate.resetAttackHighlight();
+    Gamestate.resetMovementHighlight();
+    Gamestate.resetAttackHighlight();
     //TODO: make a menu for swapping puppets in the array(different index => different keybind)
     if (entityIndex == 0) {
         //Player
-        game.gamestate.selectedEntity = game.player;
+        Gamestate.selectedEntity = game.player;
     } else {
         //Puppets
         if (game.player.data.player.puppets.items.len >= entityIndex) {
-            game.gamestate.selectedEntity = game.player.data.player.puppets.items[entityIndex - 1];
+            const pupID = game.player.data.player.puppets.items[entityIndex - 1];
+            Gamestate.selectedEntity = EntityManager.getEntityID(pupID);
         }
     }
 
-    if (game.gamestate.selectedEntity) |selected_entity| {
-        game.cameraManager.targetEntity = selected_entity;
-        game.gamestate.removeCursor();
-        highlightEntity(game.gamestate, selected_entity.pos);
-        game.gamestate.selectedAction = null;
+    if (Gamestate.selectedEntity) |selected_entity| {
+        CameraManager.targetEntity = selected_entity.id;
+        Gamestate.removeCursor();
+        highlightEntity(selected_entity.pos);
+        Gamestate.selectedAction = null;
     }
 }
 pub fn entityAction(game: *Game.Game) !void {
-    if (game.gamestate.selectedEntity) |entity| {
-        if (game.gamestate.selectedAction == null) {
-            game.gamestate.showMenu = .action_select;
+    if (Gamestate.selectedEntity) |entity| {
+        if (Gamestate.selectedAction == null) {
+            Gamestate.showMenu = .action_select;
 
             if (game.uiCommand.getMenuSelect()) |menu_item| {
                 switch (menu_item) {
@@ -530,64 +495,64 @@ pub fn entityAction(game: *Game.Game) !void {
                         std.debug.print("menu_item is .puppet_id instead of .action", .{});
                     },
                     .action => |action| {
-                        game.gamestate.selectedAction = action;
+                        Gamestate.selectedAction = action;
                     },
                 }
             }
         }
 
-        const selectedAction = game.gamestate.selectedAction orelse return;
+        const selectedAction = Gamestate.selectedAction orelse return;
         switch (selectedAction) {
             .move => {
-                game.gamestate.showMenu = .none;
-                game.gamestate.makeUpdateCursor(entity.pos);
-                try game.gamestate.highlightMovement(entity);
+                Gamestate.showMenu = .none;
+                Gamestate.makeUpdateCursor(entity.pos);
+                try Gamestate.highlightMovement(entity);
 
                 if (game.uiCommand.getConfirm()) {
-                    if (game.gamestate.cursor) |cur| {
-                        if (game.gamestate.isinMovable(cur)) {
-                            entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
+                    if (Gamestate.cursor) |cur| {
+                        if (Gamestate.isinMovable(cur)) {
+                            entity.path = try game.pathfinder.findPath(entity.pos, cur);
                             entity.hasMoved = true;
-                            game.gamestate.resetMovementHighlight();
-                            game.gamestate.removeCursor();
-                            game.gamestate.selectedAction = null;
+                            Gamestate.resetMovementHighlight();
+                            Gamestate.removeCursor();
+                            Gamestate.selectedAction = null;
                         }
                     }
                 }
 
                 if (c.IsKeyPressed(c.KEY_SPACE)) {
                     //TODO: manage state after skip
-                    skipMovement(game);
+                    skipMovement();
                 }
             },
             .attack => {
-                game.gamestate.showMenu = .none;
-                game.gamestate.makeUpdateCursor(entity.pos);
-                try game.gamestate.highlightAttack(entity);
+                Gamestate.showMenu = .none;
+                Gamestate.makeUpdateCursor(entity.pos);
+                try Gamestate.highlightAttack(entity);
 
                 if (game.uiCommand.getConfirm()) {
-                    if (game.gamestate.cursor) |cur| {
-                        if (game.gamestate.isinAttackable(cur)) {
-                            const attackedEntity = getEntityByPos(game.entities.*, cur);
+                    if (Gamestate.cursor) |cur| {
+                        if (Gamestate.isinAttackable(cur)) {
+                            const attackedEntity = EntityManager.getEntityByPos(cur);
                             try game.shaderManager.spawnSlash(entity.pos, cur);
                             try game.shaderManager.spawnImpact(cur);
 
                             attack(game, entity, attackedEntity);
-                            game.gamestate.resetAttackHighlight();
-                            game.gamestate.removeCursor();
+                            Gamestate.resetAttackHighlight();
+                            Gamestate.removeCursor();
                             entity.hasAttacked = true;
-                            game.gamestate.selectedAction = null;
+                            Gamestate.selectedAction = null;
                         }
                     }
                 }
 
                 if (c.IsKeyPressed(c.KEY_SPACE)) {
                     //TODO: manage state after skip
-                    skipAttack(game);
+                    skipAttack();
                 }
-                // game.gamestate.showMenu = .none;
+                // Gamestate.showMenu = .none;
                 // std.debug.print("attacking\n", .{});
-                // game.gamestate.updateCursor();
+                // Gamestate.updateCursor();
                 // try selectedEntityAttack(game, entity);
                 // if (c.IsKeyPressed(c.KEY_SPACE)) {
                 //     skipAttack(game);
@@ -595,7 +560,7 @@ pub fn entityAction(game: *Game.Game) !void {
             },
         }
 
-        if (entity.hasMoved and !entity.canAttack(game)) {
+        if (entity.hasMoved and !entity.canAttack()) {
             //TODO:
         }
 
@@ -609,64 +574,64 @@ pub fn resolveTurnTaken(game: *Game.Game) void {
     if (game.player.data.player.inCombatWith.items.len > 0) {
         if (game.player.turnTaken or game.player.allPupsTurnTaken()) {
             // finished turn
-            game.gamestate.currentTurn = .enemy;
+            Gamestate.currentTurn = .enemy;
             game.player.resetTurnTakens();
-            game.gamestate.reset();
+            Gamestate.reset();
         }
     }
 }
 
-pub fn skipMovement(game: *Game.Game) void {
-    if (game.gamestate.selectedEntity) |entity| {
+pub fn skipMovement() void {
+    if (Gamestate.selectedEntity) |entity| {
         entity.hasMoved = true;
     }
-    game.gamestate.resetMovementHighlight();
-    game.gamestate.removeCursor();
-    game.gamestate.selectedAction = null;
+    Gamestate.resetMovementHighlight();
+    Gamestate.removeCursor();
+    Gamestate.selectedAction = null;
 }
 
-pub fn skipAttack(game: *Game.Game) void {
-    if (game.gamestate.selectedEntity) |entity| {
+pub fn skipAttack() void {
+    if (Gamestate.selectedEntity) |entity| {
         entity.hasAttacked = true;
     }
-    game.gamestate.resetAttackHighlight();
-    game.gamestate.removeCursor();
-    game.gamestate.selectedAction = null;
+    Gamestate.resetAttackHighlight();
+    Gamestate.removeCursor();
+    Gamestate.selectedAction = null;
 }
 
 pub fn selectedEntityMove(game: *Game.Game, entity: *Entity.Entity) !void {
     //TODO: absolutely change this
-    try game.gamestate.highlightMovement(entity);
+    try Gamestate.highlightMovement(entity);
 
     if (c.IsKeyPressed(c.KEY_A)) {
-        if (game.gamestate.cursor) |cur| {
-            if (game.gamestate.isinMovable(cur)) {
+        if (Gamestate.cursor) |cur| {
+            if (Gamestate.isinMovable(cur)) {
                 entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
                 entity.hasMoved = true;
-                game.gamestate.resetMovementHighlight();
-                game.gamestate.removeCursor();
-                game.gamestate.selectedAction = null;
+                Gamestate.resetMovementHighlight();
+                Gamestate.removeCursor();
+                Gamestate.selectedAction = null;
             }
         }
     }
 }
 pub fn selectedEntityAttack(game: *Game.Game, entity: *Entity.Entity) !void {
-    try game.gamestate.highlightAttack(entity);
+    try Gamestate.highlightAttack(entity);
 
     if (c.IsKeyPressed(c.KEY_A)) {
-        if (game.gamestate.cursor) |cur| {
+        if (Gamestate.cursor) |cur| {
             //try game.shaderManager.spawnSlash(entity.pos, cur);
             //try game.shaderManager.spawnExplosion(entity.pos);
             //try game.shaderManager.spawnImpact(cur);
-            if (game.gamestate.isinAttackable(cur)) {
-                const attackedEntity = getEntityByPos(game.entities.*, cur);
+            if (Gamestate.isinAttackable(cur)) {
+                const attackedEntity = EntityManager.getEntityByPos(cur);
 
                 try game.shaderManager.spawnSlash(entity.pos, cur);
                 try game.shaderManager.spawnImpact(cur);
 
                 attack(game, entity, attackedEntity);
-                game.gamestate.resetAttackHighlight();
-                game.gamestate.removeCursor();
+                Gamestate.resetAttackHighlight();
+                Gamestate.removeCursor();
                 entity.hasAttacked = true;
             }
         }
@@ -691,13 +656,13 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
 }
 
 pub fn puppetSelection(game: *Game.Game) !void {
-    if (game.gamestate.selectedPupId == null) {
-        game.gamestate.showMenu = .puppet_select;
+    if (Gamestate.selectedPupId == null) {
+        Gamestate.showMenu = .puppet_select;
 
         if (game.uiCommand.getMenuSelect()) |menu_item| {
             switch (menu_item) {
                 .puppet_id => |pid| {
-                    game.gamestate.selectedPupId = pid;
+                    Gamestate.selectedPupId = pid;
                 },
                 .action => {
                     std.debug.print("menu_item is .action instead of .puppet_id", .{});
@@ -708,40 +673,40 @@ pub fn puppetSelection(game: *Game.Game) !void {
 }
 
 pub fn puppetDeployment(game: *Game.Game) !void {
-    if (game.gamestate.selectedPupId) |selected_pup| {
-        game.gamestate.showMenu = .none;
-        game.gamestate.makeUpdateCursor(game.player.pos);
+    if (Gamestate.selectedPupId) |selected_pup| {
+        Gamestate.showMenu = .none;
+        Gamestate.makeUpdateCursor(game.player.pos);
 
         //TODO: put deploycells / highlight  into function
-        if (game.gamestate.deployableCells == null) {
+        if (Gamestate.deployableCells == null) {
             const neighbours = neighboursAll(game.player.pos);
-            game.gamestate.deployableCells = neighbours;
+            Gamestate.deployableCells = neighbours;
         }
-        if (game.gamestate.deployableCells) |cells| {
-            if (!game.gamestate.deployHighlighted) {
+        if (Gamestate.deployableCells) |cells| {
+            if (!Gamestate.deployHighlighted) {
                 for (cells) |value| {
                     if (value) |val| {
-                        try highlightTile(game.gamestate, val);
-                        game.gamestate.deployHighlighted = true;
+                        try highlightTile(val);
+                        Gamestate.deployHighlighted = true;
                     }
                 }
             }
         }
         if (game.uiCommand.getConfirm()) {
-            if (canDeploy(game.player, game.gamestate, game.grid.*, game.entities)) {
-                try deployPuppet(game, selected_pup);
+            if (canDeploy(game.player)) {
+                try deployPuppet(selected_pup);
             }
         }
     }
 }
 
-pub fn staircaseTransition(game: *Game.Game, newPos: Types.Vector2Int) Types.Vector2Int {
+pub fn staircaseTransition(newPos: Types.Vector2Int) Types.Vector2Int {
     if (!isStaircase(newPos)) {
         return newPos;
     }
 
     if (getStaircaseDestination(newPos)) |lvllocation| {
-        switchLevel(game.world, lvllocation.level);
+        switchLevel(lvllocation.level);
         return lvllocation.pos;
     }
 
@@ -815,14 +780,14 @@ pub fn exitCombat(game: *Game.Game) !void {
 }
 
 pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
-    if (game.gamestate.currentTurn != .player) {
+    if (Gamestate.currentTurn != .player) {
         return;
     }
     try updateEntityMovement(puppet, game);
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
-    if (game.gamestate.currentTurn != .enemy) {
+    if (Gamestate.currentTurn != .enemy) {
         return;
     }
     std.debug.print("updating_enemy\n", .{});
@@ -842,7 +807,7 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
 
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path == null and entity.goal != null) {
-        entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, entity.goal.?, game.entities.*);
+        entity.path = try game.pathfinder.findPath(entity.pos, entity.goal.?);
     }
     if (entity.path) |path| {
         if (path.nodes.items.len < 2) {
@@ -858,15 +823,15 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
         entity.movementCooldown = 0;
         entity.path.?.currIndex += 1;
         const new_pos = entity.path.?.nodes.items[entity.path.?.currIndex];
-        const new_pos_entity = getEntityByPos(game.entities.*, new_pos);
+        const new_pos_entity = EntityManager.getEntityByPos(new_pos);
 
         if (new_pos_entity) |_| {
             // position has entity, recalculate
             if (entity.goal) |goal| {
-                entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, goal, game.entities.*);
+                entity.path = try game.pathfinder.findPath(entity.pos, goal);
             }
         } else {
-            entity.move(new_pos, game.grid);
+            entity.move(new_pos);
         }
 
         if (entity.path) |path_| {
@@ -892,7 +857,7 @@ fn wanderTowards(enemy: *Entity.Entity, target: Types.Vector2Int, game: *Game.Ga
     if (posToIndex(target)) |idx| {
         const tile = game.grid.*[idx];
         if (!tile.solid) {
-            if (getEntityByPos(game.entities.*, target) == null) {
+            if (EntityManager.getEntityByPos(target) == null) {
                 enemy.pos = target;
             }
         }

@@ -5,6 +5,7 @@ const Entity = @import("entity.zig");
 const TilesetManager = @import("tilesetManager.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
+const EntityManager = @import("entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -205,7 +206,8 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn draw(this: @This(), entities: std.ArrayList(*Entity.Entity), tilesetManager: *TilesetManager.TilesetManager) void {
+    pub fn draw(this: *Level, tilesetManager: *TilesetManager.TilesetManager) void {
+        const entities = EntityManager.entities;
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
             //const pos_y = your_position.y;
@@ -277,9 +279,9 @@ pub const Level = struct {
             }
         }
 
-        for (entities.items) |entity| {
+        for (entities.items) |*entity| {
             if (this.id == entity.levelID) {
-                entity.Draw(tilesetManager);
+                entity.draw(tilesetManager);
             }
         }
     }

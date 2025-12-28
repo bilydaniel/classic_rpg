@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // ----- Build options -----
-    const fast_debug = b.option(bool, "fast-debug", "Fast iteration build (reduced debug info)") orelse true;
+    const fast_debug = b.option(bool, "fast-debug", "Fast iteration build (reduced debug info)") orelse false;
     const build_editor = b.option(bool, "editor", "Build editor") orelse false;
     const build_example = b.option(bool, "example", "Build example") orelse false;
 

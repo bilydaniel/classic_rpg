@@ -43,7 +43,7 @@ pub var deployHighlighted: bool = false;
 
 pub var currentTurn: CurrentTurnEnum = .player;
 
-pub var selectedEntity: ?*Entity.Entity = null;
+pub var selectedEntity: ?*Entity.Entity = null; //TODO: maybe switch to id?
 pub var selectedEntityMode: EntityModeEnum = .none;
 pub var selectedEntityHighlight: ?Highlight = null;
 

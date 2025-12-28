@@ -4,12 +4,14 @@ const Window = @import("../game/window.zig");
 const Gamestate = @import("../game/gamestate.zig");
 const Types = @import("../common/types.zig");
 const InputManager = @import("../game/inputManager.zig");
+const EntityManager = @import("../game/entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
+//TODO: REWRITE ALL OF THIS
 
 //TODO: how to make some lines / additional graphics?
-pub const updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
+pub const Updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
 
 //TODO: @finish
 pub var uiCommand: UiCommand = undefined;
@@ -22,7 +24,7 @@ pub const Element = struct {
     //TODO: filled: bool, full vs only lines
     elements: std.ArrayList(*Element),
     data: ElementData,
-    updateFn: ?updatefunction = null,
+    updateFn: ?Updatefunction = null,
 
     pub fn init(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
         const element = try allocator.create(Element);
@@ -64,7 +66,7 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, updateFunction: updatefunction) !*Element {
+    pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, updateFunction: Updatefunction) !*Element {
         var element = try init(allocator, rect, color, undefined);
 
         element.updateFn = updateFunction;
@@ -564,7 +566,7 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
     return characterPlate;
 }
 
-pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []const u8, updateFunction: updatefunction) !*Element {
+pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []const u8, updateFunction: Updatefunction) !*Element {
     const backgroundRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
@@ -608,23 +610,27 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []con
     return menuBackground;
 }
 
-pub fn updatePuppetMenu(this: *Element, ctx: *Game.Game) MenuError!void {
+pub fn updatePuppetMenu(this: *Element, game: *Game.Game) MenuError!void {
     //TODO: update every frame for now, probably can make it better
     this.data.menu.menuItems.clearRetainingCapacity();
 
     //TODO: this is ridicolous, maybe make a getter or something?
-    for (ctx.player.data.player.puppets.items) |pup| {
-        if (!pup.data.puppet.deployed) {
-            const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-            try this.data.menu.menuItems.append(item);
+    for (game.player.data.player.puppets.items) |pupID| {
+        const puppet = EntityManager.getEntityID(pupID);
+        if (puppet) |pup| {
+            if (!pup.data.puppet.deployed) {
+                const item = ElementMenuItem.initPupItem(pup.name, pup.id);
+                try this.data.menu.menuItems.append(item);
+            }
         }
     }
 }
 
-pub fn updateActionMenu(this: *Element, ctx: *Game.Game) MenuError!void {
+pub fn updateActionMenu(this: *Element, game: *Game.Game) MenuError!void {
+    _ = game;
     this.data.menu.menuItems.clearRetainingCapacity();
 
-    if (ctx.gamestate.selectedEntity) |selected_entity| {
+    if (Gamestate.selectedEntity) |selected_entity| {
         if (!selected_entity.hasMoved) {
             const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
             try this.data.menu.menuItems.append(itemMove);

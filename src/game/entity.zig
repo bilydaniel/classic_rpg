@@ -8,6 +8,7 @@ const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
 const Level = @import("level.zig");
 const Game = @import("game.zig");
+const EntityManager = @import("entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -109,7 +110,7 @@ pub const Entity = struct {
         return entity;
     }
 
-    pub fn Draw(this: *Entity, tilesetManager: *TilesetManager.TilesetManager) void {
+    pub fn draw(this: *Entity, tilesetManager: *TilesetManager.TilesetManager) void {
         if (this.visible) {
             if (this.isAscii) {
                 if (this.ascii) |ascii| {
@@ -159,22 +160,28 @@ pub const Entity = struct {
     }
 
     pub fn returnPuppets(this: *Entity) void {
-        for (this.data.player.puppets.items) |pup| {
-            pup.visible = false;
-            pup.targetable = false;
-            pup.data.puppet.deployed = false;
+        for (this.data.player.puppets.items) |pupID| {
+            const puppet = EntityManager.getEntityID(pupID);
+            if (puppet) |pup| {
+                pup.visible = false;
+                pup.targetable = false;
+                pup.data.puppet.deployed = false;
 
-            //TODO: hack, probably should add an extra variable like targetable or something
-            pup.pos.x = -1;
-            pup.pos.y = -1;
+                //TODO: hack, probably should add an extra variable like targetable or something
+                pup.pos.x = -1;
+                pup.pos.y = -1;
+            }
         }
     }
 
     pub fn allPupsTurnTaken(this: *Entity) bool {
         if (this.data == .player) {
-            for (this.data.player.puppets.items) |pup| {
-                if (pup.turnTaken == false) {
-                    return false;
+            for (this.data.player.puppets.items) |pupID| {
+                const puppet = EntityManager.getEntityID(pupID);
+                if (puppet) |pup| {
+                    if (pup.turnTaken == false) {
+                        return false;
+                    }
                 }
             }
         }
@@ -196,9 +203,9 @@ pub const Entity = struct {
         }
     }
 
-    pub fn move(this: *Entity, pos: Types.Vector2Int, grid: []Level.Tile) void {
+    pub fn move(this: *Entity, pos: Types.Vector2Int) void {
         this.pos = pos;
-        Systems.calculateFOV(grid, pos, 8);
+        Systems.calculateFOV(pos, 8);
     }
 
     pub fn wander(this: *Entity, pos: Types.Vector2Int, ctx: *Game.Context) void {
@@ -226,17 +233,19 @@ pub const Entity = struct {
             this.hasAttacked = false;
             this.turnTaken = false;
 
-            for (this.data.player.puppets.items) |pup| {
-                pup.hasMoved = false;
-                pup.hasAttacked = false;
-                pup.turnTaken = false;
+            for (this.data.player.puppets.items) |pupID| {
+                const puppet = EntityManager.getEntityID(pupID);
+                if (puppet) |pup| {
+                    pup.hasMoved = false;
+                    pup.hasAttacked = false;
+                    pup.turnTaken = false;
+                }
             }
         }
     }
 
-    pub fn canAttack(this: *Entity, ctx: *Game.Context) bool {
+    pub fn canAttack(this: *Entity) bool {
         _ = this;
-        _ = ctx;
         //TODO: @finish
         return false;
     }
@@ -277,9 +286,12 @@ pub const PlayerData = struct {
     }
 
     pub fn allPupsDeployed(this: *PlayerData) bool {
-        for (this.puppets.items) |pup| {
-            if (!pup.data.puppet.deployed) {
-                return false;
+        for (this.puppets.items) |pupID| {
+            const puppet = EntityManager.getEntityID(pupID);
+            if (puppet) |pup| {
+                if (!pup.data.puppet.deployed) {
+                    return false;
+                }
             }
         }
         return true;

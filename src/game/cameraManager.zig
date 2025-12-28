@@ -7,10 +7,10 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-var camera: *c.Camera2D = undefined;
-var manual: bool = undefined;
-var speed: f32 = undefined;
-var targetEntity: ?u32 = undefined;
+pub var camera: *c.Camera2D = undefined;
+pub var manual: bool = undefined;
+pub var speed: f32 = undefined;
+pub var targetEntity: ?u32 = undefined;
 
 pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
     camera = try allocator.create(c.Camera2D);

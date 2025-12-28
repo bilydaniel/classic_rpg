@@ -57,7 +57,7 @@ pub const Game = struct {
             .shaderManager = shadermanager,
         };
 
-        Systems.calculateFOV(World.currentLevel.grid, player.pos, 8);
+        Systems.calculateFOV(player.pos, 8);
         return game;
     }
 
@@ -77,9 +77,10 @@ pub const Game = struct {
         //-> send &uiintent into uimanager.update, use it in update
 
         try this.uiManager.update(this);
+        this.uiCommand = UiManager.uiCommand;
         //std.debug.print("ui_command: {}\n", .{uiCommand});
         //this.world.update(this.context);
-        EntityManager.update(this);
+        try EntityManager.update(this);
 
         CameraManager.update(delta);
         Gamestate.update();
@@ -92,13 +93,12 @@ pub const Game = struct {
         c.ClearBackground(c.BLACK);
         c.DrawFPS(0, 0);
         c.BeginMode2D(CameraManager.camera.*);
-        this.world.Draw(this.tilesetManager);
-        this.player.Draw(this.tilesetManager);
+        World.draw(this.tilesetManager);
+        this.player.draw(this.tilesetManager);
         this.shaderManager.draw();
 
         //TODO: @conitnue put draw in gamestate
-        Systems.drawGameState(this.gameState, this.world.currentLevel);
-        Gamestate.draw(this.world.currentLevel);
+        Gamestate.draw();
 
         c.EndMode2D();
         this.uiManager.draw();
