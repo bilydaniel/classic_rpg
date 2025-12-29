@@ -17,6 +17,179 @@ pub const Updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
 //TODO: @finish
 pub var uiCommand: UiCommand = undefined;
 
+var allocator: std.mem.Allocator = undefined;
+var elements: std.ArrayList(*Element) = undefined;
+//TODO: pointer to active element or have active value in elements?
+//accessing certain elements that are needed, maybe do this in another way?
+var menus: std.AutoHashMap(MenuType, *Element) = undefined;
+var deployMenu: *Element = undefined;
+var actionMenu: *Element = undefined;
+var activeMenu: ?*Element = null;
+
+pub fn init(alloc: std.mem.Allocator) !void {
+    allocator = alloc;
+    elements = std.ArrayList(*Element).init(allocator);
+    menus = std.AutoHashMap(MenuType, *Element).init(allocator);
+
+    try makeUIElements();
+
+    menus = menus;
+}
+
+pub fn update(game: *Game.Game) !void {
+    uiCommand = UiCommand{};
+    if (Gamestate.currentTurn != .player) {
+        return;
+    }
+    if (Gamestate.showMenu == .none) {
+        if (activeMenu != null) {
+            activeMenu.?.visible = false;
+            activeMenu = null;
+        }
+    } else {
+        if (activeMenu == null) {
+            activeMenu = menus.get(Gamestate.showMenu);
+            activeMenu.?.visible = true;
+        }
+    }
+
+    //TODO: @continue add items into menu based on the context
+    for (elements.items) |element| {
+        try element.update(game, null);
+    }
+
+    //confirm
+    var confirm = InputManager.takeConfirmInput();
+
+    //cancel
+    const cancel = InputManager.takeCancelInput();
+
+    //move
+    const move = InputManager.takePositionInput();
+
+    //menu select
+    if (move) |_move| {
+        updateActiveMenu(_move);
+    }
+
+    var menuSelect: ?MenuItemData = null;
+    if (confirm) {
+        menuSelect = getSelectedItem();
+        if (menuSelect != null) {
+            confirm = false;
+        }
+    }
+
+    //quick select
+    const quickSelect = InputManager.takeQuickSelectInput();
+
+    //combat toggle
+    const combatToggle = InputManager.takeCombatToggle();
+
+    const uicommand = UiCommand{
+        .confirm = confirm,
+        .cancel = cancel,
+        .move = move,
+        .menuSelect = menuSelect,
+        .quickSelect = quickSelect,
+        .combatToggle = combatToggle,
+    };
+    uiCommand = uicommand;
+}
+
+pub fn draw() !void {
+    for (elements.items) |element| {
+        element.draw();
+    }
+
+    var buffer: [64:0]u8 = undefined;
+    const text = try std.fmt.bufPrintZ(&buffer, "Turn: {}", .{Gamestate.turnNumber});
+
+    c.DrawText(text.ptr, Config.window_width - 200, 10, 15, c.RED);
+}
+
+pub fn makeUIElements() !void {
+    const playerPlate = try makeCharacterPlate(c.Vector2{ .x = 0, .y = 0 });
+    try elements.append(playerPlate);
+
+    deployMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick a Puppet:", updatePuppetMenu);
+    deployMenu.visible = false;
+    try elements.append(deployMenu);
+
+    actionMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick Action:", updateActionMenu);
+    actionMenu.visible = false;
+    try elements.append(actionMenu);
+
+    try menus.put(.puppet_select, deployMenu);
+    try menus.put(.action_select, actionMenu);
+}
+
+pub fn showDeployMenu() void {
+    deployMenu.visible = true;
+    activeMenu = deployMenu;
+}
+
+pub fn hideDeployMenu() void {
+    deployMenu.visible = false;
+    activeMenu = null;
+}
+
+pub fn updateActiveMenu(move: Types.Vector2Int) void {
+    var menuData: ?*ElementMenuData = null;
+
+    if (activeMenu) |active_menu| {
+        const menu = active_menu.getChild(.menu);
+        if (menu) |_menu| {
+            menuData = &_menu.data.menu;
+        }
+
+        if (menuData) |menu_data| {
+            const itemCount = @as(u32, @intCast(menu_data.menuItems.items.len));
+            var index = menu_data.index;
+            if (itemCount == 0) {
+                return;
+            }
+
+            if (move.y == -1) {
+                if (index <= 0) {
+                    index = itemCount - 1;
+                } else {
+                    index -= 1;
+                }
+            } else if (move.y == 1) {
+                if (index >= itemCount - 1) {
+                    index = 0;
+                } else {
+                    index += 1;
+                }
+            }
+            menu_data.index = index;
+        }
+    }
+}
+
+pub fn showActionMenu() void {
+    actionMenu.visible = true;
+    activeMenu = actionMenu;
+}
+
+pub fn hideActionMenu() void {
+    actionMenu.visible = false;
+    activeMenu = null;
+}
+
+pub fn getSelectedItem() ?MenuItemData {
+    if (activeMenu) |active_menu| {
+        const menu = active_menu.getChild(.menu);
+        if (menu) |_menu| {
+            const menuData = &_menu.data.menu;
+            if (menuData.menuItems.items.len > 0) {
+                return menuData.menuItems.items[menuData.index].data;
+            }
+        }
+    }
+    return null;
+}
 pub const Element = struct {
     //TODO: add stuff like margin etc. will check in the future what is needed
     visible: bool,
@@ -27,48 +200,48 @@ pub const Element = struct {
     data: ElementData,
     updateFn: ?Updatefunction = null,
 
-    pub fn init(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
+    pub fn init(rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
         const element = try allocator.create(Element);
-        const elements = std.ArrayList(*Element).init(allocator);
+        const subelements = std.ArrayList(*Element).init(allocator);
         element.* = .{
             .visible = true,
             .rect = rect,
             .color = color,
             .data = data,
-            .elements = elements,
+            .elements = subelements,
         };
 
         return element;
     }
 
-    pub fn initBar(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color) !*Element {
+    pub fn initBar(rect: c.Rectangle, color: c.Color) !*Element {
         const element = try allocator.create(Element);
-        const elements = std.ArrayList(*Element).init(allocator);
+        const subelements = std.ArrayList(*Element).init(allocator);
         element.* = .{
             .rect = rect,
             .visible = true,
             .color = color,
             .data = undefined,
-            .elements = elements,
+            .elements = subelements,
         };
 
         return element;
     }
 
-    pub fn initBackground(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color) !*Element {
-        var element = try init(allocator, rect, color, undefined);
+    pub fn initBackground(rect: c.Rectangle, color: c.Color) !*Element {
+        var element = try Element.init(rect, color, undefined);
         element.data = ElementData{ .background = ElementBackgroundData{} };
         return element;
     }
 
-    pub fn initText(allocator: std.mem.Allocator, rect: c.Rectangle, text: []const u8, color: c.Color) !*Element {
-        var element = try init(allocator, rect, color, undefined);
+    pub fn initText(rect: c.Rectangle, text: []const u8, color: c.Color) !*Element {
+        var element = try Element.init(rect, color, undefined);
         element.data = ElementData{ .text = ElementTextData.init(text, c.WHITE) };
         return element;
     }
 
-    pub fn initMenu(allocator: std.mem.Allocator, rect: c.Rectangle, color: c.Color, updateFunction: Updatefunction) !*Element {
-        var element = try init(allocator, rect, color, undefined);
+    pub fn initMenu(rect: c.Rectangle, color: c.Color, updateFunction: Updatefunction) !*Element {
+        var element = try Element.init(rect, color, undefined);
 
         element.updateFn = updateFunction;
 
@@ -311,232 +484,7 @@ pub const UiCommand = struct {
     }
 };
 
-pub const UiManager = struct {
-    allocator: std.mem.Allocator,
-    elements: std.ArrayList(*Element),
-    commands: std.ArrayList(Command),
-    //TODO: pointer to active element or have active value in elements?
-    //accessing certain elements that are needed, maybe do this in another way?
-    menus: std.AutoHashMap(MenuType, *Element),
-    deployMenu: *Element,
-    actionMenu: *Element,
-    activeMenu: ?*Element = null,
-
-    pub fn init(allocator: std.mem.Allocator) !*UiManager {
-        const uimanager = try allocator.create(UiManager);
-
-        const menus = std.AutoHashMap(MenuType, *Element).init(allocator);
-        uimanager.menus = menus;
-
-        const elements = try uimanager.makeUIElements(allocator);
-        const commands = std.ArrayList(Command).init(allocator);
-
-        //TODO: make a deploy menu
-        //const deployMenu = Element.init(allocator, c.Rectangle{ .x = 0, .y = 0, .width = 100, .height = 100 }, c.RED);
-
-        uimanager.* = .{
-            .allocator = allocator,
-            .elements = elements,
-            .commands = commands,
-            .deployMenu = uimanager.deployMenu,
-            .actionMenu = uimanager.actionMenu,
-            .menus = uimanager.menus,
-        };
-        return uimanager;
-    }
-
-    pub fn update(this: *UiManager, game: *Game.Game) !void {
-        uiCommand = UiCommand{};
-        if (Gamestate.currentTurn != .player) {
-            return;
-        }
-        if (Gamestate.showMenu == .none) {
-            if (this.activeMenu != null) {
-                this.activeMenu.?.visible = false;
-                this.activeMenu = null;
-            }
-        } else {
-            if (this.activeMenu == null) {
-                this.activeMenu = this.menus.get(Gamestate.showMenu);
-                this.activeMenu.?.visible = true;
-            }
-        }
-        //
-        // if (ctx.gamestate.showPupDeployMenu) {
-        //     //this.showDeployMenu();
-        // } else {
-        //     //this.hideDeployMenu();
-        //     //TODO: @continue cant just put it to null, bug with action menu
-        // }
-        //
-        // if (ctx.gamestate.showActionMenu) {
-        //     //this.showActionMenu();
-        // } else {
-        //     //this.hideActionMenu();
-        // }
-
-        //TODO: @continue add items into menu based on the context
-        for (this.elements.items) |element| {
-            try element.update(game, null);
-        }
-
-        //confirm
-        var confirm = InputManager.takeConfirmInput();
-
-        //cancel
-        const cancel = InputManager.takeCancelInput();
-
-        //move
-        const move = InputManager.takePositionInput();
-
-        //menu select
-        if (move) |_move| {
-            this.updateActiveMenu(_move);
-        }
-
-        var menuSelect: ?MenuItemData = null;
-        if (confirm) {
-            menuSelect = this.getSelectedItem();
-            if (menuSelect != null) {
-                confirm = false;
-            }
-        }
-
-        //quick select
-        const quickSelect = InputManager.takeQuickSelectInput();
-
-        //combat toggle
-        const combatToggle = InputManager.takeCombatToggle();
-
-        const uicommand = UiCommand{
-            .confirm = confirm,
-            .cancel = cancel,
-            .move = move,
-            .menuSelect = menuSelect,
-            .quickSelect = quickSelect,
-            .combatToggle = combatToggle,
-        };
-        uiCommand = uicommand;
-    }
-
-    pub fn draw(this: *UiManager) !void {
-        for (this.elements.items) |element| {
-            element.draw();
-        }
-
-        var buffer: [64:0]u8 = undefined;
-        const text = try std.fmt.bufPrintZ(&buffer, "Turn: {}", .{Gamestate.turnNumber});
-
-        c.DrawText(text.ptr, Config.window_width - 200, 10, 15, c.RED);
-    }
-
-    pub fn push(this: *UiManager, command: Command) !void {
-        try this.commands.append(command);
-    }
-
-    pub fn pop(this: *UiManager) ?Command {
-        if (this.commands.items.len < 1) {
-            return null;
-        }
-        const command = this.commands.orderedRemove(0);
-        return command;
-    }
-
-    pub fn hasCommands(this: *UiManager) bool {
-        return (this.commands.items.len > 0);
-    }
-
-    pub fn makeUIElements(this: *UiManager, allocator: std.mem.Allocator) !std.ArrayList(*Element) {
-        var elements = std.ArrayList(*Element).init(allocator);
-
-        const playerPlate = try makeCharacterPlate(allocator, c.Vector2{ .x = 0, .y = 0 });
-        try elements.append(playerPlate);
-
-        const deployMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 }, "Pick a Puppet:", updatePuppetMenu);
-        deployMenu.visible = false;
-        try elements.append(deployMenu);
-        this.deployMenu = deployMenu;
-
-        const actionMenu = try makeChoiceMenu(allocator, c.Vector2{ .x = 500, .y = 500 }, "Pick Action:", updateActionMenu);
-        actionMenu.visible = false;
-        try elements.append(actionMenu);
-        this.actionMenu = actionMenu;
-
-        try this.menus.put(.puppet_select, deployMenu);
-        try this.menus.put(.action_select, actionMenu);
-
-        return elements;
-    }
-
-    pub fn showDeployMenu(this: *UiManager) void {
-        this.deployMenu.visible = true;
-        this.activeMenu = this.deployMenu;
-    }
-
-    pub fn hideDeployMenu(this: *UiManager) void {
-        this.deployMenu.visible = false;
-        this.activeMenu = null;
-    }
-
-    pub fn updateActiveMenu(this: *UiManager, move: Types.Vector2Int) void {
-        var menuData: ?*ElementMenuData = null;
-
-        if (this.activeMenu) |active_menu| {
-            const menu = active_menu.getChild(.menu);
-            if (menu) |_menu| {
-                menuData = &_menu.data.menu;
-            }
-
-            if (menuData) |menu_data| {
-                const itemCount = @as(u32, @intCast(menu_data.menuItems.items.len));
-                var index = menu_data.index;
-                if (itemCount == 0) {
-                    return;
-                }
-
-                if (move.y == -1) {
-                    if (index <= 0) {
-                        index = itemCount - 1;
-                    } else {
-                        index -= 1;
-                    }
-                } else if (move.y == 1) {
-                    if (index >= itemCount - 1) {
-                        index = 0;
-                    } else {
-                        index += 1;
-                    }
-                }
-                menu_data.index = index;
-            }
-        }
-    }
-
-    pub fn showActionMenu(this: *UiManager) void {
-        this.actionMenu.visible = true;
-        this.activeMenu = this.actionMenu;
-    }
-
-    pub fn hideActionMenu(this: *UiManager) void {
-        this.actionMenu.visible = false;
-        this.activeMenu = null;
-    }
-
-    pub fn getSelectedItem(this: *UiManager) ?MenuItemData {
-        if (this.activeMenu) |active_menu| {
-            const menu = active_menu.getChild(.menu);
-            if (menu) |_menu| {
-                const menuData = &_menu.data.menu;
-                if (menuData.menuItems.items.len > 0) {
-                    return menuData.menuItems.items[menuData.index].data;
-                }
-            }
-        }
-        return null;
-    }
-};
-
-pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Element {
+pub fn makeCharacterPlate(pos: c.Vector2) !*Element {
     const plateRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
@@ -545,7 +493,6 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
         .height = 150,
     };
     const characterPlate = try Element.initBackground(
-        allocator,
         plateRect,
         c.BEIGE,
     );
@@ -557,7 +504,7 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
         .width = 0,
         .height = 0,
     };
-    const characterText = try Element.initText(allocator, textRect, "Player", c.Color{
+    const characterText = try Element.initText(textRect, "Player", c.Color{
         .r = 0,
         .g = 0,
         .b = 0,
@@ -565,14 +512,10 @@ pub fn makeCharacterPlate(allocator: std.mem.Allocator, pos: c.Vector2) !*Elemen
     });
     try characterPlate.elements.append(characterText);
 
-    //const hpBar = try Element.initBar(
-    //allocator,
-    //);
-
     return characterPlate;
 }
 
-pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []const u8, updateFunction: Updatefunction) !*Element {
+pub fn makeChoiceMenu(pos: c.Vector2, title: []const u8, updateFunction: Updatefunction) !*Element {
     const backgroundRect = c.Rectangle{
         .x = pos.x,
         .y = pos.y,
@@ -581,7 +524,6 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []con
         .height = 150,
     };
     const menuBackground = try Element.initBackground(
-        allocator,
         backgroundRect,
         c.BLUE,
     );
@@ -594,7 +536,7 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []con
     };
 
     //TODO: title
-    const menuTitle = try Element.initText(allocator, titleRect, title, c.WHITE);
+    const menuTitle = try Element.initText(titleRect, title, c.WHITE);
     try menuBackground.elements.append(menuTitle);
 
     //TODO: figure out the offsets, probably based on fontsize??? not really clue how it works
@@ -606,7 +548,6 @@ pub fn makeChoiceMenu(allocator: std.mem.Allocator, pos: c.Vector2, title: []con
     };
 
     const menu = try Element.initMenu(
-        allocator,
         menuRect,
         c.BLUE,
         updateFunction,

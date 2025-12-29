@@ -23,10 +23,7 @@ pub const Game = struct {
     delta: f32,
     allocator: std.mem.Allocator,
     player: *Entity.Entity,
-    pathfinder: *Pathfinder.Pathfinder,
-    tilesetManager: *TilesetManager.TilesetManager,
-    uiManager: *UiManager.UiManager,
-    shaderManager: *ShaderManager.ShaderManager,
+
     uiCommand: UiManager.UiCommand = UiManager.UiCommand{},
 
     pub fn init(allocator: std.mem.Allocator) !*Game {
@@ -39,22 +36,18 @@ pub const Game = struct {
         EntityManager.init(allocator);
         var player = try EntityManager.fillEntities();
 
-        const tilesetmanager = try TilesetManager.TilesetManager.init(allocator);
-        const pathfinder = try Pathfinder.Pathfinder.init(allocator);
+        TilesetManager.init();
+        try Pathfinder.init(allocator);
         try CameraManager.init(allocator, player.id);
         try World.init(allocator);
-        const shadermanager = try ShaderManager.ShaderManager.init(allocator);
+        try ShaderManager.init(allocator);
 
-        const uimanager = try UiManager.UiManager.init(allocator);
+        try UiManager.init(allocator);
 
         game.* = .{
             .delta = 0,
             .allocator = allocator,
             .player = &player,
-            .pathfinder = pathfinder,
-            .tilesetManager = tilesetmanager,
-            .uiManager = uimanager,
-            .shaderManager = shadermanager,
         };
 
         Systems.calculateFOV(player.pos, 8);
@@ -76,7 +69,7 @@ pub const Game = struct {
         //uiintent = intent.init()
         //-> send &uiintent into uimanager.update, use it in update
 
-        try this.uiManager.update(this);
+        try UiManager.update(this);
         this.uiCommand = UiManager.uiCommand;
         //std.debug.print("ui_command: {}\n", .{uiCommand});
         //this.world.update(this.context);
@@ -85,7 +78,7 @@ pub const Game = struct {
         CameraManager.update(delta);
         Gamestate.update();
 
-        this.shaderManager.update(delta);
+        ShaderManager.update(delta);
     }
 
     pub fn draw(this: *Game) !void {
@@ -93,14 +86,14 @@ pub const Game = struct {
         c.ClearBackground(c.BLACK);
         c.DrawFPS(0, 0);
         c.BeginMode2D(CameraManager.camera.*);
-        World.draw(this.tilesetManager);
-        this.player.draw(this.tilesetManager);
-        this.shaderManager.draw();
+        World.draw();
+        this.player.draw();
+        ShaderManager.draw();
 
         try Gamestate.draw();
 
         c.EndMode2D();
-        try this.uiManager.draw();
+        try UiManager.draw();
 
         c.EndDrawing();
     }

@@ -56,8 +56,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     currentLevel = level1;
 }
 
-pub fn draw(tilesetManager: *TilesetManager.TilesetManager) void {
-    currentLevel.draw(tilesetManager);
+pub fn draw() void {
+    currentLevel.draw();
 }
 
 pub fn update() void {}

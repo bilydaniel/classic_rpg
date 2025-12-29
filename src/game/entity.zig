@@ -110,7 +110,7 @@ pub const Entity = struct {
         return entity;
     }
 
-    pub fn draw(this: *Entity, tilesetManager: *TilesetManager.TilesetManager) void {
+    pub fn draw(this: *Entity) void {
         if (this.visible) {
             if (this.isAscii) {
                 if (this.ascii) |ascii| {
@@ -145,7 +145,7 @@ pub const Entity = struct {
                     if (this.data == .enemy) {
                         color = c.RED;
                     }
-                    c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, color);
+                    c.DrawTextureRec(TilesetManager.tileset, source_rect, pos, color);
                 }
             }
         }

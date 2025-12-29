@@ -3,19 +3,10 @@ const c = @cImport({
 });
 const std = @import("std");
 
-pub const TilesetManager = struct {
-    tileset: c.Texture2D,
-    urizenTileset: c.Texture2D,
+pub var tileset: c.Texture2D = undefined;
+pub var urizenTileset: c.Texture2D = undefined;
 
-    pub fn init(allocator: std.mem.Allocator) !*TilesetManager {
-        const tilesetManager = try allocator.create(TilesetManager);
-        const urizen_tileset = c.LoadTexture("assets/urizen_tileset.png");
-        const tileset = c.LoadTexture("assets/tileset.png");
-        std.debug.print("loaded_tileset: {}\n", .{tileset});
-        tilesetManager.* = .{
-            .tileset = tileset,
-            .urizenTileset = urizen_tileset,
-        };
-        return tilesetManager;
-    }
-};
+pub fn init() void {
+    urizenTileset = c.LoadTexture("assets/urizen_tileset.png");
+    tileset = c.LoadTexture("assets/tileset.png");
+}

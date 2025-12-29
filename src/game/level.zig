@@ -206,7 +206,7 @@ pub const Level = struct {
         return level;
     }
 
-    pub fn draw(this: *Level, tilesetManager: *TilesetManager.TilesetManager) void {
+    pub fn draw(this: *Level) void {
         const entities = EntityManager.entities;
         for (this.grid, 0..) |tile, index| {
             //const pos_x = your_position.x;
@@ -273,7 +273,7 @@ pub const Level = struct {
                             background = back;
                         }
                         //TODO: pridat scaling podle Wwindow.scale ???
-                        c.DrawTextureRec(tilesetManager.tileset, source_rect, pos, background);
+                        c.DrawTextureRec(TilesetManager.tileset, source_rect, pos, background);
                     }
                 }
             }
@@ -281,14 +281,13 @@ pub const Level = struct {
 
         for (entities.items) |*entity| {
             if (this.id == entity.levelID) {
-                entity.draw(tilesetManager);
+                entity.draw();
             }
         }
     }
 
-    pub fn update(this: *Level, pathfinder: *Pathfinder.Pathfinder) void {
+    pub fn update(this: *Level) void {
         _ = this;
-        _ = pathfinder;
     }
 
     pub fn generateInterestingLevel(level: *Level) void {

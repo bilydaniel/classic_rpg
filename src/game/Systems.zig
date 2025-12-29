@@ -10,6 +10,7 @@ const std = @import("std");
 const Pathfinder = @import("../game/pathfinder.zig");
 const InputManager = @import("../game/inputManager.zig");
 const Game = @import("game.zig");
+const ShaderManager = @import("shaderManager.zig");
 const EntityManager = @import("entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
@@ -17,7 +18,6 @@ const c = @cImport({
 
 //TODO: add an optiom to "look around", get info on enemies, etc.
 pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
-    std.debug.print("updating_player\n", .{});
     switch (player.data.player.state) {
         // TODO: go through everything, make more functions, messy
         // TODO: go through all the state management, make some fool proof system
@@ -47,7 +47,7 @@ pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
         return;
     }
 
-    try updateEntityMovement(player, game);
+    try updateEntityMovement(player);
 }
 
 pub fn preWalkingTransitions(game: *Game.Game) !bool {
@@ -512,7 +512,7 @@ pub fn entityAction(game: *Game.Game) !void {
                 if (game.uiCommand.getConfirm()) {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinMovable(cur)) {
-                            entity.path = try game.pathfinder.findPath(entity.pos, cur);
+                            entity.path = try Pathfinder.findPath(entity.pos, cur);
                             entity.hasMoved = true;
                             Gamestate.resetMovementHighlight();
                             Gamestate.removeCursor();
@@ -535,8 +535,8 @@ pub fn entityAction(game: *Game.Game) !void {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinAttackable(cur)) {
                             const attackedEntity = EntityManager.getEntityByPos(cur);
-                            try game.shaderManager.spawnSlash(entity.pos, cur);
-                            try game.shaderManager.spawnImpact(cur);
+                            try ShaderManager.spawnSlash(entity.pos, cur);
+                            try ShaderManager.spawnImpact(cur);
 
                             attack(game, entity, attackedEntity);
                             Gamestate.resetAttackHighlight();
@@ -607,7 +607,7 @@ pub fn selectedEntityMove(game: *Game.Game, entity: *Entity.Entity) !void {
     if (c.IsKeyPressed(c.KEY_A)) {
         if (Gamestate.cursor) |cur| {
             if (Gamestate.isinMovable(cur)) {
-                entity.path = try game.pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
+                entity.path = try Pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
                 entity.hasMoved = true;
                 Gamestate.resetMovementHighlight();
                 Gamestate.removeCursor();
@@ -621,14 +621,11 @@ pub fn selectedEntityAttack(game: *Game.Game, entity: *Entity.Entity) !void {
 
     if (c.IsKeyPressed(c.KEY_A)) {
         if (Gamestate.cursor) |cur| {
-            //try game.shaderManager.spawnSlash(entity.pos, cur);
-            //try game.shaderManager.spawnExplosion(entity.pos);
-            //try game.shaderManager.spawnImpact(cur);
             if (Gamestate.isinAttackable(cur)) {
                 const attackedEntity = EntityManager.getEntityByPos(cur);
 
-                try game.shaderManager.spawnSlash(entity.pos, cur);
-                try game.shaderManager.spawnImpact(cur);
+                try ShaderManager.spawnSlash(entity.pos, cur);
+                try ShaderManager.spawnImpact(cur);
 
                 attack(game, entity, attackedEntity);
                 Gamestate.resetAttackHighlight();
@@ -781,14 +778,14 @@ pub fn exitCombat(game: *Game.Game) !void {
 }
 
 pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
+    _ = game;
     if (Gamestate.currentTurn != .player) {
         return;
     }
-    try updateEntityMovement(puppet, game);
+    try updateEntityMovement(puppet);
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
-    std.debug.print("updating_enemy\n", .{});
     if (Gamestate.currentTurn != .enemy) {
         return;
     }
@@ -803,12 +800,12 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
         try enemy.aiBehaviourWalking.?(enemy, game);
         //enemyWanderBehaviour(enemy, game);
     }
-    try updateEntityMovement(enemy, game);
+    try updateEntityMovement(enemy);
 }
 
-pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+pub fn updateEntityMovement(entity: *Entity.Entity) !void {
     if (entity.path == null and entity.goal != null) {
-        entity.path = try game.pathfinder.findPath(entity.pos, entity.goal.?);
+        entity.path = try Pathfinder.findPath(entity.pos, entity.goal.?);
     }
     if (entity.path) |path| {
         if (path.nodes.items.len < 2) {
@@ -829,7 +826,7 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
         if (new_pos_entity) |_| {
             // position has entity, recalculate
             if (entity.goal) |goal| {
-                entity.path = try game.pathfinder.findPath(entity.pos, goal);
+                entity.path = try Pathfinder.findPath(entity.pos, goal);
             }
         } else {
             entity.move(new_pos);
