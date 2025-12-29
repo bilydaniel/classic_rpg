@@ -10,15 +10,16 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 //TODO: REWRITE ALL OF THIS
+//TODO: how to make it resolution independent??
+//TODO: make the ui relative to anchors (corners + center)
 
-//TODO: how to make some lines / additional graphics?
 pub const Updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
 
 //TODO: @finish
 pub var uiCommand: UiCommand = undefined;
 
 var allocator: std.mem.Allocator = undefined;
-var elements: std.ArrayList(*Element) = undefined;
+var elements: std.ArrayList(Element) = undefined;
 //TODO: pointer to active element or have active value in elements?
 //accessing certain elements that are needed, maybe do this in another way?
 var menus: std.AutoHashMap(MenuType, *Element) = undefined;
@@ -28,7 +29,7 @@ var activeMenu: ?*Element = null;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
-    elements = std.ArrayList(*Element).init(allocator);
+    elements = std.ArrayList(Element).init(allocator);
     menus = std.AutoHashMap(MenuType, *Element).init(allocator);
 
     try makeUIElements();
@@ -190,13 +191,34 @@ pub fn getSelectedItem() ?MenuItemData {
     }
     return null;
 }
+
+pub const Anchor = enum {
+    top_left,
+    top_center,
+    top_right,
+    center_left,
+    center,
+    center_right,
+    bottom_left,
+    bottom_center,
+    bottom_right,
+};
+
+pub const RelativePos = struct {
+    anchor: Anchor,
+    x: f32,
+    y: f32,
+};
+
+fn relativeToScreenPos(){
+
+}
 pub const Element = struct {
     //TODO: add stuff like margin etc. will check in the future what is needed
     visible: bool,
     rect: c.Rectangle,
     color: c.Color,
     //TODO: filled: bool, full vs only lines
-    elements: std.ArrayList(*Element),
     data: ElementData,
     updateFn: ?Updatefunction = null,
 
