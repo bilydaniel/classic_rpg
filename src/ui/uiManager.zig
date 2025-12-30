@@ -6,22 +6,17 @@ const Types = @import("../common/types.zig");
 const InputManager = @import("../game/inputManager.zig");
 const EntityManager = @import("../game/entityManager.zig");
 const Config = @import("../common/config.zig");
+const Utils = @import("../common/utils.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
-//TODO: REWRITE ALL OF THIS
-//TODO: how to make it resolution independent??
-//TODO: make the ui relative to anchors (corners + center)
 
 pub const Updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
 
-//TODO: @finish
 pub var uiCommand: UiCommand = undefined;
 
 var allocator: std.mem.Allocator = undefined;
 var elements: std.ArrayList(Element) = undefined;
-//TODO: pointer to active element or have active value in elements?
-//accessing certain elements that are needed, maybe do this in another way?
 var menus: std.AutoHashMap(MenuType, *Element) = undefined;
 var deployMenu: *Element = undefined;
 var actionMenu: *Element = undefined;
@@ -33,8 +28,6 @@ pub fn init(alloc: std.mem.Allocator) !void {
     menus = std.AutoHashMap(MenuType, *Element).init(allocator);
 
     try makeUIElements();
-
-    menus = menus;
 }
 
 pub fn update(game: *Game.Game) !void {
@@ -56,7 +49,7 @@ pub fn update(game: *Game.Game) !void {
 
     //TODO: @continue add items into menu based on the context
     for (elements.items) |element| {
-        try element.update(game, null);
+        try element.update(game);
     }
 
     //confirm
@@ -110,19 +103,20 @@ pub fn draw() !void {
 }
 
 pub fn makeUIElements() !void {
-    const playerPlate = try makeCharacterPlate(c.Vector2{ .x = 0, .y = 0 });
-    try elements.append(playerPlate);
+    const playerPlatePos = RelativePos.init(.top_left, 10, 10);
+    const playerPlateSize = c.Vector2{ .x = 200, .y = 150 };
+    try makeCharacterPlate(c.Vector2{ .x = 10, .y = 10 });
 
-    deployMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick a Puppet:", updatePuppetMenu);
-    deployMenu.visible = false;
-    try elements.append(deployMenu);
-
-    actionMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick Action:", updateActionMenu);
-    actionMenu.visible = false;
-    try elements.append(actionMenu);
-
-    try menus.put(.puppet_select, deployMenu);
-    try menus.put(.action_select, actionMenu);
+    // deployMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick a Puppet:", updatePuppetMenu);
+    // deployMenu.visible = false;
+    // try elements.append(deployMenu);
+    //
+    // actionMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick Action:", updateActionMenu);
+    // actionMenu.visible = false;
+    // try elements.append(actionMenu);
+    //
+    // try menus.put(.puppet_select, deployMenu);
+    // try menus.put(.action_select, actionMenu);
 }
 
 pub fn showDeployMenu() void {
@@ -192,7 +186,7 @@ pub fn getSelectedItem() ?MenuItemData {
     return null;
 }
 
-pub const Anchor = enum {
+pub const AnchorEnum = enum {
     top_left,
     top_center,
     top_right,
@@ -205,65 +199,108 @@ pub const Anchor = enum {
 };
 
 pub const RelativePos = struct {
-    anchor: Anchor,
-    x: f32,
-    y: f32,
+    anchor: AnchorEnum,
+    pos: c.Vector2,
+
+    pub fn init(anchor: AnchorEnum, x: f32, y: f32) RelativePos {
+        return RelativePos{
+            .anchor = anchor,
+            .pos = c.Vector2{
+                .x = x,
+                .y = y,
+            },
+        };
+    }
 };
 
-fn relativeToScreenPos(){
+fn relativeToScreenPos(rPos: RelativePos) c.Vector2 {
+    const anchorPosition = getAnchorPosition(rPos.anchor);
+    const result = Utils.vector2Add(anchorPosition, rPos.pos);
 
+    // // Adjust for element size based on anchor
+    // switch (self.anchor) {
+    //     .top_center, .center, .bottom_center => {
+    //         x -= (element_width * Window.scale) / 2;
+    //     },
+    //     .top_right, .center_right, .bottom_right => {
+    //         x -= element_width * Window.scale;
+    //     },
+    //     else => {},
+    // }
+    //
+    // switch (self.anchor) {
+    //     .center_left, .center, .center_right => {
+    //         y -= (element_height * Window.scale) / 2;
+    //     },
+    //     .bottom_left, .bottom_center, .bottom_right => {
+    //         y -= element_height * Window.scale;
+    //     },
+    //     else => {},
+    // }
+
+    std.debug.print("anchor_position: {}\n", .{anchorPosition});
+    std.debug.print("result: {}\n", .{result});
+    return result;
 }
+
+fn getAnchorPosition(anchor: Anchor) c.Vector2 {
+    return switch (anchor) {
+        .top_left => c.Vector2{ .x = 0, .y = 0 },
+        .top_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = 0 },
+        .top_right => c.Vector2{ .x = Window.scaledWidth, .y = 0 },
+        .center_left => c.Vector2{ .x = 0, .y = Window.scaledHeightHalf },
+        .center => c.Vector2{ .x = Window.scaledWidthHalf, .y = Window.scaledHeightHalf },
+        .center_right => c.Vector2{ .x = Window.scaledWidth, .y = Window.scaledHeightHalf },
+        .bottom_left => c.Vector2{ .x = 0, .y = Window.scaledHeight },
+        .bottom_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = Window.scaledHeight },
+        .bottom_right => c.Vector2{ .x = Window.scaledWidth, .y = Window.scaledHeight },
+    };
+}
+
 pub const Element = struct {
     //TODO: add stuff like margin etc. will check in the future what is needed
     visible: bool,
-    rect: c.Rectangle,
-    color: c.Color,
-    //TODO: filled: bool, full vs only lines
+    relPos: RelativePos,
+    size: c.Vector2,
     data: ElementData,
     updateFn: ?Updatefunction = null,
 
-    pub fn init(rect: c.Rectangle, color: c.Color, data: ElementData) !*Element {
-        const element = try allocator.create(Element);
-        const subelements = std.ArrayList(*Element).init(allocator);
-        element.* = .{
+    pub fn init(resPos: RelativePos, size: c.Vector2, data: ElementData) !Element {
+        const element = Element{
             .visible = true,
-            .rect = rect,
-            .color = color,
+            .relPos = resPos,
+            .size = size,
             .data = data,
-            .elements = subelements,
         };
 
         return element;
     }
 
-    pub fn initBar(rect: c.Rectangle, color: c.Color) !*Element {
-        const element = try allocator.create(Element);
-        const subelements = std.ArrayList(*Element).init(allocator);
-        element.* = .{
-            .rect = rect,
+    pub fn initBar(resPos: RelativePos, size: c.Vector2, data: ElementData) !*Element {
+        const element = Element{
             .visible = true,
-            .color = color,
-            .data = undefined,
-            .elements = subelements,
+            .relPos = resPos,
+            .size = size,
+            .data = data,
         };
 
         return element;
     }
 
-    pub fn initBackground(rect: c.Rectangle, color: c.Color) !*Element {
-        var element = try Element.init(rect, color, undefined);
-        element.data = ElementData{ .background = ElementBackgroundData{} };
+    pub fn initBackground(resPos: RelativePos, size: c.Vector2, color: c.Color) !*Element {
+        var element = try Element.init(resPos, size, undefined);
+        element.data = ElementData{ .background = ElementBackgroundData{ .color = color } };
         return element;
     }
 
-    pub fn initText(rect: c.Rectangle, text: []const u8, color: c.Color) !*Element {
-        var element = try Element.init(rect, color, undefined);
+    pub fn initText(resPos: RelativePos, size: c.Vector2, text: []const u8) !*Element {
+        var element = try Element.init(resPos, size, undefined);
         element.data = ElementData{ .text = ElementTextData.init(text, c.WHITE) };
         return element;
     }
 
-    pub fn initMenu(rect: c.Rectangle, color: c.Color, updateFunction: Updatefunction) !*Element {
-        var element = try Element.init(rect, color, undefined);
+    pub fn initMenu(resPos: RelativePos, size: c.Vector2, updateFunction: Updatefunction) !*Element {
+        var element = try Element.init(resPos, size, undefined);
 
         element.updateFn = updateFunction;
 
@@ -276,26 +313,9 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn getChild(this: *Element, elementType: ElementType) ?*Element {
-        for (this.elements.items) |element| {
-            if (element.data == elementType) {
-                return element;
-            }
-        }
-        return null;
-    }
-
-    pub fn update(this: *Element, game: *Game.Game, rect: ?c.Rectangle) !void {
+    pub fn update(this: *Element, game: *Game.Game) !void {
         if (this.updateFn) |_fn| {
             try _fn(this, game);
-        }
-        //TODO: make logic for extracting data from ctx
-        if (rect) |r| {
-            this.rect = r;
-        }
-
-        for (this.elements.items) |item| {
-            try item.update(game, null);
         }
     }
 
@@ -407,7 +427,9 @@ pub const MenuItemData = union(enum) {
     action: ActionType,
 };
 
-pub const ElementBackgroundData = struct {};
+pub const ElementBackgroundData = struct {
+    color: c.Color,
+};
 
 pub const ElementBarData = struct {
     min: i32,
@@ -506,16 +528,10 @@ pub const UiCommand = struct {
     }
 };
 
-pub fn makeCharacterPlate(pos: c.Vector2) !*Element {
-    const plateRect = c.Rectangle{
-        .x = pos.x,
-        .y = pos.y,
-        //TODO: what to do about width and height?
-        .width = 200,
-        .height = 150,
-    };
-    const characterPlate = try Element.initBackground(
-        plateRect,
+pub fn makeCharacterPlate(relPos: RelativePos, size: c.Vector2) !*void {
+    const background = try Element.initBackground(
+        relPos,
+        size,
         c.BEIGE,
     );
 
@@ -526,15 +542,15 @@ pub fn makeCharacterPlate(pos: c.Vector2) !*Element {
         .width = 0,
         .height = 0,
     };
-    const characterText = try Element.initText(textRect, "Player", c.Color{
+    const text = try Element.initText(textRect, "Player", c.Color{
         .r = 0,
         .g = 0,
         .b = 0,
         .a = 0,
     });
-    try characterPlate.elements.append(characterText);
 
-    return characterPlate;
+    elements.append(background);
+    elements.append(text);
 }
 
 pub fn makeChoiceMenu(pos: c.Vector2, title: []const u8, updateFunction: Updatefunction) !*Element {
