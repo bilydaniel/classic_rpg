@@ -74,4 +74,6 @@ pub fn updateWindow() void {
     scaledHeight = scaled_height;
     scaledWidthHalf = @as(f32, @floatFromInt(scaled_width)) / 2;
     scaledHeightHalf = @as(f32, @floatFromInt(scaled_height)) / 2;
+    std.debug.print("window_w: {}\n", .{windowWidth});
+    std.debug.print("window_h: {}\n", .{windowHeight});
 }

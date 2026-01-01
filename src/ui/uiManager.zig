@@ -11,21 +11,23 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+//TODO: how do I do some special shapes / effects for design?
+// maybe attach them to an element or have them separate?
 pub const Updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
 
 pub var uiCommand: UiCommand = undefined;
 
 var allocator: std.mem.Allocator = undefined;
 var elements: std.ArrayList(Element) = undefined;
-var menus: std.AutoHashMap(MenuType, *Element) = undefined;
-var deployMenu: *Element = undefined;
-var actionMenu: *Element = undefined;
-var activeMenu: ?*Element = null;
+var menus: std.AutoHashMap(MenuType, i32) = undefined; //element id
+var activeMenu: ?i32 = null;
+var elementGroupID: i32 = 0;
+var nextElementID: i32 = 0;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
     elements = std.ArrayList(Element).init(allocator);
-    menus = std.AutoHashMap(MenuType, *Element).init(allocator);
+    menus = std.AutoHashMap(MenuType, i32).init(allocator);
 
     try makeUIElements();
 }
@@ -37,18 +39,19 @@ pub fn update(game: *Game.Game) !void {
     }
     if (Gamestate.showMenu == .none) {
         if (activeMenu != null) {
-            activeMenu.?.visible = false;
-            activeMenu = null;
+            const menuElement = getElementByID(activeMenu.?);
+            if (menuElement.?.data == .menu) {
+                hideMenu(menuElement.?.data.menu.type);
+            }
         }
     } else {
         if (activeMenu == null) {
-            activeMenu = menus.get(Gamestate.showMenu);
-            activeMenu.?.visible = true;
+            showMenu(Gamestate.showMenu);
         }
     }
 
     //TODO: @continue add items into menu based on the context
-    for (elements.items) |element| {
+    for (elements.items) |*element| {
         try element.update(game);
     }
 
@@ -92,7 +95,7 @@ pub fn update(game: *Game.Game) !void {
 }
 
 pub fn draw() !void {
-    for (elements.items) |element| {
+    for (elements.items) |*element| {
         element.draw();
     }
 
@@ -103,84 +106,98 @@ pub fn draw() !void {
 }
 
 pub fn makeUIElements() !void {
-    const playerPlatePos = RelativePos.init(.top_left, 10, 10);
+    const playerPlatePos = RelativePos.init(.top_left, 10, 30);
     const playerPlateSize = c.Vector2{ .x = 200, .y = 150 };
-    try makeCharacterPlate(c.Vector2{ .x = 10, .y = 10 });
+    _ = try makeCharacterPlate(playerPlatePos, playerPlateSize);
 
-    // deployMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick a Puppet:", updatePuppetMenu);
-    // deployMenu.visible = false;
-    // try elements.append(deployMenu);
-    //
-    // actionMenu = try makeChoiceMenu(c.Vector2{ .x = 500, .y = 500 }, "Pick Action:", updateActionMenu);
-    // actionMenu.visible = false;
-    // try elements.append(actionMenu);
-    //
-    // try menus.put(.puppet_select, deployMenu);
-    // try menus.put(.action_select, actionMenu);
+    const deployMenuPos = RelativePos.init(.center, 0, 0);
+    const deployMenuSize = c.Vector2{ .x = 200, .y = 150 };
+    const deployMenuID = try makeChoiceMenu(deployMenuPos, deployMenuSize, "Pick a Puppet:", MenuType.puppet_select, updatePuppetMenu);
+    hideElementGroup(deployMenuID);
+
+    const actionMenuPos = RelativePos.init(.center, 0, 0);
+    const actionMenuSize = c.Vector2{ .x = 200, .y = 150 };
+    const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
+    hideElementGroup(actionMenuID);
 }
 
-pub fn showDeployMenu() void {
-    deployMenu.visible = true;
-    activeMenu = deployMenu;
+pub fn showMenu(menuType: MenuType) void {
+    const menuID = menus.get(menuType) orelse return;
+    const menuElement = getElementByID(menuID);
+    if (menuElement) |_menu| {
+        showElementGroup(_menu.groupID);
+        activeMenu = menuID;
+    }
 }
 
-pub fn hideDeployMenu() void {
-    deployMenu.visible = false;
-    activeMenu = null;
+pub fn hideMenu(menuType: MenuType) void {
+    const menuID = menus.get(menuType) orelse return;
+    const menuElement = getElementByID(menuID);
+    if (menuElement) |_menu| {
+        hideElementGroup(_menu.groupID);
+        activeMenu = null;
+    }
 }
 
-pub fn updateActiveMenu(move: Types.Vector2Int) void {
-    var menuData: ?*ElementMenuData = null;
-
-    if (activeMenu) |active_menu| {
-        const menu = active_menu.getChild(.menu);
-        if (menu) |_menu| {
-            menuData = &_menu.data.menu;
-        }
-
-        if (menuData) |menu_data| {
-            const itemCount = @as(u32, @intCast(menu_data.menuItems.items.len));
-            var index = menu_data.index;
-            if (itemCount == 0) {
-                return;
-            }
-
-            if (move.y == -1) {
-                if (index <= 0) {
-                    index = itemCount - 1;
-                } else {
-                    index -= 1;
-                }
-            } else if (move.y == 1) {
-                if (index >= itemCount - 1) {
-                    index = 0;
-                } else {
-                    index += 1;
-                }
-            }
-            menu_data.index = index;
+pub fn hideElementGroup(id: i32) void {
+    for (elements.items) |*element| {
+        if (element.groupID == id) {
+            element.visible = false;
         }
     }
 }
 
-pub fn showActionMenu() void {
-    actionMenu.visible = true;
-    activeMenu = actionMenu;
+pub fn showElementGroup(id: i32) void {
+    for (elements.items) |*element| {
+        if (element.groupID == id) {
+            element.visible = true;
+        }
+    }
 }
 
-pub fn hideActionMenu() void {
-    actionMenu.visible = false;
-    activeMenu = null;
+pub fn updateActiveMenu(move: Types.Vector2Int) void {
+    if (activeMenu) |active_menu| {
+        const activeElement = getElementByID(active_menu) orelse return;
+        var menuData = &activeElement.data.menu;
+        const itemCount = @as(u32, @intCast(menuData.menuItems.items.len));
+        var index = menuData.index;
+        if (itemCount == 0) {
+            return;
+        }
+
+        if (move.y == -1) {
+            if (index <= 0) {
+                index = itemCount - 1;
+            } else {
+                index -= 1;
+            }
+        } else if (move.y == 1) {
+            if (index >= itemCount - 1) {
+                index = 0;
+            } else {
+                index += 1;
+            }
+        }
+        menuData.index = index;
+    }
 }
 
 pub fn getSelectedItem() ?MenuItemData {
     if (activeMenu) |active_menu| {
-        const menu = active_menu.getChild(.menu);
-        if (menu) |_menu| {
-            const menuData = &_menu.data.menu;
-            if (menuData.menuItems.items.len > 0) {
-                return menuData.menuItems.items[menuData.index].data;
-            }
+        const activeElement = getElementByID(active_menu) orelse return null;
+
+        const menu = activeElement.data.menu;
+        if (menu.menuItems.items.len > 0) {
+            return menu.menuItems.items[menu.index].data;
+        }
+    }
+    return null;
+}
+
+fn getElementByID(id: i32) ?*Element {
+    for (elements.items) |*element| {
+        if (element.id == id) {
+            return element;
         }
     }
     return null;
@@ -213,65 +230,72 @@ pub const RelativePos = struct {
     }
 };
 
-fn relativeToScreenPos(rPos: RelativePos) c.Vector2 {
+fn getScaledSize(size: c.Vector2) c.Vector2 {
+    return Utils.vector2Scale(size, Window.scale);
+}
+
+fn relativeToScreenPos(rPos: RelativePos, size: c.Vector2) c.Vector2 {
     const anchorPosition = getAnchorPosition(rPos.anchor);
-    const result = Utils.vector2Add(anchorPosition, rPos.pos);
+    const position = Utils.vector2Scale(rPos.pos, Window.scale);
+    var result = Utils.vector2Add(anchorPosition, position);
 
-    // // Adjust for element size based on anchor
-    // switch (self.anchor) {
-    //     .top_center, .center, .bottom_center => {
-    //         x -= (element_width * Window.scale) / 2;
-    //     },
-    //     .top_right, .center_right, .bottom_right => {
-    //         x -= element_width * Window.scale;
-    //     },
-    //     else => {},
-    // }
-    //
-    // switch (self.anchor) {
-    //     .center_left, .center, .center_right => {
-    //         y -= (element_height * Window.scale) / 2;
-    //     },
-    //     .bottom_left, .bottom_center, .bottom_right => {
-    //         y -= element_height * Window.scale;
-    //     },
-    //     else => {},
-    // }
+    //Adjust for element size based on anchor
+    switch (rPos.anchor) {
+        .top_center, .center, .bottom_center => {
+            result.x -= (size.x * Window.scale) / 2;
+        },
+        .top_right, .center_right, .bottom_right => {
+            result.x -= size.x * Window.scale;
+        },
+        else => {},
+    }
 
-    std.debug.print("anchor_position: {}\n", .{anchorPosition});
-    std.debug.print("result: {}\n", .{result});
+    switch (rPos.anchor) {
+        .center_left, .center, .center_right => {
+            result.y -= (size.y * Window.scale) / 2;
+        },
+        .bottom_left, .bottom_center, .bottom_right => {
+            result.y -= size.y * Window.scale;
+        },
+        else => {},
+    }
+
     return result;
 }
 
-fn getAnchorPosition(anchor: Anchor) c.Vector2 {
+fn getAnchorPosition(anchor: AnchorEnum) c.Vector2 {
     return switch (anchor) {
         .top_left => c.Vector2{ .x = 0, .y = 0 },
         .top_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = 0 },
-        .top_right => c.Vector2{ .x = Window.scaledWidth, .y = 0 },
+        .top_right => c.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = 0 },
         .center_left => c.Vector2{ .x = 0, .y = Window.scaledHeightHalf },
         .center => c.Vector2{ .x = Window.scaledWidthHalf, .y = Window.scaledHeightHalf },
-        .center_right => c.Vector2{ .x = Window.scaledWidth, .y = Window.scaledHeightHalf },
-        .bottom_left => c.Vector2{ .x = 0, .y = Window.scaledHeight },
-        .bottom_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = Window.scaledHeight },
-        .bottom_right => c.Vector2{ .x = Window.scaledWidth, .y = Window.scaledHeight },
+        .center_right => c.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = Window.scaledHeightHalf },
+        .bottom_left => c.Vector2{ .x = 0, .y = @floatFromInt(Window.scaledHeight) },
+        .bottom_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = @floatFromInt(Window.scaledHeight) },
+        .bottom_right => c.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = @floatFromInt(Window.scaledHeight) },
     };
 }
 
 pub const Element = struct {
-    //TODO: add stuff like margin etc. will check in the future what is needed
+    id: i32,
     visible: bool,
     relPos: RelativePos,
     size: c.Vector2,
     data: ElementData,
     updateFn: ?Updatefunction = null,
+    groupID: i32 = undefined,
 
-    pub fn init(resPos: RelativePos, size: c.Vector2, data: ElementData) !Element {
+    pub fn init(resPos: RelativePos, size: c.Vector2, data: ElementData) Element {
         const element = Element{
+            .id = nextElementID,
             .visible = true,
             .relPos = resPos,
             .size = size,
             .data = data,
+            .groupID = elementGroupID,
         };
+        nextElementID += 1;
 
         return element;
     }
@@ -287,20 +311,20 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn initBackground(resPos: RelativePos, size: c.Vector2, color: c.Color) !*Element {
-        var element = try Element.init(resPos, size, undefined);
+    pub fn initBackground(resPos: RelativePos, size: c.Vector2, color: c.Color) Element {
+        var element = Element.init(resPos, size, undefined);
         element.data = ElementData{ .background = ElementBackgroundData{ .color = color } };
         return element;
     }
 
-    pub fn initText(resPos: RelativePos, size: c.Vector2, text: []const u8) !*Element {
-        var element = try Element.init(resPos, size, undefined);
+    pub fn initText(resPos: RelativePos, size: c.Vector2, text: []const u8) Element {
+        var element = Element.init(resPos, size, undefined);
         element.data = ElementData{ .text = ElementTextData.init(text, c.WHITE) };
         return element;
     }
 
-    pub fn initMenu(resPos: RelativePos, size: c.Vector2, updateFunction: Updatefunction) !*Element {
-        var element = try Element.init(resPos, size, undefined);
+    pub fn initMenu(resPos: RelativePos, size: c.Vector2, updateFunction: Updatefunction) Element {
+        var element = Element.init(resPos, size, undefined);
 
         element.updateFn = updateFunction;
 
@@ -326,15 +350,19 @@ pub const Element = struct {
 
         switch (this.data) {
             .background => {
-                var rect = this.rect;
-                rect.height = rect.height * Window.scale;
-                rect.width = rect.width * Window.scale;
-                c.DrawRectangleRec(rect, this.color);
+                const size = getScaledSize(this.size);
+                const position = relativeToScreenPos(this.relPos, size);
+
+                c.DrawRectangle(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(size.x), @intFromFloat(size.y), c.ORANGE);
             },
             .menu => {
                 //TODO: @finish
-                var x = this.rect.x;
-                var y = this.rect.y;
+
+                const size = getScaledSize(this.size);
+                const position = relativeToScreenPos(this.relPos, size);
+
+                var x = position.x;
+                var y = position.y;
                 for (this.data.menu.menuItems.items, 0..) |item, i| {
                     var text_color = this.data.menu.textColor;
                     if (this.data.menu.index == i) {
@@ -354,18 +382,18 @@ pub const Element = struct {
             },
             .bar => {},
             .text => {
+                const size = getScaledSize(this.size);
+                const position = relativeToScreenPos(this.relPos, size);
+                const fontSize = @as(c_int, @intFromFloat(@as(f32, @floatFromInt(this.data.text.fontSize)) * Window.scale));
+
                 c.DrawText(
                     this.data.text.text.ptr,
-                    @intFromFloat(this.rect.x),
-                    @intFromFloat(this.rect.y),
-                    this.data.text.fontSize,
+                    @intFromFloat(position.x),
+                    @intFromFloat(position.y),
+                    fontSize,
                     this.data.text.textColor,
                 );
             },
-        }
-
-        for (this.elements.items) |item| {
-            item.draw();
         }
     }
 };
@@ -447,7 +475,7 @@ pub const ElementTextData = struct {
         return ElementTextData{
             .text = text,
             .textColor = textColor,
-            .fontSize = 20,
+            .fontSize = 25,
         };
     }
 };
@@ -528,71 +556,45 @@ pub const UiCommand = struct {
     }
 };
 
-pub fn makeCharacterPlate(relPos: RelativePos, size: c.Vector2) !*void {
-    const background = try Element.initBackground(
-        relPos,
+pub fn makeCharacterPlate(relPos: RelativePos, size: c.Vector2) !i32 {
+    var relativePosition = relPos;
+    const background = Element.initBackground(
+        relativePosition,
         size,
         c.BEIGE,
     );
 
-    const textRect = c.Rectangle{
-        .x = pos.x + 3,
-        .y = pos.y + 5,
-        //TODO: what to do about width and height?
-        .width = 0,
-        .height = 0,
-    };
-    const text = try Element.initText(textRect, "Player", c.Color{
-        .r = 0,
-        .g = 0,
-        .b = 0,
-        .a = 0,
-    });
+    relativePosition.pos.x += 3;
+    relativePosition.pos.y += 5;
+    const text = Element.initText(relativePosition, size, "Player");
 
-    elements.append(background);
-    elements.append(text);
+    try elements.append(background);
+    try elements.append(text);
+    elementGroupID += 1;
+    return background.groupID;
 }
 
-pub fn makeChoiceMenu(pos: c.Vector2, title: []const u8, updateFunction: Updatefunction) !*Element {
-    const backgroundRect = c.Rectangle{
-        .x = pos.x,
-        .y = pos.y,
-        //TODO: what to do about width and height?
-        .width = 200,
-        .height = 150,
-    };
-    const menuBackground = try Element.initBackground(
-        backgroundRect,
-        c.BLUE,
-    );
+pub fn makeChoiceMenu(relPos: RelativePos, size: c.Vector2, title: []const u8, menuType: MenuType, updateFunction: Updatefunction) !i32 {
+    var relativePosition = relPos;
 
-    const titleRect = c.Rectangle{
-        .x = pos.x + 3,
-        .y = pos.y + 5,
-        .width = 0,
-        .height = 0,
-    };
+    const background = Element.initBackground(relativePosition, size, c.BLUE);
 
-    //TODO: title
-    const menuTitle = try Element.initText(titleRect, title, c.WHITE);
-    try menuBackground.elements.append(menuTitle);
+    relativePosition.pos.x += 3;
+    relativePosition.pos.y += 5;
 
-    //TODO: figure out the offsets, probably based on fontsize??? not really clue how it works
-    const menuRect = c.Rectangle{
-        .x = pos.x + 3,
-        .y = pos.y + 30,
-        .width = 0,
-        .height = 0,
-    };
+    const titleElement = Element.initText(relativePosition, size, title);
 
-    const menu = try Element.initMenu(
-        menuRect,
-        c.BLUE,
-        updateFunction,
-    );
-    try menuBackground.elements.append(menu);
+    relativePosition.pos.x += 3;
+    relativePosition.pos.y += 30;
 
-    return menuBackground;
+    const menu = Element.initMenu(relativePosition, size, updateFunction);
+    try menus.put(menuType, menu.id);
+
+    try elements.append(background);
+    try elements.append(titleElement);
+    try elements.append(menu);
+    elementGroupID += 1;
+    return background.groupID;
 }
 
 pub fn updatePuppetMenu(this: *Element, game: *Game.Game) MenuError!void {

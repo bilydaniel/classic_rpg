@@ -11,6 +11,7 @@ pub fn main() !void {
     c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE);
     //c.SetConfigFlags(c.FLAG_FULLSCREEN_MODE);
     c.InitWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
+    //c.ToggleFullscreen();
     defer c.CloseWindow();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
