@@ -12,6 +12,7 @@ const InputManager = @import("../game/inputManager.zig");
 const Game = @import("game.zig");
 const ShaderManager = @import("shaderManager.zig");
 const EntityManager = @import("entityManager.zig");
+const UiManager = @import("../ui/uiManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -51,7 +52,7 @@ pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
 }
 
 pub fn preWalkingTransitions(game: *Game.Game) !bool {
-    if (game.uiCommand.getCombatToggle()) {
+    if (UiManager.getCombatToggle()) {
         //TODO: check in enemies are around, if it makes sense to even go to combat
         try playerChangeState(game, .deploying_puppets);
         return true;
@@ -66,7 +67,7 @@ pub fn preWalkingTransitions(game: *Game.Game) !bool {
 }
 
 pub fn preDeployingTransitions(game: *Game.Game) !bool {
-    if (game.uiCommand.getCombatToggle()) {
+    if (UiManager.getCombatToggle()) {
         try playerChangeState(game, .walking);
         return true;
     }
@@ -80,7 +81,7 @@ pub fn preDeployingTransitions(game: *Game.Game) !bool {
 }
 
 pub fn preCombatTransitions(game: *Game.Game) !bool {
-    if (game.uiCommand.getCombatToggle()) {
+    if (UiManager.getCombatToggle()) {
         //TODO: check can end combat?
         try playerChangeState(game, .walking);
         return true;
@@ -445,7 +446,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     //TODO: should I put all the code just in the handleplayerdeploying?
     //j_blow says so, have a look into it, kinda makes sense
     //maybe should try to stop only changing the game values and have some local variables / returns, feels kinda wierd
-    try puppetSelection(game);
+    try puppetSelection();
     try puppetDeployment(game);
 }
 pub fn handlePlayerCombat(game: *Game.Game) !void {
@@ -461,10 +462,12 @@ pub fn handlePlayerCombat(game: *Game.Game) !void {
 }
 
 pub fn entitySelect(game: *Game.Game) void {
-    const entityIndex = game.uiCommand.getQuickSelect() orelse return;
+    const entityIndex = UiManager.getQuickSelect() orelse return;
 
     Gamestate.resetMovementHighlight();
     Gamestate.resetAttackHighlight();
+    UiManager.resetActiveMenuIndex();
+    //TODO: reset the active menu index
     //TODO: make a menu for swapping puppets in the array(different index => different keybind)
     if (entityIndex == 0) {
         //Player
@@ -489,7 +492,7 @@ pub fn entityAction(game: *Game.Game) !void {
         if (Gamestate.selectedAction == null) {
             Gamestate.showMenu = .action_select;
 
-            if (game.uiCommand.getMenuSelect()) |menu_item| {
+            if (UiManager.getMenuSelect()) |menu_item| {
                 switch (menu_item) {
                     .puppet_id => {
                         std.debug.print("menu_item is .puppet_id instead of .action", .{});
@@ -508,7 +511,7 @@ pub fn entityAction(game: *Game.Game) !void {
                 Gamestate.makeUpdateCursor(entity.pos);
                 try Gamestate.highlightMovement(entity);
 
-                if (game.uiCommand.getConfirm()) {
+                if (UiManager.getConfirm()) {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinMovable(cur)) {
                             entity.path = try Pathfinder.findPath(entity.pos, cur);
@@ -530,7 +533,7 @@ pub fn entityAction(game: *Game.Game) !void {
                 Gamestate.makeUpdateCursor(entity.pos);
                 try Gamestate.highlightAttack(entity);
 
-                if (game.uiCommand.getConfirm()) {
+                if (UiManager.getConfirm()) {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinAttackable(cur)) {
                             const attackedEntity = EntityManager.getEntityByPos(cur);
@@ -651,11 +654,11 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
     return null;
 }
 
-pub fn puppetSelection(game: *Game.Game) !void {
+pub fn puppetSelection() !void {
     if (Gamestate.selectedPupId == null) {
         Gamestate.showMenu = .puppet_select;
 
-        if (game.uiCommand.getMenuSelect()) |menu_item| {
+        if (UiManager.getMenuSelect()) |menu_item| {
             switch (menu_item) {
                 .puppet_id => |pid| {
                     Gamestate.selectedPupId = pid;
@@ -688,7 +691,7 @@ pub fn puppetDeployment(game: *Game.Game) !void {
                 }
             }
         }
-        if (game.uiCommand.getConfirm()) {
+        if (UiManager.getConfirm()) {
             if (canDeploy(game.player)) {
                 try deployPuppet(selected_pup);
             }

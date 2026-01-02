@@ -24,8 +24,6 @@ pub const Game = struct {
     allocator: std.mem.Allocator,
     player: *Entity.Entity,
 
-    uiCommand: UiManager.UiCommand = UiManager.UiCommand{},
-
     pub fn init(allocator: std.mem.Allocator) !*Game {
         //TODO: figure out instantiation of types of entities
         //probably a file with some sort of templates?
@@ -61,18 +59,7 @@ pub const Game = struct {
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
 
-        //TODO: when i change the window size, clicking is not precise anymore
-        //TODO: make a state machine for inputs
-
-        //TODO: make uimanager retutn commands that get used in updateplayer etc.
-        //TODO take UIintent out of this
-        //uiintent = intent.init()
-        //-> send &uiintent into uimanager.update, use it in update
-
         try UiManager.update(this);
-        this.uiCommand = UiManager.uiCommand;
-        //std.debug.print("ui_command: {}\n", .{uiCommand});
-        //this.world.update(this.context);
         try EntityManager.update(this);
 
         CameraManager.update(delta);

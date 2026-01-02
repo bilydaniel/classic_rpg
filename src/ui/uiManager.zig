@@ -118,12 +118,12 @@ pub fn makeUIElements() !void {
     const playerPlateSize = c.Vector2{ .x = 200, .y = 150 };
     _ = try makeCharacterPlate(playerPlatePos, playerPlateSize);
 
-    const deployMenuPos = RelativePos.init(.center, 0, 0);
+    const deployMenuPos = RelativePos.init(.bottom_center, 0, 0);
     const deployMenuSize = c.Vector2{ .x = 200, .y = 150 };
     const deployMenuID = try makeChoiceMenu(deployMenuPos, deployMenuSize, "Pick a Puppet:", MenuType.puppet_select, updatePuppetMenu);
     hideElementGroup(deployMenuID);
 
-    const actionMenuPos = RelativePos.init(.center, 0, 0);
+    const actionMenuPos = RelativePos.init(.bottom_center, 0, 0);
     const actionMenuSize = c.Vector2{ .x = 200, .y = 150 };
     const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
     hideElementGroup(actionMenuID);
@@ -182,6 +182,13 @@ pub fn getSelectedItem() ?MenuItemData {
         }
     }
     return null;
+}
+
+pub fn resetActiveMenuIndex() void {
+    if (activeMenu) |active_menu| {
+        const activeElement = getElementByID(active_menu) orelse return;
+        activeElement.data.menu.index = 0;
+    }
 }
 
 fn getElementByID(id: i32) ?*Element {
@@ -508,43 +515,43 @@ pub const UiCommand = struct {
     menuSelect: ?MenuItemData = null,
     quickSelect: ?u8 = null,
     combatToggle: bool = false,
-
-    pub fn getConfirm(this: *UiCommand) bool {
-        const confirm = this.confirm;
-        this.confirm = false;
-        return confirm;
-    }
-
-    pub fn getCancel(this: *UiCommand) bool {
-        const cancel = this.cancel;
-        this.cancel = false;
-        return cancel;
-    }
-
-    pub fn getMove(this: *UiCommand) ?Types.Vector2Int {
-        const move = this.move;
-        this.move = null;
-        return move;
-    }
-
-    pub fn getMenuSelect(this: *UiCommand) ?MenuItemData {
-        const item = this.menuSelect;
-        this.menuSelect = null;
-        return item;
-    }
-
-    pub fn getQuickSelect(this: *UiCommand) ?u8 {
-        const item = this.quickSelect;
-        this.quickSelect = null;
-        return item;
-    }
-
-    pub fn getCombatToggle(this: *UiCommand) bool {
-        const combat = this.combatToggle;
-        this.combatToggle = false;
-        return combat;
-    }
 };
+
+pub fn getConfirm() bool {
+    const confirm = uiCommand.confirm;
+    uiCommand.confirm = false;
+    return confirm;
+}
+
+pub fn getCancel() bool {
+    const cancel = uiCommand.cancel;
+    uiCommand.cancel = false;
+    return cancel;
+}
+
+pub fn getMove() ?Types.Vector2Int {
+    const move = uiCommand.move;
+    uiCommand.move = null;
+    return move;
+}
+
+pub fn getMenuSelect() ?MenuItemData {
+    const item = uiCommand.menuSelect;
+    uiCommand.menuSelect = null;
+    return item;
+}
+
+pub fn getQuickSelect() ?u8 {
+    const item = uiCommand.quickSelect;
+    uiCommand.quickSelect = null;
+    return item;
+}
+
+pub fn getCombatToggle() bool {
+    const combat = uiCommand.combatToggle;
+    uiCommand.combatToggle = false;
+    return combat;
+}
 
 pub fn makeCharacterPlate(relPos: RelativePos, size: c.Vector2) !i32 {
     var relativePosition = relPos;
