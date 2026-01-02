@@ -40,13 +40,21 @@ pub fn update(game: *Game.Game) !void {
     if (Gamestate.showMenu == .none) {
         if (activeMenu != null) {
             const menuElement = getElementByID(activeMenu.?);
-            if (menuElement.?.data == .menu) {
-                hideMenu(menuElement.?.data.menu.type);
+            if (menuElement) |menu| {
+                hideElementGroup(menu.groupID);
+                activeMenu = null;
             }
         }
     } else {
         if (activeMenu == null) {
-            showMenu(Gamestate.showMenu);
+            const menuID = menus.get(Gamestate.showMenu);
+            if (menuID) |menuid| {
+                const menuElement = getElementByID(menuid);
+                if (menuElement) |_menu| {
+                    showElementGroup(_menu.groupID);
+                    activeMenu = menuid;
+                }
+            }
         }
     }
 
@@ -119,24 +127,6 @@ pub fn makeUIElements() !void {
     const actionMenuSize = c.Vector2{ .x = 200, .y = 150 };
     const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
     hideElementGroup(actionMenuID);
-}
-
-pub fn showMenu(menuType: MenuType) void {
-    const menuID = menus.get(menuType) orelse return;
-    const menuElement = getElementByID(menuID);
-    if (menuElement) |_menu| {
-        showElementGroup(_menu.groupID);
-        activeMenu = menuID;
-    }
-}
-
-pub fn hideMenu(menuType: MenuType) void {
-    const menuID = menus.get(menuType) orelse return;
-    const menuElement = getElementByID(menuID);
-    if (menuElement) |_menu| {
-        hideElementGroup(_menu.groupID);
-        activeMenu = null;
-    }
 }
 
 pub fn hideElementGroup(id: i32) void {

@@ -429,7 +429,6 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
 
     //TODO: take input from uimanager?
     const moveDelta = InputManager.takePositionInput() orelse return;
-    std.debug.print("move: {}\n", .{moveDelta});
 
     var new_pos = Types.vector2IntAdd(game.player.pos, moveDelta);
     if (!canMove(new_pos)) {
@@ -639,7 +638,6 @@ pub fn attack(game: *Game.Game, entity: *Entity.Entity, attackedEntity: ?*Entity
     _ = game;
     if (attackedEntity) |attacked_entity| {
         attacked_entity.health -= entity.attack;
-        std.debug.print("DMG: {}\n", .{entity.attack});
     } else {}
 }
 
@@ -793,7 +791,6 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     if (enemy.inCombat) {
         //TODO:
     } else {
-        std.debug.print("non_combat\n", .{});
         if (enemy.aiBehaviourWalking == null) {
             return error.value_missing;
         }
