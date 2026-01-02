@@ -48,7 +48,7 @@ pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
         return;
     }
 
-    try updateEntityMovement(player);
+    try updateEntityMovement(player, game);
 }
 
 pub fn preWalkingTransitions(game: *Game.Game) !bool {
@@ -779,11 +779,10 @@ pub fn exitCombat(game: *Game.Game) !void {
 }
 
 pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
-    _ = game;
     if (Gamestate.currentTurn != .player) {
         return;
     }
-    try updateEntityMovement(puppet);
+    try updateEntityMovement(puppet, game);
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
@@ -792,7 +791,10 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     }
 
     if (enemy.inCombat) {
-        //TODO:
+        if (enemy.aiBehaviourCombat == null) {
+            return error.value_missing;
+        }
+        try enemy.aiBehaviourCombat.?(enemy, game);
     } else {
         if (enemy.aiBehaviourWalking == null) {
             return error.value_missing;
@@ -800,10 +802,10 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
         try enemy.aiBehaviourWalking.?(enemy, game);
         //enemyWanderBehaviour(enemy, game);
     }
-    try updateEntityMovement(enemy);
+    try updateEntityMovement(enemy, game);
 }
 
-pub fn updateEntityMovement(entity: *Entity.Entity) !void {
+pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path == null and entity.goal != null) {
         entity.path = try Pathfinder.findPath(entity.pos, entity.goal.?);
     }
@@ -813,10 +815,10 @@ pub fn updateEntityMovement(entity: *Entity.Entity) !void {
         }
 
         //TODO: gonna have to make some animation state, wait for animation to finish
-        // entity.movementCooldown += game.delta;
-        // if (entity.movementCooldown < Config.movement_animation_duration) {
-        //     return;
-        // }
+        entity.movementCooldown += game.delta;
+        if (entity.movementCooldown < Config.movement_animation_duration) {
+            return;
+        }
 
         entity.movementCooldown = 0;
         entity.path.?.currIndex += 1;
