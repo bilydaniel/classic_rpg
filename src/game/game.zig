@@ -28,6 +28,7 @@ pub const Game = struct {
         //TODO: figure out instantiation of types of entities
         //probably a file with some sort of templates?
 
+        //TODO: fix turn taken stuff
         const game = try allocator.create(Game);
         Gamestate.init(allocator);
 

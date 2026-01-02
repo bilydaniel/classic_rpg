@@ -5,12 +5,15 @@ const Window = @import("../game/window.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Gamestate = @import("gamestate.zig");
+const Systems = @import("Systems.zig");
+const CameraManager = @import("cameraManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
 
 var entity_allocator: std.mem.Allocator = undefined;
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
+pub var walkingEntity: ?*Entity.Entity = null;
 
 const PLAYER_INDEX = 0; //always 0
 
@@ -22,6 +25,11 @@ const PLAYER_INDEX = 0; //always 0
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
     entities = std.ArrayList(Entity.Entity).init(allocator);
+}
+
+pub fn setWalkingEntity(entity: *Entity.Entity) void {
+    walkingEntity = entity;
+    CameraManager.targetEntity = entity.id;
 }
 
 // just a helper funciton, returns the player so it can be used to fill into context
@@ -72,9 +80,17 @@ pub fn addEntity(entity: Entity.Entity) !void {
     try entities.append(entity);
 }
 
-pub fn update(ctx: *Game.Game) !void {
+pub fn update(game: *Game.Game) !void {
+    if (walkingEntity) |entity| {
+        std.debug.print("walking...\n", .{});
+        try Systems.updateEntityMovement(entity, game);
+        if (entity.path == null) {
+            walkingEntity = null;
+        }
+        return;
+    }
     for (entities.items) |*entity| {
-        try entity.update(ctx);
+        try entity.update(game);
     }
 
     //TODO: when to switch current_turn to enemy?

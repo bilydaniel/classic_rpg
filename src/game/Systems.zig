@@ -519,6 +519,8 @@ pub fn entityAction(game: *Game.Game) !void {
                             Gamestate.resetMovementHighlight();
                             Gamestate.removeCursor();
                             Gamestate.selectedAction = null;
+
+                            EntityManager.setWalkingEntity(entity);
                         }
                     }
                 }
@@ -786,6 +788,7 @@ pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
+    //TODO: fix turn taken stuff
     if (Gamestate.currentTurn != .enemy) {
         return;
     }
@@ -808,6 +811,9 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path == null and entity.goal != null) {
         entity.path = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        if (entity.inCombat) {
+            EntityManager.setWalkingEntity(entity);
+        }
     }
     if (entity.path) |path| {
         if (path.nodes.items.len < 2) {
@@ -837,6 +843,7 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
         if (entity.path) |path_| {
             if (path_.currIndex >= entity.path.?.nodes.items.len - 1) {
                 entity.path = null;
+                entity.goal = null;
             }
         }
     }
