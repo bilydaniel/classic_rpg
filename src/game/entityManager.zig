@@ -92,6 +92,7 @@ pub fn update(game: *Game.Game) !void {
     for (entities.items) |*entity| {
         //TODO: probably should refactor AI, the state management is horrible
         // so many bugs
+        //https://claude.ai/chat/5e92415c-8474-4796-9b8b-9c25062e0525 ,might help
         try entity.update(game);
     }
 
