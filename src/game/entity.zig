@@ -112,6 +112,13 @@ pub const Entity = struct {
 
     pub fn draw(this: *Entity) void {
         if (this.visible) {
+            if (this.path) |path| {
+                Pathfinder.drawPath(path);
+            }
+            if (this.goal) |goal| {
+                c.DrawRectangleLines(goal.x * Config.tile_width, goal.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
+            }
+
             if (this.isAscii) {
                 if (this.ascii) |ascii| {
                     var background_color = this.backgroundColor;
@@ -304,6 +311,7 @@ pub const EnemyData = struct {
     //TODO: move goal to base entity
     //goal: ?Types.Vector2Int,
     asd: bool,
+    pathRecalculated: i32 = 0,
 
     // lastSeenPlayerPos: ?Types.Vector2Int,
     // aggressionRange: u32, //do i want this or should you just always fight everyone?

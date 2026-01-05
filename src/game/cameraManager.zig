@@ -20,14 +20,14 @@ pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
         .rotation = 0.0,
         .zoom = Config.camera_zoom,
     };
-    manual = false;
+    manual = true;
     speed = 100.0;
     targetEntity = entityID;
 }
 
 pub fn update(delta: f32) void {
     if (c.IsKeyPressed(c.KEY_END)) {
-        manual = manual;
+        manual = !manual;
     }
     if (manual) {
         if (c.IsKeyDown(c.KEY_W)) {

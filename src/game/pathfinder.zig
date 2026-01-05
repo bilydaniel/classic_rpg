@@ -3,6 +3,10 @@ const Systems = @import("Systems.zig");
 const std = @import("std");
 const Level = @import("level.zig");
 const Entity = @import("entity.zig");
+const Config = @import("../common/config.zig");
+const c = @cImport({
+    @cInclude("raylib.h");
+});
 
 pub const NodeIndex = struct {
     node: *Node,
@@ -162,4 +166,16 @@ pub fn printList(list: std.ArrayList(Node)) void {
         std.debug.print("\t{}\n", .{item.pos});
     }
     std.debug.print("*********************\n", .{});
+}
+
+pub fn drawPath(path: Path) void {
+    if (Config.drawPathDebug) {
+        for (path.nodes.items[path.currIndex..]) |value| {
+            const pos = Types.vector2IntToPixels(value);
+            c.DrawRectangleLines(pos.x, pos.y, Config.tile_width, Config.tile_height, c.RED);
+        }
+
+        const current = Types.vector2IntToPixels(path.nodes.items[path.currIndex]);
+        c.DrawRectangleLines(current.x, current.y, Config.tile_width, Config.tile_height, c.GREEN);
+    }
 }

@@ -19,6 +19,7 @@ var confirm: c_int = c.KEY_ENTER;
 var cancel: c_int = c.KEY_Q;
 var combatToggle: c_int = c.KEY_F;
 var quickSelect: [5]u8 = .{ c.KEY_ONE, c.KEY_TWO, c.KEY_THREE, c.KEY_FOUR, c.KEY_FIVE };
+var skip: c_int = c.KEY_SPACE;
 
 //TODO: take delta position and use it to update cursos/player
 pub fn takePositionInput() ?Types.Vector2Int {
@@ -61,6 +62,13 @@ pub fn takeQuickSelectInput() ?u8 {
 
 pub fn takeCombatToggle() bool {
     if (c.IsKeyPressed(combatToggle)) {
+        return true;
+    }
+    return false;
+}
+
+pub fn takeSkipInput() bool {
+    if (c.IsKeyPressed(skip)) {
         return true;
     }
     return false;

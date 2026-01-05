@@ -63,3 +63,10 @@ pub fn vector2ConvertWithPixels(a: c.Vector2) Vector2Int {
         .y = @intFromFloat(a.y / Config.tile_height),
     };
 }
+
+pub fn vector2IntToPixels(a: Vector2Int) Vector2Int {
+    return Vector2Int{
+        .x = a.x * Config.tile_width,
+        .y = a.y * Config.tile_height,
+    };
+}

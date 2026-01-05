@@ -13,7 +13,7 @@ const c = @cImport({
 
 //TODO: how do I do some special shapes / effects for design?
 // maybe attach them to an element or have them separate?
-pub const Updatefunction = *const fn (*Element, *Game.Game) MenuError!void;
+pub const Updatefunction = *const fn (*Element, *Game.Game) anyerror!void;
 
 pub var uiCommand: UiCommand = undefined;
 
@@ -91,6 +91,8 @@ pub fn update(game: *Game.Game) !void {
     //combat toggle
     const combatToggle = InputManager.takeCombatToggle();
 
+    const skip = InputManager.takeSkipInput();
+
     const uicommand = UiCommand{
         .confirm = confirm,
         .cancel = cancel,
@@ -98,6 +100,7 @@ pub fn update(game: *Game.Game) !void {
         .menuSelect = menuSelect,
         .quickSelect = quickSelect,
         .combatToggle = combatToggle,
+        .skip = skip,
     };
     uiCommand = uicommand;
 }
@@ -107,10 +110,10 @@ pub fn draw() !void {
         element.draw();
     }
 
-    var buffer: [64:0]u8 = undefined;
-    const text = try std.fmt.bufPrintZ(&buffer, "Turn: {}", .{Gamestate.turnNumber});
+    //var buffer: [64:0]u8 = undefined;
+    //const text = try std.fmt.bufPrintZ(&buffer, "Turn: {}", .{Gamestate.turnNumber});
 
-    c.DrawText(text.ptr, Config.window_width - 200, 10, 15, c.RED);
+    //c.DrawText(text.ptr, Config.window_width - 200, 10, 15, c.RED);
 }
 
 pub fn makeUIElements() !void {
@@ -127,6 +130,24 @@ pub fn makeUIElements() !void {
     const actionMenuSize = c.Vector2{ .x = 200, .y = 150 };
     const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
     hideElementGroup(actionMenuID);
+
+    const turnNumberPos = RelativePos.init(.top_right, 0, 0);
+    const turnNumberSize = c.Vector2{ .x = 100, .y = 100 };
+
+    const turnElementID = try makeText(turnNumberPos, turnNumberSize, "Turn:");
+    const turnElement = getElementByID(turnElementID);
+    if (turnElement) |element| {
+        element.updateFn = updateTurnNumberText;
+    }
+
+    const currentTurnPos = RelativePos.init(.top_right, 0, 100);
+    const currentTurnSize = c.Vector2{ .x = 100, .y = 100 };
+
+    const currentTurnID = try makeText(currentTurnPos, currentTurnSize, "");
+    const currentTurnElement = getElementByID(currentTurnID);
+    if (currentTurnElement) |element| {
+        element.updateFn = updateCurrentTurnText;
+    }
 }
 
 pub fn hideElementGroup(id: i32) void {
@@ -384,7 +405,7 @@ pub const Element = struct {
                 const fontSize = @as(c_int, @intFromFloat(@as(f32, @floatFromInt(this.data.text.fontSize)) * Window.scale));
 
                 c.DrawText(
-                    this.data.text.text.ptr,
+                    &this.data.text.text,
                     @intFromFloat(position.x),
                     @intFromFloat(position.y),
                     fontSize,
@@ -464,13 +485,16 @@ pub const ElementBarData = struct {
 };
 
 pub const ElementTextData = struct {
-    text: []const u8,
+    text: [64:0]u8 = undefined,
     textColor: c.Color,
     fontSize: i32,
 
     pub fn init(text: []const u8, textColor: c.Color) ElementTextData {
+        var textBuffer: [64:0]u8 = undefined;
+        @memcpy(textBuffer[0..text.len], text);
+        textBuffer[text.len] = 0;
         return ElementTextData{
-            .text = text,
+            .text = textBuffer,
             .textColor = textColor,
             .fontSize = 25,
         };
@@ -506,7 +530,7 @@ pub const CommandData = union(CommandType) {
     select_action: ActionType,
 };
 
-const MenuError = error{OutOfMemory};
+const MenuError = error{};
 
 pub const UiCommand = struct {
     confirm: bool = false,
@@ -515,6 +539,7 @@ pub const UiCommand = struct {
     menuSelect: ?MenuItemData = null,
     quickSelect: ?u8 = null,
     combatToggle: bool = false,
+    skip: bool = false,
 };
 
 pub fn getConfirm() bool {
@@ -533,6 +558,12 @@ pub fn getMove() ?Types.Vector2Int {
     const move = uiCommand.move;
     uiCommand.move = null;
     return move;
+}
+
+pub fn getSkip() bool {
+    const skip = uiCommand.skip;
+    uiCommand.skip = false;
+    return skip;
 }
 
 pub fn getMenuSelect() ?MenuItemData {
@@ -594,7 +625,16 @@ pub fn makeChoiceMenu(relPos: RelativePos, size: c.Vector2, title: []const u8, m
     return background.groupID;
 }
 
-pub fn updatePuppetMenu(this: *Element, game: *Game.Game) MenuError!void {
+pub fn makeText(relPos: RelativePos, size: c.Vector2, text: []const u8) !i32 {
+    //TODO: maybe add some backgrround?
+    const relativePosition = relPos;
+    const textElement = Element.initText(relativePosition, size, text);
+    try elements.append(textElement);
+    elementGroupID += 1;
+    return textElement.id;
+}
+
+pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
     //TODO: update every frame for now, probably can make it better
     this.data.menu.menuItems.clearRetainingCapacity();
 
@@ -610,7 +650,7 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) MenuError!void {
     }
 }
 
-pub fn updateActionMenu(this: *Element, game: *Game.Game) MenuError!void {
+pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
     _ = game;
     this.data.menu.menuItems.clearRetainingCapacity();
 
@@ -624,5 +664,21 @@ pub fn updateActionMenu(this: *Element, game: *Game.Game) MenuError!void {
             const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
             try this.data.menu.menuItems.append(itemAttack);
         }
+    }
+}
+
+pub fn updateTurnNumberText(this: *Element, game: *Game.Game) anyerror!void {
+    _ = game;
+
+    _ = try std.fmt.bufPrintZ(&this.data.text.text, "Turn: {}", .{Gamestate.turnNumber});
+}
+
+pub fn updateCurrentTurnText(this: *Element, game: *Game.Game) anyerror!void {
+    _ = game;
+
+    if (Gamestate.currentTurn == .player) {
+        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Player"});
+    } else if (Gamestate.currentTurn == .enemy) {
+        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Enemy"});
     }
 }

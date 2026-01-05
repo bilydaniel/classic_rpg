@@ -429,9 +429,18 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     }
 
     //TODO: take input from uimanager?
-    const moveDelta = InputManager.takePositionInput() orelse return;
+    const skipMove = UiManager.getSkip();
+    const moveDelta = UiManager.getMove();
+    if (skipMove == false and moveDelta == null) {
+        return;
+    }
+    if (skipMove) {
+        game.player.movementCooldown = 0;
+        Gamestate.switchTurn(.enemy);
+        return;
+    }
 
-    var new_pos = Types.vector2IntAdd(game.player.pos, moveDelta);
+    var new_pos = Types.vector2IntAdd(game.player.pos, moveDelta.?);
     if (!canMove(new_pos)) {
         return;
     }
@@ -789,9 +798,6 @@ pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     //TODO: fix turn taken stuff
-    if (Gamestate.currentTurn != .enemy) {
-        return;
-    }
 
     if (enemy.inCombat) {
         if (enemy.aiBehaviourCombat == null) {
@@ -805,10 +811,19 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
         try enemy.aiBehaviourWalking.?(enemy, game);
         //enemyWanderBehaviour(enemy, game);
     }
+
+    //TODO: figure out where to put this,
+    //was on the top, caused a bug(stuck turn)
+    if (Gamestate.currentTurn != .enemy) {
+        return;
+    }
     try updateEntityMovement(enemy, game);
 }
 
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+    if (entity.hasMoved) {
+        return;
+    }
     if (entity.path == null and entity.goal != null) {
         entity.path = try Pathfinder.findPath(entity.pos, entity.goal.?);
         if (entity.inCombat) {
@@ -817,16 +832,18 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     }
     if (entity.path) |path| {
         if (path.nodes.items.len < 2) {
+            std.debug.print("short_path\n", .{});
             return;
         }
 
-        //TODO: gonna have to make some animation state, wait for animation to finish
-        entity.movementCooldown += game.delta;
-        if (entity.movementCooldown < Config.movement_animation_duration) {
-            return;
+        if (entity.inCombat) {
+            entity.movementCooldown += game.delta;
+            if (entity.movementCooldown < Config.movement_animation_duration) {
+                return;
+            }
+            entity.movementCooldown = 0;
         }
 
-        entity.movementCooldown = 0;
         entity.path.?.currIndex += 1;
         const new_pos = entity.path.?.nodes.items[entity.path.?.currIndex];
         const new_pos_entity = EntityManager.getEntityByPos(new_pos);
@@ -835,9 +852,24 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
             // position has entity, recalculate
             if (entity.goal) |goal| {
                 entity.path = try Pathfinder.findPath(entity.pos, goal);
+                if (entity.data == .enemy) {
+
+                    //TODO: pathrecalculated doesnt work?
+                    entity.data.enemy.pathRecalculated += 1;
+
+                    if (entity.data.enemy.pathRecalculated >= 2) {
+                        entity.goal = getRandomValidPosition(World.currentLevel.grid);
+                    }
+                }
             }
         } else {
-            entity.move(new_pos);
+            if (!entity.hasMoved) {
+                entity.move(new_pos);
+                entity.hasMoved = true;
+            }
+            if (entity.data == .enemy) {
+                entity.data.enemy.pathRecalculated = 0;
+            }
         }
 
         if (entity.path) |path_| {
