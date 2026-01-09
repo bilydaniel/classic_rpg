@@ -1,4 +1,9 @@
 
+Think through how the combat / turn / state management should work in the abstract, code it later
+some entities in combat and some out of it
+do i want to use a queue system?
+what should be the update order? do i have problems because of update order? not all entities are updated at the same time
+
 gonna need to refactor the whole game / context mess, research jblow first
     hardcode ui?
     use file scope
@@ -16,7 +21,6 @@ start using the entitymanager
 do an overall refactor 
 start using the profiller that i made in computer enhance, start to make decisions based on actual numbers
 
-STOP SENDING CTX EVERYWHERE, GONNA HAVE to FIX SOME APIS
 0. UI final fantasy like ui, only use keyboard, dont do mouse
 1. Refactor state machine, split out functions a lillte bit more(handle funcitons are too big), refactor input system
 2. Mouse input
@@ -25,8 +29,6 @@ STOP SENDING CTX EVERYWHERE, GONNA HAVE to FIX SOME APIS
 5. magic numbers
 
 
-TO RESEARCH:
-go through the examples I saved
 
 
 
@@ -36,11 +38,9 @@ random generation world + entities
 
 how to work with enemies, types, how to instantiate, spawn etc
 
-figure out some better input system (event system + queue?)
 
 fix entities position(level + pos)
 
 better way of connecting levels, kinda wierd right now
 
-General refactor, alot of stuff that needs fixing or looking at
 

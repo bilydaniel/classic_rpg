@@ -1,2 +1,18 @@
  if a functions gets inlined out of debugging use this:
     @setRuntimeSafety(true);
+
+
+
+jblow + casey:
+   the player must be able to have a plan and execute it, not always the same plan -> boring
+   what is the list of things the player has to understand, what is the space of the game
+   how to comunicate the space? (in my case its gonna be mostly the skillchains)
+   dificulty vs complexity (stats vs skillchains)
+   combinations of differents things, enemies
+   make the map matter, even when random generated
+
+   make interesting map, make 3 monster types, combine them in the fight
+   balance based on time? rng? some sort of seed? meta changes every run
+   each run roll a bit different stats? maybe each drop has a bit different stats?
+
+   

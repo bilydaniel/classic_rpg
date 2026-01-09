@@ -44,8 +44,6 @@ pub const Entity = struct {
     movementCooldown: f32, //TODO: probably do a different way
     movementDistance: u32,
     attackDistance: u32,
-    isAscii: bool,
-    ascii: ?[4]u8,
     textureID: ?i32,
     sourceRect: ?c.Rectangle,
     color: c.Color,
@@ -56,10 +54,10 @@ pub const Entity = struct {
     turnTaken: bool,
     hasMoved: bool,
     hasAttacked: bool,
-    movementAnimationCooldown: f32,
     inCombat: bool,
     aiBehaviourWalking: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourWander,
-    aiBehaviourCombat: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourWander,
+    aiBehaviourCombat: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourAggresiveMellee,
+
     data: EntityData,
 
     pub fn init(
@@ -85,8 +83,6 @@ pub const Entity = struct {
             .attack = 3,
             .pos = pos,
             .levelID = levelID,
-            .isAscii = Config.ascii_mode,
-            .ascii = ascii_array,
             .textureID = null,
             .sourceRect = null,
             .movementCooldown = 0,
@@ -102,7 +98,6 @@ pub const Entity = struct {
             .turnTaken = false,
             .hasMoved = false,
             .hasAttacked = false,
-            .movementAnimationCooldown = 0,
             .inCombat = false,
             .data = entityData,
         };
@@ -119,41 +114,16 @@ pub const Entity = struct {
                 c.DrawRectangleLines(goal.x * Config.tile_width, goal.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
             }
 
-            if (this.isAscii) {
-                if (this.ascii) |ascii| {
-                    var background_color = this.backgroundColor;
-                    if (this.tempBackground) |temp_color| {
-                        background_color = temp_color;
-                    }
+            if (this.sourceRect) |source_rect| {
+                const x: f32 = @floatFromInt(this.pos.x * Config.tile_width);
+                const y: f32 = @floatFromInt(this.pos.y * Config.tile_height);
+                const pos = c.Vector2{ .x = x, .y = y };
 
-                    const font_size = 16;
-                    const text_width = c.MeasureText(&ascii[0], font_size);
-                    const text_height = font_size; // Approximate height
-
-                    const x = (this.pos.x * Config.tile_width + @divFloor((Config.tile_width - text_width), 2));
-                    const y = (this.pos.y * Config.tile_height + @divFloor((Config.tile_height - text_height), 2));
-
-                    c.DrawRectangle(@intCast(this.pos.x * Config.tile_width), @intCast(this.pos.y * Config.tile_height), Config.tile_width, Config.tile_height, background_color);
-
-                    if (this.data == .enemy) {
-                        //TODO: figure out colors for everything
-                        //this.color = c.RED;
-                    }
-
-                    c.DrawText(&ascii[0], @intCast(x), @intCast(y), 16, this.color);
+                var color = c.WHITE;
+                if (this.data == .enemy) {
+                    color = c.RED;
                 }
-            } else {
-                if (this.sourceRect) |source_rect| {
-                    const x: f32 = @floatFromInt(this.pos.x * Config.tile_width);
-                    const y: f32 = @floatFromInt(this.pos.y * Config.tile_height);
-                    const pos = c.Vector2{ .x = x, .y = y };
-
-                    var color = c.WHITE;
-                    if (this.data == .enemy) {
-                        color = c.RED;
-                    }
-                    c.DrawTextureRec(TilesetManager.tileset, source_rect, pos, color);
-                }
+                c.DrawTextureRec(TilesetManager.tileset, source_rect, pos, color);
             }
         }
     }
@@ -324,15 +294,18 @@ pub const PuppetData = struct {
 };
 
 //TODO: maybe put into another file?
-pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Context) anyerror!void {
+pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     _ = entity;
     _ = game;
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
-    _ = game;
     if (entity.goal == null) {
         const position = Systems.getRandomValidPosition(World.currentLevel.grid);
         entity.goal = position;
     }
+
+    try Systems.updateEntityMovement(entity, game);
+
+    entity.turnTaken = true;
 }

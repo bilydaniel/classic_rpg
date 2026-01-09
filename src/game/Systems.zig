@@ -524,12 +524,11 @@ pub fn entityAction(game: *Game.Game) !void {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinMovable(cur)) {
                             entity.path = try Pathfinder.findPath(entity.pos, cur);
-                            entity.hasMoved = true;
                             Gamestate.resetMovementHighlight();
                             Gamestate.removeCursor();
                             Gamestate.selectedAction = null;
 
-                            EntityManager.setWalkingEntity(entity);
+                            EntityManager.setActingEntity(entity);
                         }
                     }
                 }
@@ -797,7 +796,12 @@ pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
-    //TODO: fix turn taken stuff
+    //TODO: figure out where to put this,
+    //good for now, might need some updating
+    //late even if its not mu turn
+    if (Gamestate.currentTurn != .enemy) {
+        return;
+    }
 
     if (enemy.inCombat) {
         if (enemy.aiBehaviourCombat == null) {
@@ -809,32 +813,29 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
             return error.value_missing;
         }
         try enemy.aiBehaviourWalking.?(enemy, game);
-        //enemyWanderBehaviour(enemy, game);
     }
-
-    //TODO: figure out where to put this,
-    //was on the top, caused a bug(stuck turn)
-    if (Gamestate.currentTurn != .enemy) {
-        return;
-    }
-    try updateEntityMovement(enemy, game);
 }
 
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+    std.debug.print("{}\n", .{entity.hasMoved});
     if (entity.hasMoved) {
         return;
     }
+
     if (entity.path == null and entity.goal != null) {
         entity.path = try Pathfinder.findPath(entity.pos, entity.goal.?);
+
         if (entity.inCombat) {
-            EntityManager.setWalkingEntity(entity);
+            EntityManager.setActingEntity(entity);
         }
     }
+
     if (entity.path) |path| {
-        if (path.nodes.items.len < 2) {
-            std.debug.print("short_path\n", .{});
-            return;
-        }
+        //TODO: fix path variable, why is the items.len check needed? fix
+        // if (path.nodes.items.len < 2) {
+        //     std.debug.print("short_path\n", .{});
+        //     return;
+        // }
 
         if (entity.inCombat) {
             entity.movementCooldown += game.delta;
@@ -845,6 +846,7 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
         }
 
         entity.path.?.currIndex += 1;
+        std.debug.print("curr_idx: {}\n", .{path.currIndex});
         const new_pos = entity.path.?.nodes.items[entity.path.?.currIndex];
         const new_pos_entity = EntityManager.getEntityByPos(new_pos);
 
@@ -872,11 +874,9 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
             }
         }
 
-        if (entity.path) |path_| {
-            if (path_.currIndex >= entity.path.?.nodes.items.len - 1) {
-                entity.path = null;
-                entity.goal = null;
-            }
+        if (entity.?.path.currIndex >= entity.path.?.nodes.items.len - 1) {
+            entity.path = null;
+            entity.goal = null;
         }
     }
 }

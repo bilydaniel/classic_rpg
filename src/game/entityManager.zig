@@ -13,7 +13,7 @@ const c = @cImport({
 
 var entity_allocator: std.mem.Allocator = undefined;
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
-pub var walkingEntity: ?*Entity.Entity = null;
+pub var actingEntity: ?*Entity.Entity = null;
 
 const PLAYER_INDEX = 0; //always 0
 
@@ -27,8 +27,8 @@ pub fn init(allocator: std.mem.Allocator) void {
     entities = std.ArrayList(Entity.Entity).init(allocator);
 }
 
-pub fn setWalkingEntity(entity: *Entity.Entity) void {
-    walkingEntity = entity;
+pub fn setActingEntity(entity: *Entity.Entity) void {
+    actingEntity = entity;
     CameraManager.targetEntity = entity.id;
 }
 
@@ -81,34 +81,34 @@ pub fn addEntity(entity: Entity.Entity) !void {
 }
 
 pub fn update(game: *Game.Game) !void {
-    if (walkingEntity) |entity| {
+    if (actingEntity) |entity| {
         try Systems.updateEntityMovement(entity, game);
         if (entity.path == null) {
-            walkingEntity = null;
+            actingEntity = null;
         }
         return;
     }
 
     for (entities.items) |*entity| {
-        //TODO: probably should refactor AI, the state management is horrible
-        // so many bugs
-        //https://claude.ai/chat/5e92415c-8474-4796-9b8b-9c25062e0525 ,might help
         try entity.update(game);
-    }
-
-    var allEnemiesMoved = true;
-    for (entities.items) |entity| {
-        if (entity.data == .enemy and !entity.hasMoved) {
-            allEnemiesMoved = false;
-        }
     }
 
     //TODO: when to switch current_turn to enemy?
     //gonna have to be more complicated than this
-    if (Gamestate.currentTurn != .player and allEnemiesMoved) {
+    if (Gamestate.currentTurn != .player and allEnemiesTurnTaken()) {
         Gamestate.switchTurn(.player);
-        resetHasMoved();
+        resetTurnFlags();
     }
+}
+
+pub fn allEnemiesTurnTaken() bool {
+    var turnTaken = true;
+    for (entities.items) |entity| {
+        if (entity.data == .enemy and !entity.turnTaken) {
+            turnTaken = false;
+        }
+    }
+    return turnTaken;
 }
 
 pub fn getPlayer() *Entity.Entity {
@@ -141,7 +141,7 @@ pub fn getEntityByPos(pos: Types.Vector2Int) ?*Entity.Entity {
     return null;
 }
 
-pub fn resetHasMoved() void {
+pub fn resetTurnFlags() void {
     for (entities.items) |*entity| {
         entity.hasMoved = false;
     }
