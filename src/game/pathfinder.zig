@@ -75,6 +75,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
 
         if (Types.vector2IntCompare(current_node.pos, end)) {
             const path = try reconstructPath(closed_list, &current_node);
+            std.debug.print("reconstruct: {}\n", .{path});
             return path;
         }
 
@@ -103,6 +104,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
             }
         }
     }
+    std.debug.print("returning_null\n", .{});
 
     return null;
 }

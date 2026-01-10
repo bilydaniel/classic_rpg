@@ -318,15 +318,19 @@ pub const PuppetData = struct {
 
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
+    EntityManager.setActingEntity(entity);
     std.debug.print("combat\n", .{});
     if (entity.goal == null) {
         const position = game.player.pos;
         entity.goal = position;
     }
 
-    try Systems.updateEntityMovement(entity, game);
-
-    entity.turnTaken = true;
+    std.debug.print("enemy_moved: {}\n", .{entity.hasMoved});
+    try Systems.updateEntityMovementIC(entity, game);
+    if (entity.hasMoved) {
+        //TODO: make more complex
+        entity.turnTaken = true;
+    }
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
@@ -335,7 +339,7 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
         entity.goal = position;
     }
 
-    try Systems.updateEntityMovement(entity, game);
+    try Systems.updateEntityMovementOOC(entity, game);
 
     entity.turnTaken = true;
 }

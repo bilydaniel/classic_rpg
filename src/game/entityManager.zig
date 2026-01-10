@@ -81,6 +81,7 @@ pub fn addEntity(entity: Entity.Entity) !void {
 }
 
 pub fn update(game: *Game.Game) !void {
+    std.debug.print("player_pos: {}\n", .{game.player.pos});
     std.debug.print("curr:{}\n", .{Gamestate.currentTurn});
     if (actingEntity) |entity| {
         //try Systems.updateEntityMovement(entity, game);
@@ -92,6 +93,11 @@ pub fn update(game: *Game.Game) !void {
         std.debug.print("**********************\n", .{});
         if (entity.turnTaken) {
             actingEntity = null;
+            if (entity.data == .player) {
+                Gamestate.switchTurn(.enemy);
+                game.player.resetTurnTakens();
+                Gamestate.reset();
+            }
         }
         return;
     }

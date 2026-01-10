@@ -48,7 +48,11 @@ pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
         return;
     }
 
-    try updateEntityMovement(player, game);
+    if (player.inCombat) {
+        try updateEntityMovementIC(player, game);
+    } else {
+        try updateEntityMovementOOC(player, game);
+    }
 }
 
 pub fn preWalkingTransitions(game: *Game.Game) !bool {
@@ -794,7 +798,12 @@ pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
     if (Gamestate.currentTurn != .player) {
         return;
     }
-    try updateEntityMovement(puppet, game);
+    //TODO: correct?
+    if (game.player.inCombat) {
+        try updateEntityMovementIC(puppet, game);
+    } else {
+        try updateEntityMovementOOC(puppet, game);
+    }
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
@@ -818,7 +827,9 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     }
 }
 
-pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
+    _ = game;
+    //TODO: enemies are looking for path for a turn for some reason
     if (entity.hasMoved) {
         return;
     }
@@ -833,15 +844,71 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path) |_| {
         const path = &entity.path.?;
 
-        if (entity.inCombat) {
-            //TODO: should i set the entity every frame?
-            EntityManager.setActingEntity(entity);
-            entity.movementCooldown += game.delta;
-            if (entity.movementCooldown < Config.movement_animation_duration) {
-                return;
-            }
-            entity.movementCooldown = 0;
+        if (path.currIndex + 1 >= path.nodes.items.len) {
+            entity.removePathGoal();
+            return;
         }
+        path.currIndex += 1;
+
+        const new_pos = path.nodes.items[path.currIndex];
+        const new_pos_entity = EntityManager.getEntityByPos(new_pos);
+
+        // position has entity, recalculate
+        if (new_pos_entity) |_| {
+            //TODO: @fix this, enemies get stuck
+            if (entity.goal) |goal| {
+                //TODO: take entities into account for pathing
+                //TODO: fix dangling pointer
+                entity.path = try Pathfinder.findPath(entity.pos, goal);
+                if (entity.data == .enemy) {
+
+                    //TODO: pathrecalculated doesnt work?
+                    entity.data.enemy.pathRecalculated += 1;
+
+                    if (entity.data.enemy.pathRecalculated >= 2) {
+                        entity.goal = getRandomValidPosition(World.currentLevel.grid);
+                    }
+                }
+            }
+        } else {
+            if (!entity.hasMoved) {
+                entity.move(new_pos);
+                entity.hasMoved = true;
+            }
+            if (entity.data == .enemy) {
+                entity.data.enemy.pathRecalculated = 0;
+            }
+        }
+    }
+}
+
+pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
+    if (entity.hasMoved) {
+        return;
+    }
+
+    if (entity.path == null and entity.goal != null) {
+        std.debug.print("enemy_finding_path\n", .{});
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        std.debug.print("enemy_goal: {?}\n", .{entity.goal});
+        std.debug.print("enemy_new_path: {?}\n", .{newPath});
+        if (newPath) |new_path| {
+            entity.setNewPath(new_path);
+        }
+    }
+
+    std.debug.print("enemy_path: {?}\n", .{entity.path});
+    if (entity.path) |_| {
+        const path = &entity.path.?;
+
+        //TODO: should i set the entity every frame?
+        EntityManager.setActingEntity(entity);
+        std.debug.print("cooldown: {}\n", .{entity.movementCooldown});
+        entity.movementCooldown += game.delta;
+        if (entity.movementCooldown < Config.movement_animation_duration) {
+            return;
+        }
+        entity.movementCooldown = 0;
 
         if (path.currIndex + 1 >= path.nodes.items.len) {
             entity.removePathGoal();
@@ -858,31 +925,15 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
             if (entity.goal) |goal| {
                 //TODO: take entities into account for pathing
                 entity.path = try Pathfinder.findPath(entity.pos, goal);
-                if (entity.data == .enemy) {
-
-                    //TODO: pathrecalculated doesnt work?
-                    entity.data.enemy.pathRecalculated += 1;
-
-                    if (entity.data.enemy.pathRecalculated >= 2) {
-                        entity.goal = getRandomValidPosition(World.currentLevel.grid);
-                    }
-                }
             }
         } else {
             if (!entity.hasMoved) {
                 entity.move(new_pos);
-                if (entity.inCombat) {
-                    entity.movedDistance += 1;
-                    if (entity.movedDistance >= entity.movementDistance) {
-                        entity.hasMoved = true;
-                        entity.movedDistance = 0;
-                    }
-                } else {
+                entity.movedDistance += 1;
+                if (entity.movedDistance >= entity.movementDistance) {
                     entity.hasMoved = true;
+                    entity.movedDistance = 0;
                 }
-            }
-            if (entity.data == .enemy) {
-                entity.data.enemy.pathRecalculated = 0;
             }
         }
     }
