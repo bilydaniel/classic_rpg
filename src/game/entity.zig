@@ -43,6 +43,7 @@ pub const Entity = struct {
     speed: f32,
     movementCooldown: f32, //TODO: probably do a different way
     movementDistance: u32,
+    movedDistance: u32 = 0,
     attackDistance: u32,
     textureID: ?i32,
     sourceRect: ?c.Rectangle,
@@ -226,6 +227,28 @@ pub const Entity = struct {
         //TODO: @finish
         return false;
     }
+
+    pub fn removePath(this: *Entity) void {
+        if (this.path) |*path| {
+            path.deinit();
+            path = null;
+        }
+    }
+
+    pub fn setNewPath(this: *Entity, newPath: Pathfinder.Path) void {
+        if (this.path) |*path| {
+            path.deinit();
+        }
+        this.path = newPath;
+    }
+
+    pub fn removePathGoal(this: *Entity) void {
+        if (this.path) |*path| {
+            path.deinit();
+            this.path = null;
+        }
+        this.goal = null;
+    }
 };
 
 pub const playerStateEnum = enum {
@@ -295,8 +318,15 @@ pub const PuppetData = struct {
 
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
-    _ = entity;
-    _ = game;
+    std.debug.print("combat\n", .{});
+    if (entity.goal == null) {
+        const position = game.player.pos;
+        entity.goal = position;
+    }
+
+    try Systems.updateEntityMovement(entity, game);
+
+    entity.turnTaken = true;
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {

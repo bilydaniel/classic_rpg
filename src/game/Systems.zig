@@ -587,9 +587,11 @@ pub fn resolveTurnTaken(game: *Game.Game) void {
     if (game.player.data.player.inCombatWith.items.len > 0) {
         if (game.player.turnTaken or game.player.allPupsTurnTaken()) {
             // finished turn
-            Gamestate.switchTurn(.enemy);
-            game.player.resetTurnTakens();
-            Gamestate.reset();
+            if (EntityManager.actingEntity == null) {
+                Gamestate.switchTurn(.enemy);
+                game.player.resetTurnTakens();
+                Gamestate.reset();
+            }
         }
     }
 }
@@ -817,27 +819,23 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
 }
 
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
-    std.debug.print("{}\n", .{entity.hasMoved});
     if (entity.hasMoved) {
         return;
     }
 
     if (entity.path == null and entity.goal != null) {
-        entity.path = try Pathfinder.findPath(entity.pos, entity.goal.?);
-
-        if (entity.inCombat) {
-            EntityManager.setActingEntity(entity);
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        if (newPath) |new_path| {
+            entity.setNewPath(new_path);
         }
     }
 
-    if (entity.path) |path| {
-        //TODO: fix path variable, why is the items.len check needed? fix
-        // if (path.nodes.items.len < 2) {
-        //     std.debug.print("short_path\n", .{});
-        //     return;
-        // }
+    if (entity.path) |_| {
+        const path = &entity.path.?;
 
         if (entity.inCombat) {
+            //TODO: should i set the entity every frame?
+            EntityManager.setActingEntity(entity);
             entity.movementCooldown += game.delta;
             if (entity.movementCooldown < Config.movement_animation_duration) {
                 return;
@@ -845,14 +843,20 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
             entity.movementCooldown = 0;
         }
 
-        entity.path.?.currIndex += 1;
-        std.debug.print("curr_idx: {}\n", .{path.currIndex});
-        const new_pos = entity.path.?.nodes.items[entity.path.?.currIndex];
+        if (path.currIndex + 1 >= path.nodes.items.len) {
+            entity.removePathGoal();
+            return;
+        }
+        path.currIndex += 1;
+
+        const new_pos = path.nodes.items[path.currIndex];
         const new_pos_entity = EntityManager.getEntityByPos(new_pos);
 
+        // position has entity, recalculate
         if (new_pos_entity) |_| {
-            // position has entity, recalculate
+            //TODO: @fix this, enemies get stuck
             if (entity.goal) |goal| {
+                //TODO: take entities into account for pathing
                 entity.path = try Pathfinder.findPath(entity.pos, goal);
                 if (entity.data == .enemy) {
 
@@ -867,16 +871,19 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
         } else {
             if (!entity.hasMoved) {
                 entity.move(new_pos);
-                entity.hasMoved = true;
+                if (entity.inCombat) {
+                    entity.movedDistance += 1;
+                    if (entity.movedDistance >= entity.movementDistance) {
+                        entity.hasMoved = true;
+                        entity.movedDistance = 0;
+                    }
+                } else {
+                    entity.hasMoved = true;
+                }
             }
             if (entity.data == .enemy) {
                 entity.data.enemy.pathRecalculated = 0;
             }
-        }
-
-        if (entity.?.path.currIndex >= entity.path.?.nodes.items.len - 1) {
-            entity.path = null;
-            entity.goal = null;
         }
     }
 }
