@@ -54,9 +54,8 @@ pub fn init(alloc: std.mem.Allocator) !void {
 }
 
 pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
-    //TODO: take entities into account
-    //TODO: only return new nodes and index = 0, dont create a new std.arraylist every time
-    //TODO: make all arraylist, use the pointer from all
+    //TODO: check the code, made by ai
+    //TODO: different pathfinding for different enemy types??
     var open_list = std.ArrayList(Node).init(allocator);
     defer open_list.deinit();
 
@@ -75,7 +74,6 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
 
         if (Types.vector2IntCompare(current_node.pos, end)) {
             const path = try reconstructPath(closed_list, &current_node);
-            std.debug.print("reconstruct: {}\n", .{path});
             return path;
         }
 
@@ -104,7 +102,6 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
             }
         }
     }
-    std.debug.print("returning_null\n", .{});
 
     return null;
 }

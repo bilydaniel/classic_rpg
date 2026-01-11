@@ -56,6 +56,7 @@ pub const Entity = struct {
     hasMoved: bool,
     hasAttacked: bool,
     inCombat: bool,
+    stuck: u32 = 0,
     aiBehaviourWalking: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourWander,
     aiBehaviourCombat: ?*const fn (*Entity, *Game.Game) anyerror!void = aiBehaviourAggresiveMellee,
 
@@ -231,7 +232,7 @@ pub const Entity = struct {
     pub fn removePath(this: *Entity) void {
         if (this.path) |*path| {
             path.deinit();
-            path = null;
+            this.path = null;
         }
     }
 
@@ -248,6 +249,11 @@ pub const Entity = struct {
             this.path = null;
         }
         this.goal = null;
+    }
+
+    pub fn finishMovement(this: *Entity) void {
+        this.hasMoved = true;
+        this.movedDistance = 0;
     }
 };
 
@@ -304,7 +310,6 @@ pub const EnemyData = struct {
     //TODO: move goal to base entity
     //goal: ?Types.Vector2Int,
     asd: bool,
-    pathRecalculated: i32 = 0,
 
     // lastSeenPlayerPos: ?Types.Vector2Int,
     // aggressionRange: u32, //do i want this or should you just always fight everyone?
@@ -319,13 +324,16 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     EntityManager.setActingEntity(entity);
-    std.debug.print("combat\n", .{});
-    if (entity.goal == null) {
+    if (entity.goal == null or entity.stuck >= 2) {
         const position = game.player.pos;
-        entity.goal = position;
+        const availablePosition = Systems.getAvailableTileAround(position);
+        entity.goal = availablePosition;
     }
 
-    std.debug.print("enemy_moved: {}\n", .{entity.hasMoved});
+    if (entity.stuck > 2) {
+        entity.turnTaken = true;
+    }
+
     try Systems.updateEntityMovementIC(entity, game);
     if (entity.hasMoved) {
         //TODO: make more complex
@@ -334,12 +342,14 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
-    if (entity.goal == null) {
+    if (entity.goal == null or entity.stuck >= 2) {
         const position = Systems.getRandomValidPosition(World.currentLevel.grid);
         entity.goal = position;
     }
 
     try Systems.updateEntityMovementOOC(entity, game);
 
-    entity.turnTaken = true;
+    if (entity.hasMoved) {
+        entity.turnTaken = true;
+    }
 }

@@ -20,7 +20,7 @@ pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
         .rotation = 0.0,
         .zoom = Config.camera_zoom,
     };
-    manual = true;
+    manual = false;
     speed = 100.0;
     targetEntity = entityID;
 }

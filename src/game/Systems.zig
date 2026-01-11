@@ -287,7 +287,22 @@ pub fn getStaircaseDestination(pos: Types.Vector2Int) ?Level.Location {
     }
     return null;
 }
+pub fn getAvailableTileAround(pos: Types.Vector2Int) ?Types.Vector2Int {
+    if (canMove(pos)) {
+        return pos;
+    }
 
+    const neighbours = neighboursAll(pos);
+    for (neighbours) |neighbor| {
+        const neigh = neighbor orelse continue;
+        if (canMove(neigh)) {
+            return neigh;
+        }
+    }
+
+    return null;
+}
+//TODO: move somewhere else?
 pub fn canMove(pos: Types.Vector2Int) bool {
     const grid = World.currentLevel.grid;
     const pos_index = posToIndex(pos);
@@ -829,16 +844,19 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
 
 pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
     _ = game;
-    //TODO: enemies are looking for path for a turn for some reason
-    if (entity.hasMoved) {
-        return;
-    }
 
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
         if (newPath) |new_path| {
             entity.setNewPath(new_path);
+            entity.stuck = 0;
+        } else {
+            entity.stuck += 1;
         }
+    }
+
+    if (entity.hasMoved) {
+        return;
     }
 
     if (entity.path) |_| {
@@ -846,6 +864,7 @@ pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
 
         if (path.currIndex + 1 >= path.nodes.items.len) {
             entity.removePathGoal();
+            entity.finishMovement();
             return;
         }
         path.currIndex += 1;
@@ -855,55 +874,38 @@ pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
 
         // position has entity, recalculate
         if (new_pos_entity) |_| {
-            //TODO: @fix this, enemies get stuck
-            if (entity.goal) |goal| {
-                //TODO: take entities into account for pathing
-                //TODO: fix dangling pointer
-                entity.path = try Pathfinder.findPath(entity.pos, goal);
-                if (entity.data == .enemy) {
+            entity.removePath();
+            entity.stuck += 1;
+            return;
+        }
 
-                    //TODO: pathrecalculated doesnt work?
-                    entity.data.enemy.pathRecalculated += 1;
-
-                    if (entity.data.enemy.pathRecalculated >= 2) {
-                        entity.goal = getRandomValidPosition(World.currentLevel.grid);
-                    }
-                }
-            }
-        } else {
-            if (!entity.hasMoved) {
-                entity.move(new_pos);
-                entity.hasMoved = true;
-            }
-            if (entity.data == .enemy) {
-                entity.data.enemy.pathRecalculated = 0;
-            }
+        if (!entity.hasMoved) {
+            entity.move(new_pos);
+            entity.hasMoved = true;
+            entity.stuck = 0;
         }
     }
 }
 
 pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
+    if (entity.path == null and entity.goal != null) {
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        if (newPath) |new_path| {
+            entity.setNewPath(new_path);
+            entity.stuck = 0;
+        } else {
+            entity.stuck += 1;
+        }
+    }
+
     if (entity.hasMoved) {
         return;
     }
 
-    if (entity.path == null and entity.goal != null) {
-        std.debug.print("enemy_finding_path\n", .{});
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
-        std.debug.print("enemy_goal: {?}\n", .{entity.goal});
-        std.debug.print("enemy_new_path: {?}\n", .{newPath});
-        if (newPath) |new_path| {
-            entity.setNewPath(new_path);
-        }
-    }
-
-    std.debug.print("enemy_path: {?}\n", .{entity.path});
     if (entity.path) |_| {
         const path = &entity.path.?;
 
-        //TODO: should i set the entity every frame?
         EntityManager.setActingEntity(entity);
-        std.debug.print("cooldown: {}\n", .{entity.movementCooldown});
         entity.movementCooldown += game.delta;
         if (entity.movementCooldown < Config.movement_animation_duration) {
             return;
@@ -912,6 +914,7 @@ pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
 
         if (path.currIndex + 1 >= path.nodes.items.len) {
             entity.removePathGoal();
+            entity.finishMovement();
             return;
         }
         path.currIndex += 1;
@@ -921,19 +924,16 @@ pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
 
         // position has entity, recalculate
         if (new_pos_entity) |_| {
-            //TODO: @fix this, enemies get stuck
-            if (entity.goal) |goal| {
-                //TODO: take entities into account for pathing
-                entity.path = try Pathfinder.findPath(entity.pos, goal);
-            }
-        } else {
-            if (!entity.hasMoved) {
-                entity.move(new_pos);
-                entity.movedDistance += 1;
-                if (entity.movedDistance >= entity.movementDistance) {
-                    entity.hasMoved = true;
-                    entity.movedDistance = 0;
-                }
+            entity.removePath();
+            entity.stuck += 1;
+            return;
+        }
+
+        if (!entity.hasMoved) {
+            entity.move(new_pos);
+            entity.movedDistance += 1;
+            if (entity.movedDistance >= entity.movementDistance) {
+                entity.finishMovement();
             }
         }
     }

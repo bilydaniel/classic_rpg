@@ -6,6 +6,7 @@ const Systems = @import("Systems.zig");
 const Entity = @import("entity.zig");
 const Level = @import("level.zig");
 const UiManager = @import("../ui/uiManager.zig");
+const EntityManager = @import("entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -226,6 +227,11 @@ pub fn draw() !void {
 
     if (cursor) |cur| {
         c.DrawRectangleLines(cur.x * Config.tile_width, cur.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
+    }
+
+    //TODO: @refactor for debugging
+    if (EntityManager.actingEntity) |e| {
+        c.DrawCircleLines(e.pos.x * Config.tile_width + Config.tile_width / 2, e.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, c.WHITE);
     }
 }
 

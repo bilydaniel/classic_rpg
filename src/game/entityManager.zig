@@ -81,29 +81,14 @@ pub fn addEntity(entity: Entity.Entity) !void {
 }
 
 pub fn update(game: *Game.Game) !void {
-    std.debug.print("player_pos: {}\n", .{game.player.pos});
-    std.debug.print("curr:{}\n", .{Gamestate.currentTurn});
+    //TODO: order in combat
+    //TODO: think combat updating through
     if (actingEntity) |entity| {
-        //try Systems.updateEntityMovement(entity, game);
         try entity.update(game);
-        std.debug.print("type: {}\n", .{entity.data});
-        std.debug.print("turn_taken: {}\n", .{entity.turnTaken});
-        std.debug.print("has_moved: {}\n", .{entity.hasMoved});
-        std.debug.print("has_attacked: {}\n", .{entity.hasAttacked});
-        std.debug.print("**********************\n", .{});
         if (entity.turnTaken) {
             actingEntity = null;
-            if (entity.data == .player) {
-                Gamestate.switchTurn(.enemy);
-                game.player.resetTurnTakens();
-                Gamestate.reset();
-            }
         }
         return;
-    }
-
-    for (entities.items) |*entity| {
-        try entity.update(game);
     }
 
     //TODO: when to switch current_turn to enemy?
@@ -111,6 +96,10 @@ pub fn update(game: *Game.Game) !void {
     if (Gamestate.currentTurn != .player and allEnemiesTurnTaken()) {
         Gamestate.switchTurn(.player);
         resetTurnFlags();
+    }
+
+    for (entities.items) |*entity| {
+        try entity.update(game);
     }
 }
 
@@ -157,5 +146,7 @@ pub fn getEntityByPos(pos: Types.Vector2Int) ?*Entity.Entity {
 pub fn resetTurnFlags() void {
     for (entities.items) |*entity| {
         entity.hasMoved = false;
+        entity.hasAttacked = false;
+        entity.turnTaken = false;
     }
 }
