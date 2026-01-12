@@ -388,7 +388,6 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
 }
 
 pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.Entity)) bool {
-    std.debug.print("p: {}\n", .{player.worldPos});
     for (entities.items) |e| {
         if (e.data == .enemy) {
             if (Types.vector3IntCompare(player.worldPos, e.worldPos)) {
