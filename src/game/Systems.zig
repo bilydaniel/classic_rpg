@@ -125,7 +125,7 @@ pub fn canDeploy(player: *Entity.Entity) bool {
             return false;
         }
 
-        const grid = World.currentLevel.grid;
+        const grid = World.getCurrentLevel().grid;
         if (!isTileWalkable(grid, dep_pos)) {
             return false;
         }
@@ -177,7 +177,7 @@ pub fn getEntityById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.
 }
 
 pub fn calculateFOV(center: Types.Vector2Int, radius: usize) void {
-    var grid = World.currentLevel.grid;
+    var grid = World.getCurrentLevel().grid;
     var idx: usize = 0;
     while (idx < grid.len) : (idx += 1) {
         grid[idx].visible = false;
@@ -233,15 +233,6 @@ pub fn castRay(grid: []Level.Tile, center: Types.Vector2Int, target: Types.Vecto
     }
 }
 
-//TODO: @refactor put into world
-pub fn switchLevel(levelID: u32) void {
-    for (World.levels.items) |level| {
-        if (level.id == levelID) {
-            World.currentLevel = level;
-        }
-    }
-}
-
 pub fn old_highlightTile(grid: []Level.Tile, pos: Types.Vector2Int, color: c.Color) void {
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
@@ -268,25 +259,14 @@ pub fn highlightEntity(pos: Types.Vector2Int) void {
     };
 }
 
-//TODO: put into world / probably gonna remove links anyway
-pub fn isStaircase(pos: Types.Vector2Int) bool {
-    //TODO: probably should add a check for the tile type
-    for (World.levelLinks.items) |levelLink| {
-        if (levelLink.from.level == World.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-pub fn getStaircaseDestination(pos: Types.Vector2Int) ?Level.Location {
-    for (World.levelLinks.items) |levelLink| {
-        if (levelLink.from.level == World.currentLevel.id and Types.vector2IntCompare(levelLink.from.pos, pos)) {
-            return levelLink.to;
-        }
+pub fn getTileType(pos: Types.Vector2Int) ?Level.TileType {
+    const tile = getTilePos(World.getCurrentLevel().grid, pos);
+    if (tile) |t| {
+        return t.tileType;
     }
     return null;
 }
+
 pub fn getAvailableTileAround(pos: Types.Vector2Int) ?Types.Vector2Int {
     if (canMove(pos)) {
         return pos;
@@ -304,7 +284,7 @@ pub fn getAvailableTileAround(pos: Types.Vector2Int) ?Types.Vector2Int {
 }
 //TODO: move somewhere else?
 pub fn canMove(pos: Types.Vector2Int) bool {
-    const grid = World.currentLevel.grid;
+    const grid = World.getCurrentLevel().grid;
     const pos_index = posToIndex(pos);
     if (pos_index) |index| {
         if (index < grid.len) {
@@ -464,6 +444,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         return;
     }
 
+    //TODO: only staircase for now, add normal transitions
     new_pos = staircaseTransition(new_pos);
 
     game.player.move(new_pos);
@@ -731,14 +712,24 @@ pub fn puppetDeployment(game: *Game.Game) !void {
 }
 
 pub fn staircaseTransition(newPos: Types.Vector2Int) Types.Vector2Int {
-    if (!isStaircase(newPos)) {
-        return newPos;
+    //TODO: add normal transitions
+    const tileType = getTileType(newPos);
+    var worldPosDelta = Types.Vector3Int.init(0, 0, 0);
+    if (tileType) |t| {
+        switch (t) {
+            .staircase_up => {
+                worldPosDelta.z = 1;
+            },
+            .staircase_down => {
+                worldPosDelta.z = -1;
+            },
+            else => {
+                return newPos;
+            },
+        }
     }
 
-    if (getStaircaseDestination(newPos)) |lvllocation| {
-        switchLevel(lvllocation.level);
-        return lvllocation.pos;
-    }
+    World.changeCurrentLevelDelta(worldPosDelta);
 
     return newPos;
 }

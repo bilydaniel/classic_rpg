@@ -11,53 +11,37 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-//TODO: probably should completely rewrite, links are bullshit, make it like casey???
-pub var currentLevel: *Level.Level = undefined; //TODO: mabe switch to id? if i need to delete levels, might be e problem
-pub var levels: std.ArrayList(*Level.Level) = undefined;
-pub var levelLinks: std.ArrayList(Level.Link) = undefined;
+pub var currentLevel: Types.Vector3Int = undefined;
+pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
-    //TODO: test if i can do this, arraylist of just Level, not Level.Level
-    levels = std.ArrayList(*Level.Level).init(allocator);
+    levels = std.AutoHashMap(Types.Vector3Int, Level.Level).init(allocator);
 
-    var level1 = try Level.Level.init(allocator, 0);
+    var worldPos = Types.Vector3Int.init(0, 0, 0);
+    var level1 = try Level.Level.init(allocator, 0, worldPos);
     level1.generateInterestingLevel();
-    var level2 = try Level.Level.init(allocator, 1);
+
+    worldPos.x += 1;
+    var level2 = try Level.Level.init(allocator, 1, worldPos);
     level2.generateInterestingLevel2();
-    try levels.append(level1);
-    try levels.append(level2);
 
-    levelLinks = std.ArrayList(Level.Link).init(allocator);
-    const link1 = Level.Link{
-        .from = Level.Location{
-            .level = 0,
-            .pos = Types.Vector2Int.init(22, 18),
-        },
-        .to = Level.Location{
-            .level = 1,
-            .pos = Types.Vector2Int.init(3, 6),
-        },
-    };
+    try levels.put(level1.worldPos, level1);
+    try levels.put(level2.worldPos, level2);
 
-    const link2 = Level.Link{
-        .from = Level.Location{
-            .level = 1,
-            .pos = Types.Vector2Int.init(3, 6),
-        },
-        .to = Level.Location{
-            .level = 0,
-            .pos = Types.Vector2Int.init(22, 18),
-        },
-    };
+    currentLevel = level1.worldPos;
+}
 
-    try levelLinks.append(link1);
-    try levelLinks.append(link2);
-
-    currentLevel = level1;
+pub fn getCurrentLevel() *Level.Level {
+    return levels.getPtr(currentLevel).?;
 }
 
 pub fn draw() void {
-    currentLevel.draw();
+    getCurrentLevel().draw();
 }
 
 pub fn update() void {}
+
+pub fn changeCurrentLevelDelta(delta: Types.Vector3Int) void {
+    currentLevel = Types.vector3IntAdd(currentLevel, delta);
+    //TODO: check if the level exists? maybe generate new level?
+}

@@ -5,6 +5,7 @@ const Window = @import("../game/window.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Gamestate = @import("gamestate.zig");
+const World = @import("world.zig");
 const Systems = @import("Systems.zig");
 const CameraManager = @import("cameraManager.zig");
 const c = @cImport({
@@ -37,13 +38,13 @@ pub fn fillEntities() !Entity.Entity {
     var playerData = try Entity.PlayerData.init(entity_allocator);
 
     const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
-    var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 0, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } }, "&");
+    var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } }, "&");
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(50);
     try playerData.puppets.append(puppet.id);
 
-    var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 0, 1, Entity.EntityData{ .player = playerData }, "@");
+    var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData }, "@");
     player.setTextureID(76);
     try addEntity(player);
     try addEntity(puppet);
@@ -53,19 +54,19 @@ pub fn fillEntities() !Entity.Entity {
     const enemy_rect = Utils.makeSourceRect(enemy_tile);
     const enemy_goal = Types.Vector2Int.init(2, 2);
 
-    var entity = try Entity.Entity.init(entity_allocator, pos, 0, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } }, "r");
+    var entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } }, "r");
     entity.goal = enemy_goal;
 
     entity.textureID = enemy_tile;
     entity.sourceRect = enemy_rect;
 
     const pos2 = Types.Vector2Int{ .x = 6, .y = 16 };
-    var entity2 = try Entity.Entity.init(entity_allocator, pos2, 0, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } }, "r");
+    var entity2 = try Entity.Entity.init(entity_allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } }, "r");
     entity2.textureID = enemy_tile;
     entity2.sourceRect = enemy_rect;
 
     const pos3 = Types.Vector2Int{ .x = 7, .y = 17 };
-    var entity3 = try Entity.Entity.init(entity_allocator, pos3, 0, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } }, "r");
+    var entity3 = try Entity.Entity.init(entity_allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } }, "r");
     entity3.textureID = enemy_tile;
     entity3.sourceRect = enemy_rect;
 
@@ -100,6 +101,14 @@ pub fn update(game: *Game.Game) !void {
 
     for (entities.items) |*entity| {
         try entity.update(game);
+    }
+}
+
+pub fn draw() void {
+    for (entities) |e| {
+        if (Types.vector3IntCompare(e.worldPos, World.getCurrentLevel())) {
+            e.draw();
+        }
     }
 }
 

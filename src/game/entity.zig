@@ -37,7 +37,7 @@ pub const Entity = struct {
     tp: i32,
     attack: i32,
     pos: Types.Vector2Int,
-    levelID: u32,
+    worldPos: Types.Vector3Int = Types.Vector3Int.init(0, 0, 0),
     goal: ?Types.Vector2Int = null,
     path: ?Pathfinder.Path,
     speed: f32,
@@ -65,7 +65,6 @@ pub const Entity = struct {
     pub fn init(
         allocator: std.mem.Allocator,
         pos: Types.Vector2Int,
-        levelID: u32,
         speed: f32,
         entityData: anytype,
         asciiChar: []const u8,
@@ -84,7 +83,6 @@ pub const Entity = struct {
             .tp = 0,
             .attack = 3,
             .pos = pos,
-            .levelID = levelID,
             .textureID = null,
             .sourceRect = null,
             .movementCooldown = 0,
@@ -343,7 +341,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
     if (entity.goal == null or entity.stuck >= 2) {
-        const position = Systems.getRandomValidPosition(World.currentLevel.grid);
+        const position = Systems.getRandomValidPosition(World.getCurrentLevel().grid);
         entity.goal = position;
     }
 
