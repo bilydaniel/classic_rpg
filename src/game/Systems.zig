@@ -62,6 +62,7 @@ pub fn preWalkingTransitions(game: *Game.Game) !bool {
         return true;
     }
 
+    //TODO: probably should only check when moved
     if (checkCombatStart(game.player, EntityManager.entities)) {
         try playerChangeState(game, .deploying_puppets);
         return true;
@@ -294,6 +295,9 @@ pub fn canMove(pos: Types.Vector2Int) bool {
             }
         }
     }
+
+    //TODO: @finish
+    //entities now have worldpos, gotta filter by that
     const entity = EntityManager.getEntityByPos(pos);
     if (entity == null) {
         return true;
@@ -384,11 +388,14 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
 }
 
 pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.Entity)) bool {
-    for (entities.items) |entity| {
-        if (entity.data == .enemy) {
-            const distance = Types.vector2Distance(player.pos, entity.pos);
-            if (distance < 3) {
-                return true;
+    std.debug.print("p: {}\n", .{player.worldPos});
+    for (entities.items) |e| {
+        if (e.data == .enemy) {
+            if (Types.vector3IntCompare(player.worldPos, e.worldPos)) {
+                const distance = Types.vector2Distance(player.pos, e.pos);
+                if (distance < 3) {
+                    return true;
+                }
             }
         }
     }
@@ -729,6 +736,8 @@ pub fn staircaseTransition(newPos: Types.Vector2Int) Types.Vector2Int {
         }
     }
 
+    var player = EntityManager.getPlayer();
+    player.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);
     World.changeCurrentLevelDelta(worldPosDelta);
 
     return newPos;

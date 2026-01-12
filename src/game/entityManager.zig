@@ -105,8 +105,8 @@ pub fn update(game: *Game.Game) !void {
 }
 
 pub fn draw() void {
-    for (entities) |e| {
-        if (Types.vector3IntCompare(e.worldPos, World.getCurrentLevel())) {
+    for (entities.items) |*e| {
+        if (Types.vector3IntCompare(e.worldPos, World.currentLevel)) {
             e.draw();
         }
     }

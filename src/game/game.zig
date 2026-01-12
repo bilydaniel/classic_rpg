@@ -76,6 +76,7 @@ pub const Game = struct {
         c.BeginMode2D(CameraManager.camera.*);
         World.draw();
         this.player.draw();
+        EntityManager.draw();
         ShaderManager.draw();
 
         try Gamestate.draw();

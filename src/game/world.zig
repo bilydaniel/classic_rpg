@@ -21,7 +21,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     var level1 = try Level.Level.init(allocator, 0, worldPos);
     level1.generateInterestingLevel();
 
-    worldPos.x += 1;
+    worldPos.z -= 1;
     var level2 = try Level.Level.init(allocator, 1, worldPos);
     level2.generateInterestingLevel2();
 
@@ -42,6 +42,7 @@ pub fn draw() void {
 pub fn update() void {}
 
 pub fn changeCurrentLevelDelta(delta: Types.Vector3Int) void {
+    //TODO: probably gonna need to be a bit more complex, loading etc.
     currentLevel = Types.vector3IntAdd(currentLevel, delta);
     //TODO: check if the level exists? maybe generate new level?
 }

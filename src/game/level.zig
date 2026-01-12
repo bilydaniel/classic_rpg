@@ -308,6 +308,9 @@ pub const Level = struct {
             const idx = 18 * width + 22;
             level.grid[idx] = Tile.initStaircaseDown();
         }
+
+        const idx = 2 * width + 2;
+        level.grid[idx] = Tile.initStaircaseDown();
     }
 
     pub fn generateInterestingLevel2(level: *Level) void {
