@@ -143,10 +143,10 @@ pub fn getEntityID(id: u32) ?*Entity.Entity {
     return null;
 }
 
-pub fn getEntityByPos(pos: Types.Vector2Int) ?*Entity.Entity {
-    for (entities.items) |*entity| {
-        if (Types.vector2IntCompare(entity.pos, pos)) {
-            return entity;
+pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
+    for (entities.items) |*e| {
+        if (Types.vector2IntCompare(e.pos, pos) and Types.vector3IntCompare(e.worldPos, worldPos)) {
+            return e;
         }
     }
     return null;

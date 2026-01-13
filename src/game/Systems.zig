@@ -121,7 +121,7 @@ pub fn canDeploy(player: *Entity.Entity) bool {
             return false;
         }
 
-        const entity = EntityManager.getEntityByPos(dep_pos);
+        const entity = EntityManager.getEntityByPos(dep_pos, World.currentLevel);
         if (entity) |_| {
             return false;
         }
@@ -298,7 +298,7 @@ pub fn canMove(pos: Types.Vector2Int) bool {
 
     //TODO: @finish
     //entities now have worldpos, gotta filter by that
-    const entity = EntityManager.getEntityByPos(pos);
+    const entity = EntityManager.getEntityByPos(pos, World.currentLevel);
     if (entity == null) {
         return true;
     }
@@ -552,7 +552,7 @@ pub fn entityAction(game: *Game.Game) !void {
                 if (UiManager.getConfirm()) {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinAttackable(cur)) {
-                            const attackedEntity = EntityManager.getEntityByPos(cur);
+                            const attackedEntity = EntityManager.getEntityByPos(cur, World.currentLevel);
                             try ShaderManager.spawnSlash(entity.pos, cur);
                             try ShaderManager.spawnImpact(cur);
 
@@ -642,7 +642,7 @@ pub fn selectedEntityAttack(game: *Game.Game, entity: *Entity.Entity) !void {
     if (c.IsKeyPressed(c.KEY_A)) {
         if (Gamestate.cursor) |cur| {
             if (Gamestate.isinAttackable(cur)) {
-                const attackedEntity = EntityManager.getEntityByPos(cur);
+                const attackedEntity = EntityManager.getEntityByPos(cur, World.currentLevel);
 
                 try ShaderManager.spawnSlash(entity.pos, cur);
                 try ShaderManager.spawnImpact(cur);
@@ -869,7 +869,7 @@ pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
         path.currIndex += 1;
 
         const new_pos = path.nodes.items[path.currIndex];
-        const new_pos_entity = EntityManager.getEntityByPos(new_pos);
+        const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
 
         // position has entity, recalculate
         if (new_pos_entity) |_| {
@@ -919,7 +919,7 @@ pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
         path.currIndex += 1;
 
         const new_pos = path.nodes.items[path.currIndex];
-        const new_pos_entity = EntityManager.getEntityByPos(new_pos);
+        const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
 
         // position has entity, recalculate
         if (new_pos_entity) |_| {
