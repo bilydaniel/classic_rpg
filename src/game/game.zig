@@ -28,12 +28,13 @@ pub const Game = struct {
         //TODO: figure out instantiation of types of entities
         //probably a file with some sort of templates?
 
-        //TODO: fix turn taken stuff
         const game = try allocator.create(Game);
-        Gamestate.init(allocator);
 
+        Gamestate.init(allocator);
         EntityManager.init(allocator);
-        var player = try EntityManager.fillEntities();
+
+        try EntityManager.fillEntities();
+        const player = EntityManager.getPlayer();
 
         TilesetManager.init();
         try Pathfinder.init(allocator);
@@ -46,7 +47,7 @@ pub const Game = struct {
         game.* = .{
             .delta = 0,
             .allocator = allocator,
-            .player = &player,
+            .player = player,
         };
 
         Systems.calculateFOV(player.pos, 8);

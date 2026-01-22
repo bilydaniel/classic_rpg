@@ -13,6 +13,8 @@ const c = @cImport({
 
 //TODO: how do I do some special shapes / effects for design?
 // maybe attach them to an element or have them separate?
+//
+// TODO: switch to immeadeate mode ui watch caseys video
 pub const Updatefunction = *const fn (*Element, *Game.Game) anyerror!void;
 
 pub var uiCommand: UiCommand = undefined;

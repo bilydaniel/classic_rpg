@@ -7,6 +7,8 @@ const Game = @import("game.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Systems = @import("Systems.zig");
+const LevelGenerator = @import("levelGenerator.zig");
+
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -16,6 +18,8 @@ pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     levels = std.AutoHashMap(Types.Vector3Int, Level.Level).init(allocator);
+
+    const randomLevel = LevelGenerator.generate();
 
     var worldPos = Types.Vector3Int.init(0, 0, 0);
     var level1 = try Level.Level.init(allocator, 0, worldPos);
@@ -28,7 +32,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try levels.put(level1.worldPos, level1);
     try levels.put(level2.worldPos, level2);
 
-    currentLevel = level1.worldPos;
+    //currentLevel = level1.worldPos;
+    currentLevel = randomLevel;
 }
 
 pub fn getCurrentLevel() *Level.Level {

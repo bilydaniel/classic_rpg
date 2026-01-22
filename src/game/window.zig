@@ -17,8 +17,9 @@ pub var scaledWidthHalf: f32 = 0;
 pub var scaledHeightHalf: f32 = 0;
 
 pub fn init() void {
+    c.SetTargetFPS(60);
     screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
-    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT); //TODO:try TEXTURE_FILTER_BILINEAR for blurry effect
+    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT);
 
     scale = @min(
         @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
@@ -29,7 +30,6 @@ pub fn init() void {
     const scaled_height = @as(i32, @intFromFloat(@as(f32, Config.game_height) * scale));
     const offset_x = @divFloor(Config.window_width - scaled_width, 2);
     const offset_y = @divFloor(Config.window_height - scaled_height, 2);
-    c.SetTargetFPS(60);
 
     screen = screen;
     scale = scale;
@@ -41,8 +41,6 @@ pub fn init() void {
     scaledHeightHalf = @as(f32, @floatFromInt(scaled_height)) / 2;
     windowWidth = scaledWidth;
     windowHeight = scaledHeight;
-    //windowWidth = Config.window_width;
-    //windowHeight = Config.window_height;
 }
 
 pub fn updateWindow() void {

@@ -18,11 +18,6 @@ pub var actingEntity: ?*Entity.Entity = null;
 
 const PLAYER_INDEX = 0; //always 0
 
-//TODO: switch to hash table?
-//pub var entities: std.AutoHashMap(u32, *Entity.Entity) = undefined;
-//nextEntityID: u32 = 0,
-//TODO: no idea if needed
-
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
     entities = std.ArrayList(Entity.Entity).init(allocator);
@@ -34,7 +29,7 @@ pub fn setActingEntity(entity: *Entity.Entity) void {
 }
 
 // just a helper funciton, returns the player so it can be used to fill into context
-pub fn fillEntities() !Entity.Entity {
+pub fn fillEntities() !void {
     var playerData = try Entity.PlayerData.init(entity_allocator);
 
     const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
@@ -73,8 +68,6 @@ pub fn fillEntities() !Entity.Entity {
     try addEntity(entity);
     try addEntity(entity2);
     try addEntity(entity3);
-
-    return player;
 }
 
 pub fn addEntity(entity: Entity.Entity) !void {
@@ -123,14 +116,6 @@ pub fn allEnemiesTurnTaken() bool {
 }
 
 pub fn getPlayer() *Entity.Entity {
-    //always use this, dont acess directly entities[0], if something changes i can
-    //iterate and find the player that way
-
-    // for (entities.items) |entity| {
-    //     if (entity.data == .player) {
-    //         return entity;
-    //     }
-    // }
     return &entities.items[PLAYER_INDEX];
 }
 
