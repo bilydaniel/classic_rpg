@@ -465,7 +465,6 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         return;
     }
 
-    //TODO: take input from uimanager?
     const skipMove = UiManager.getSkip();
     const moveDelta = UiManager.getMove();
     if (skipMove == false and moveDelta == null) {
@@ -482,7 +481,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         return;
     }
 
-    //TODO: only staircase for now, add normal transitions
+    //TODO: only staircase for now, add boundry transitions
     new_pos = staircaseTransition(new_pos);
 
     game.player.move(new_pos);

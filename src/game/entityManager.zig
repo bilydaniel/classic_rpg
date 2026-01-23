@@ -120,6 +120,12 @@ pub fn getPlayer() *Entity.Entity {
     return &entities.items[PLAYER_INDEX];
 }
 
+pub fn getEnemies() []*Entity.Entity {}
+
+pub fn getPuppets() []*Entity.Entity {
+    return &entities.items[PLAYER_INDEX];
+}
+
 pub fn getEntityID(id: u32) ?*Entity.Entity {
     for (entities.items) |*entity| {
         if (entity.id == id) {

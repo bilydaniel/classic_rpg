@@ -1,17 +1,13 @@
 const std = @import("std");
 const World = @import("world.zig");
-const Level = @import("level.zig");
 const Systems = @import("Systems.zig");
 const CameraManager = @import("cameraManager.zig");
 const TilesetManager = @import("tilesetManager.zig");
 const Gamestate = @import("gamestate.zig");
 const Entity = @import("entity.zig");
 const EntityManager = @import("entityManager.zig");
-const Tileset = @import("../game/tileset.zig");
+const TurnManager = @import("turnManager.zig");
 const Window = @import("../game/window.zig");
-const Config = @import("../common/config.zig");
-const Types = @import("../common/types.zig");
-const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
@@ -62,7 +58,8 @@ pub const Game = struct {
         Window.updateWindow();
 
         try UiManager.update(this);
-        try EntityManager.update(this);
+        //try EntityManager.update(this);
+        try TurnManager.update(this);
 
         CameraManager.update(delta);
         Gamestate.update();
