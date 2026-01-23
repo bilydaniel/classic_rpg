@@ -173,7 +173,7 @@ pub const Entity = struct {
     pub fn update(this: *Entity, ctx: *Game.Game) !void {
         switch (this.data) {
             //TODO: see if it needs to be separated or not, change later
-            .player => try Systems.updatePlayer(this, ctx),
+            .player => try Systems.updatePlayer(ctx),
             .puppet => try Systems.updatePuppet(this, ctx),
             .enemy => try Systems.updateEnemy(this, ctx),
             .item => {}, //TODO: later

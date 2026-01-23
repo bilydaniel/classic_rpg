@@ -19,7 +19,7 @@ pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
 pub fn init(allocator: std.mem.Allocator) !void {
     levels = std.AutoHashMap(Types.Vector3Int, Level.Level).init(allocator);
 
-    const randomLevel = LevelGenerator.generate();
+    //const randomLevel = LevelGenerator.generate();
 
     var worldPos = Types.Vector3Int.init(0, 0, 0);
     var level1 = try Level.Level.init(allocator, 0, worldPos);
@@ -32,8 +32,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
     try levels.put(level1.worldPos, level1);
     try levels.put(level2.worldPos, level2);
 
-    //currentLevel = level1.worldPos;
-    currentLevel = randomLevel;
+    currentLevel = level1.worldPos;
+    //currentLevel = randomLevel;
 }
 
 pub fn getCurrentLevel() *Level.Level {

@@ -75,6 +75,7 @@ pub fn addEntity(entity: Entity.Entity) !void {
 }
 
 pub fn update(game: *Game.Game) !void {
+    //TODO: make a turnManager??
     //TODO: order in combat
     //TODO: think combat updating through
     if (actingEntity) |entity| {

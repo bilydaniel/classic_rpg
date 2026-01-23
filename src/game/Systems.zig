@@ -17,29 +17,105 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+//TODO: refactor this file, split into more / better files
 //TODO: add an optiom to "look around", get info on enemies, etc.
-pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
-    switch (player.data.player.state) {
-        // TODO: go through everything, make more functions, messy
-        // TODO: go through all the state management, make some fool proof system
-        // of writing the state transitions / resets of variables
-        // RESETING OF VARIABLES IS IMPORTANT, THATS WHERE I MAKE MISTAKES
+// TODO: go through everything, make more functions, messy
+// TODO: go through all the state management, make some fool proof system
+// of writing the state transitions / resets of variables
+// RESETING OF VARIABLES IS IMPORTANT, THATS WHERE I MAKE MISTAKES
+
+//TODO: make a turnManager???
+pub fn updatePlayer(game: *Game.Game) !void {
+    //
+    // FIND NEXT STATE
+    //
+    std.debug.assert(game.player.data == .player);
+    const playerData = &game.player.data.player;
+    var nextState = playerData.state;
+    const currState = playerData.state;
+    switch (currState) {
         .walking => {
-            if (try preWalkingTransitions(game)) {
-                return;
+            //TODO: check if enemies are around, if it makes sense to even go to combat
+            if (UiManager.getCombatToggle()) {
+                nextState = .deploying_puppets;
             }
+
+            //TODO: probably should only check when moved
+            if (checkCombatStart(game.player, EntityManager.entities)) {
+                nextState = .deploying_puppets;
+            }
+        },
+        .deploying_puppets => {
+            if (UiManager.getCombatToggle()) {
+                nextState = .walking;
+            }
+
+            if (game.player.data.player.allPupsDeployed()) {
+                nextState = .in_combat;
+            }
+        },
+        .in_combat => {
+            if (UiManager.getCombatToggle()) {
+                //TODO: check can end combat?
+                nextState = .walking;
+            }
+
+            if (game.player.data.player.inCombatWith.items.len == 0) {
+                nextState = .walking;
+            }
+        },
+    }
+
+    //
+    // TRANSITION
+    //
+    if (currState != nextState) {
+
+        //switching from a state
+        switch (currState) {
+            //not needed for now
+            .walking => {},
+            .deploying_puppets => {},
+            .in_combat => {},
+        }
+
+        //swithing to a state
+        switch (nextState) {
+            .walking => {
+                Gamestate.reset(); //TODO: make more reset functions depending on the state?
+                game.player.endCombat();
+                Gamestate.showMenu = .none;
+            },
+            .deploying_puppets => {
+                //TODO: filter out entities that are supposed to be in the combat
+                // could be some mechanic around attention/stealth
+                // smarter entities shout at other to help etc...
+
+                game.player.inCombat = true;
+                for (EntityManager.entities.items) |*entity| {
+                    try game.player.data.player.inCombatWith.append(entity.id);
+                    entity.resetPathing();
+                    entity.inCombat = true;
+                }
+            },
+            .in_combat => {
+                Gamestate.reset();
+                Gamestate.showMenu = .none;
+                game.player.movementCooldown = 0;
+            },
+        }
+
+        playerData.state = nextState;
+    }
+
+    switch (playerData.state) {
+        .walking => {
             try handlePlayerWalking(game);
         },
         .deploying_puppets => {
-            if (try preDeployingTransitions(game)) {
-                return;
-            }
             try handlePlayerDeploying(game);
         },
         .in_combat => {
-            if (try preCombatTransitions(game)) {
-                return;
-            }
             try handlePlayerCombat(game);
         },
     }
@@ -48,55 +124,11 @@ pub fn updatePlayer(player: *Entity.Entity, game: *Game.Game) !void {
         return;
     }
 
-    if (player.inCombat) {
-        try updateEntityMovementIC(player, game);
+    if (game.player.inCombat) {
+        try updateEntityMovementIC(game.player, game);
     } else {
-        try updateEntityMovementOOC(player, game);
+        try updateEntityMovementOOC(game.player, game);
     }
-}
-
-pub fn preWalkingTransitions(game: *Game.Game) !bool {
-    if (UiManager.getCombatToggle()) {
-        //TODO: check in enemies are around, if it makes sense to even go to combat
-        try playerChangeState(game, .deploying_puppets);
-        return true;
-    }
-
-    //TODO: probably should only check when moved
-    if (checkCombatStart(game.player, EntityManager.entities)) {
-        try playerChangeState(game, .deploying_puppets);
-        return true;
-    }
-
-    return false;
-}
-
-pub fn preDeployingTransitions(game: *Game.Game) !bool {
-    if (UiManager.getCombatToggle()) {
-        try playerChangeState(game, .walking);
-        return true;
-    }
-
-    if (game.player.data.player.allPupsDeployed()) {
-        try playerChangeState(game, .in_combat);
-        return true;
-    }
-
-    return false;
-}
-
-pub fn preCombatTransitions(game: *Game.Game) !bool {
-    if (UiManager.getCombatToggle()) {
-        //TODO: check can end combat?
-        try playerChangeState(game, .walking);
-        return true;
-    }
-
-    if (game.player.data.player.inCombatWith.items.len == 0) {
-        try playerChangeState(game, .walking);
-        return true;
-    }
-    return false;
 }
 
 pub fn deployPuppet(pupId: u32) !void {
@@ -620,22 +652,6 @@ pub fn skipAttack() void {
     Gamestate.selectedAction = null;
 }
 
-pub fn selectedEntityMove(game: *Game.Game, entity: *Entity.Entity) !void {
-    //TODO: absolutely change this
-    try Gamestate.highlightMovement(entity);
-
-    if (c.IsKeyPressed(c.KEY_A)) {
-        if (Gamestate.cursor) |cur| {
-            if (Gamestate.isinMovable(cur)) {
-                entity.path = try Pathfinder.findPath(game.grid.*, entity.pos, cur, game.entities.*);
-                entity.hasMoved = true;
-                Gamestate.resetMovementHighlight();
-                Gamestate.removeCursor();
-                Gamestate.selectedAction = null;
-            }
-        }
-    }
-}
 pub fn selectedEntityAttack(game: *Game.Game, entity: *Entity.Entity) !void {
     try Gamestate.highlightAttack(entity);
 
@@ -740,72 +756,6 @@ pub fn staircaseTransition(newPos: Types.Vector2Int) Types.Vector2Int {
     World.changeCurrentLevelDelta(worldPosDelta);
 
     return newPos;
-}
-
-//TODO: maybe add more states to the enum?
-//should things like picking a puppet from the menu has its own state?
-pub fn playerChangeState(game: *Game.Game, newState: Entity.playerStateEnum) !void {
-    var player = EntityManager.getPlayer();
-    const oldState = player.data.player.state;
-    if (oldState == newState) {
-        //state is the same
-        return;
-    }
-
-    //exit previous state
-    switch (oldState) {
-        .walking => try exitWalking(game),
-        .deploying_puppets => try exitDeployingPuppets(game),
-        .in_combat => try exitCombat(game),
-    }
-
-    //change state
-    //TODO: should I first switch the state or call enter and then switch?
-    player.data.player.state = newState;
-
-    //enter new state
-    switch (newState) {
-        .walking => try enterWalking(game),
-        .deploying_puppets => try enterDeployingPuppets(game),
-        .in_combat => try enterCombat(game),
-    }
-}
-
-pub fn enterWalking(game: *Game.Game) !void {
-    if (canEndCombat(game.player)) {
-        Gamestate.reset(); //TODO: make more reset functions depending on the state?
-        game.player.endCombat();
-        Gamestate.showMenu = .none;
-    }
-}
-pub fn exitWalking(game: *Game.Game) !void {
-    _ = game;
-    //TODO:
-}
-pub fn enterDeployingPuppets(game: *Game.Game) !void {
-    //TODO: filter out entities that are supposed to be in the combat
-    // could be some mechanic around attention/stealth
-    // smarter entities shout at other to help etc...
-
-    game.player.inCombat = true;
-
-    for (EntityManager.entities.items) |*entity| {
-        try game.player.data.player.inCombatWith.append(entity.id);
-        entity.resetPathing();
-        entity.inCombat = true;
-    }
-}
-pub fn exitDeployingPuppets(game: *Game.Game) !void {
-    _ = game;
-}
-pub fn enterCombat(game: *Game.Game) !void {
-    Gamestate.reset();
-    Gamestate.showMenu = .none;
-    game.player.movementCooldown = 0;
-}
-pub fn exitCombat(game: *Game.Game) !void {
-    _ = game;
-    //TODO:
 }
 
 pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
