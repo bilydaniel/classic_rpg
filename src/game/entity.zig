@@ -332,7 +332,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.turnTaken = true;
     }
 
-    try Systems.updateEntityMovementIC(entity, game);
+    try Systems.updateEntityMovement(entity, game);
     if (entity.hasMoved) {
         //TODO: make more complex
         entity.turnTaken = true;
@@ -345,7 +345,7 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
         entity.goal = position;
     }
 
-    try Systems.updateEntityMovementOOC(entity, game);
+    try Systems.updateEntityMovement(entity, game);
 
     if (entity.hasMoved) {
         entity.turnTaken = true;

@@ -20,12 +20,9 @@ const c = @cImport({
 
 //TODO: refactor this file, split into more / better files
 //TODO: add an optiom to "look around", get info on enemies, etc.
-// TODO: go through everything, make more functions, messy
 // TODO: go through all the state management, make some fool proof system
 // of writing the state transitions / resets of variables
-// RESETING OF VARIABLES IS IMPORTANT, THATS WHERE I MAKE MISTAKES
 
-//TODO: make a turnManager???
 pub fn updatePlayer(game: *Game.Game) !void {
     //
     // FIND NEXT STATE
@@ -125,11 +122,7 @@ pub fn updatePlayer(game: *Game.Game) !void {
         return;
     }
 
-    if (game.player.inCombat) {
-        try updateEntityMovementIC(game.player, game);
-    } else {
-        try updateEntityMovementOOC(game.player, game);
-    }
+    updateEntityMovement(game.player, game);
 }
 
 pub fn deployPuppet(pupId: u32) !void {
@@ -490,11 +483,52 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     game.player.turnTaken = true;
 }
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
-    //TODO: should I put all the code just in the handleplayerdeploying?
-    //j_blow says so, have a look into it, kinda makes sense
-    //maybe should try to stop only changing the game values and have some local variables / returns, feels kinda wierd
-    try puppetSelection();
-    try puppetDeployment(game);
+    //
+    // puppet select
+    //
+    if (Gamestate.selectedPupId == null) {
+        Gamestate.showMenu = .puppet_select;
+
+        if (UiManager.getMenuSelect()) |menu_item| {
+            switch (menu_item) {
+                .puppet_id => |pid| {
+                    Gamestate.selectedPupId = pid;
+                },
+                .action => {
+                    std.debug.print("menu_item is .action instead of .puppet_id", .{});
+                },
+            }
+        }
+    }
+
+    //
+    // puppet deploy
+    //
+    if (Gamestate.selectedPupId) |selected_pup| {
+        Gamestate.showMenu = .none;
+        Gamestate.makeUpdateCursor(game.player.pos);
+
+        //TODO: put deploycells / highlight  into function
+        if (Gamestate.deployableCells == null) {
+            const neighbours = neighboursAll(game.player.pos);
+            Gamestate.deployableCells = neighbours;
+        }
+        if (Gamestate.deployableCells) |cells| {
+            if (!Gamestate.deployHighlighted) {
+                for (cells) |value| {
+                    if (value) |val| {
+                        try highlightTile(val);
+                        Gamestate.deployHighlighted = true;
+                    }
+                }
+            }
+        }
+        if (UiManager.getConfirm()) {
+            if (canDeploy(game.player)) {
+                try deployPuppet(selected_pup);
+            }
+        }
+    }
 }
 pub fn handlePlayerCombat(game: *Game.Game) !void {
     switch (TurnManager.turn) {
@@ -688,51 +722,6 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
     return null;
 }
 
-pub fn puppetSelection() !void {
-    if (Gamestate.selectedPupId == null) {
-        Gamestate.showMenu = .puppet_select;
-
-        if (UiManager.getMenuSelect()) |menu_item| {
-            switch (menu_item) {
-                .puppet_id => |pid| {
-                    Gamestate.selectedPupId = pid;
-                },
-                .action => {
-                    std.debug.print("menu_item is .action instead of .puppet_id", .{});
-                },
-            }
-        }
-    }
-}
-
-pub fn puppetDeployment(game: *Game.Game) !void {
-    if (Gamestate.selectedPupId) |selected_pup| {
-        Gamestate.showMenu = .none;
-        Gamestate.makeUpdateCursor(game.player.pos);
-
-        //TODO: put deploycells / highlight  into function
-        if (Gamestate.deployableCells == null) {
-            const neighbours = neighboursAll(game.player.pos);
-            Gamestate.deployableCells = neighbours;
-        }
-        if (Gamestate.deployableCells) |cells| {
-            if (!Gamestate.deployHighlighted) {
-                for (cells) |value| {
-                    if (value) |val| {
-                        try highlightTile(val);
-                        Gamestate.deployHighlighted = true;
-                    }
-                }
-            }
-        }
-        if (UiManager.getConfirm()) {
-            if (canDeploy(game.player)) {
-                try deployPuppet(selected_pup);
-            }
-        }
-    }
-}
-
 pub fn staircaseTransition(newPos: Types.Vector2Int) Types.Vector2Int {
     //TODO: add normal transitions
     const tileType = getTileType(newPos);
@@ -763,11 +752,13 @@ pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
         return;
     }
     //TODO: correct?
-    if (game.player.inCombat) {
-        try updateEntityMovementIC(puppet, game);
-    } else {
-        try updateEntityMovementOOC(puppet, game);
-    }
+    // if (game.player.inCombat) {
+    //     try updateEntityMovementIC(puppet, game);
+    // } else {
+    //     try updateEntityMovementOOC(puppet, game);
+    // }
+
+    try updateEntityMovement(puppet, game);
 }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
@@ -833,6 +824,64 @@ pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
             entity.hasMoved = true;
             entity.stuck = 0;
         }
+    }
+}
+
+pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+    if (entity.path == null and entity.goal != null) {
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        if (newPath) |new_path| {
+            entity.setNewPath(new_path);
+            entity.stuck = 0;
+        } else {
+            entity.stuck += 1;
+            return;
+        }
+    }
+
+    if (entity.hasMoved or entity.path == null) {
+        return;
+    }
+
+    if (entity.inCombat) {
+        EntityManager.setActingEntity(entity);
+        entity.movementCooldown += game.delta;
+        if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
+            return;
+        }
+        entity.movementCooldown = 0;
+    }
+
+    const path = &entity.path.?;
+    const nextIndex = path.currIndex + 1;
+
+    if (nextIndex >= path.nodes.items.len) {
+        entity.removePathGoal();
+        entity.finishMovement();
+        return;
+    }
+
+    const new_pos = path.nodes.items[nextIndex];
+    const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
+
+    // position has entity, recalculate
+    if (new_pos_entity) |_| {
+        entity.removePath();
+        entity.stuck += 1;
+        return;
+    }
+
+    entity.move(new_pos);
+    entity.stuck = 0;
+    path.currIndex = nextIndex;
+
+    if (entity.inCombat) {
+        entity.movedDistance += 1;
+        if (entity.movedDistance >= entity.movementDistance) {
+            entity.finishMovement();
+        }
+    } else {
+        entity.hasMoved = true;
     }
 }
 
