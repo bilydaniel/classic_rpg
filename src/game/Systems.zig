@@ -9,6 +9,7 @@ const Types = @import("../common/types.zig");
 const std = @import("std");
 const Pathfinder = @import("../game/pathfinder.zig");
 const InputManager = @import("../game/inputManager.zig");
+const TurnManager = @import("../game/turnManager.zig");
 const Game = @import("game.zig");
 const ShaderManager = @import("shaderManager.zig");
 const EntityManager = @import("entityManager.zig");
@@ -120,7 +121,7 @@ pub fn updatePlayer(game: *Game.Game) !void {
         },
     }
 
-    if (Gamestate.currentTurn != .player) {
+    if (TurnManager.turn != .player) {
         return;
     }
 
@@ -472,7 +473,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     }
     if (skipMove) {
         game.player.movementCooldown = 0;
-        Gamestate.switchTurn(.enemy);
+        game.player.turnTaken = true;
         return;
     }
 
@@ -486,7 +487,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
 
     game.player.move(new_pos);
     game.player.movementCooldown = 0;
-    Gamestate.switchTurn(.enemy);
+    game.player.turnTaken = true;
 }
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
     //TODO: should I put all the code just in the handleplayerdeploying?
@@ -496,7 +497,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     try puppetDeployment(game);
 }
 pub fn handlePlayerCombat(game: *Game.Game) !void {
-    switch (Gamestate.currentTurn) {
+    switch (TurnManager.turn) {
         .player => {
             entitySelect(game);
             try entityAction(game);
@@ -625,7 +626,7 @@ pub fn resolveTurnTaken(game: *Game.Game) void {
         if (game.player.turnTaken or game.player.allPupsTurnTaken()) {
             // finished turn
             if (EntityManager.actingEntity == null) {
-                Gamestate.switchTurn(.enemy);
+                TurnManager.switchTurn(.enemy);
                 game.player.resetTurnTakens();
                 Gamestate.reset();
             }
@@ -758,7 +759,7 @@ pub fn staircaseTransition(newPos: Types.Vector2Int) Types.Vector2Int {
 }
 
 pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
-    if (Gamestate.currentTurn != .player) {
+    if (TurnManager.turn != .player) {
         return;
     }
     //TODO: correct?
@@ -773,7 +774,7 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     //TODO: figure out where to put this,
     //good for now, might need some updating
     //late even if its not mu turn
-    if (Gamestate.currentTurn != .enemy) {
+    if (TurnManager.turn != .enemy) {
         return;
     }
 
@@ -855,7 +856,7 @@ pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
 
         EntityManager.setActingEntity(entity);
         entity.movementCooldown += game.delta;
-        if (entity.movementCooldown < Config.movement_animation_duration) {
+        if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
             return;
         }
         entity.movementCooldown = 0;

@@ -32,6 +32,8 @@ pub const Game = struct {
         try EntityManager.fillEntities();
         const player = EntityManager.getPlayer();
 
+        TurnManager.init(allocator);
+
         TilesetManager.init();
         try Pathfinder.init(allocator);
         try CameraManager.init(allocator, player.id);

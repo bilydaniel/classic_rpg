@@ -1,5 +1,6 @@
 const std = @import("std");
 const Game = @import("../game/game.zig");
+const TurnManager = @import("../game/turnManager.zig");
 const Window = @import("../game/window.zig");
 const Gamestate = @import("../game/gamestate.zig");
 const Types = @import("../common/types.zig");
@@ -36,7 +37,7 @@ pub fn init(alloc: std.mem.Allocator) !void {
 
 pub fn update(game: *Game.Game) !void {
     uiCommand = UiCommand{};
-    if (Gamestate.currentTurn != .player) {
+    if (TurnManager.turn != .player) {
         return;
     }
     if (Gamestate.showMenu == .none) {
@@ -672,15 +673,15 @@ pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
 pub fn updateTurnNumberText(this: *Element, game: *Game.Game) anyerror!void {
     _ = game;
 
-    _ = try std.fmt.bufPrintZ(&this.data.text.text, "Turn: {}", .{Gamestate.turnNumber});
+    _ = try std.fmt.bufPrintZ(&this.data.text.text, "Turn: {}", .{TurnManager.turnNumber});
 }
 
 pub fn updateCurrentTurnText(this: *Element, game: *Game.Game) anyerror!void {
     _ = game;
 
-    if (Gamestate.currentTurn == .player) {
+    if (TurnManager.turn == .player) {
         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Player"});
-    } else if (Gamestate.currentTurn == .enemy) {
+    } else if (TurnManager.turn == .enemy) {
         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Enemy"});
     }
 }
