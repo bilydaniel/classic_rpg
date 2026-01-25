@@ -321,7 +321,6 @@ pub const PuppetData = struct {
 
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
-    EntityManager.setActingEntity(entity);
     if (entity.goal == null or entity.stuck >= 2) {
         const position = game.player.pos;
         const availablePosition = Systems.getAvailableTileAround(position);

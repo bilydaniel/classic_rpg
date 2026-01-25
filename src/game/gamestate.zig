@@ -222,7 +222,8 @@ pub fn draw() !void {
     }
 
     //TODO: @refactor for debugging
-    if (EntityManager.actingEntity) |e| {
-        c.DrawCircleLines(e.pos.x * Config.tile_width + Config.tile_width / 2, e.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, c.WHITE);
-    }
+    //@refactor
+    // if (EntityManager.actingEntity) |e| {
+    //     c.DrawCircleLines(e.pos.x * Config.tile_width + Config.tile_width / 2, e.pos.y * Config.tile_height + Config.tile_height / 2, Config.tile_width / 2, c.WHITE);
+    // }
 }

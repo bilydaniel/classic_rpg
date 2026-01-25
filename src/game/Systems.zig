@@ -535,7 +535,6 @@ pub fn handlePlayerCombat(game: *Game.Game) !void {
         .player => {
             entitySelect(game);
             try entityAction(game);
-            resolveTurnTaken(game);
         },
 
         .enemy => {},
@@ -599,8 +598,6 @@ pub fn entityAction(game: *Game.Game) !void {
                             Gamestate.resetMovementHighlight();
                             Gamestate.removeCursor();
                             Gamestate.selectedAction = null;
-
-                            EntityManager.setActingEntity(entity);
                         }
                     }
                 }
@@ -635,13 +632,6 @@ pub fn entityAction(game: *Game.Game) !void {
                     //TODO: manage state after skip
                     skipAttack();
                 }
-                // Gamestate.showMenu = .none;
-                // std.debug.print("attacking\n", .{});
-                // Gamestate.updateCursor();
-                // try selectedEntityAttack(game, entity);
-                // if (c.IsKeyPressed(c.KEY_SPACE)) {
-                //     skipAttack(game);
-                // }
             },
         }
 
@@ -651,19 +641,6 @@ pub fn entityAction(game: *Game.Game) !void {
 
         if (entity.hasMoved and entity.hasAttacked) {
             entity.turnTaken = true;
-        }
-    }
-}
-
-pub fn resolveTurnTaken(game: *Game.Game) void {
-    if (game.player.data.player.inCombatWith.items.len > 0) {
-        if (game.player.turnTaken or game.player.allPupsTurnTaken()) {
-            // finished turn
-            if (EntityManager.actingEntity == null) {
-                TurnManager.switchTurn(.enemy);
-                game.player.resetTurnTakens();
-                Gamestate.reset();
-            }
         }
     }
 }
@@ -844,7 +821,6 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     }
 
     if (entity.inCombat) {
-        EntityManager.setActingEntity(entity);
         entity.movementCooldown += game.delta;
         if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
             return;
@@ -903,7 +879,6 @@ pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path) |_| {
         const path = &entity.path.?;
 
-        EntityManager.setActingEntity(entity);
         entity.movementCooldown += game.delta;
         if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
             return;

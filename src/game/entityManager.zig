@@ -14,18 +14,12 @@ const c = @cImport({
 
 var entity_allocator: std.mem.Allocator = undefined;
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
-pub var actingEntity: ?*Entity.Entity = null;
 
 const PLAYER_INDEX = 0; //always 0
 
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
     entities = std.ArrayList(Entity.Entity).init(allocator);
-}
-
-pub fn setActingEntity(entity: *Entity.Entity) void {
-    actingEntity = entity;
-    CameraManager.targetEntity = entity.id;
 }
 
 // just a helper funciton, returns the player so it can be used to fill into context
@@ -78,13 +72,6 @@ pub fn update(game: *Game.Game) !void {
     //TODO: make a turnManager??
     //TODO: order in combat
     //TODO: think combat updating through
-    if (actingEntity) |entity| {
-        try entity.update(game);
-        if (entity.turnTaken) {
-            actingEntity = null;
-        }
-        return;
-    }
 
     //TODO: when to switch current_turn to enemy?
     //gonna have to be more complicated than this
