@@ -122,7 +122,7 @@ pub fn updatePlayer(game: *Game.Game) !void {
         return;
     }
 
-    updateEntityMovement(game.player, game);
+    try updateEntityMovement(game.player, game);
 }
 
 pub fn deployPuppet(pupId: u32) !void {
