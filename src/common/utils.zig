@@ -78,3 +78,14 @@ pub fn makeSourceRect(id: i32) c.Rectangle {
         .height = Config.tile_height,
     };
 }
+
+pub fn posToIndex(pos: Types.Vector2Int) ?usize {
+    if (pos.x < 0 or pos.y < 0) {
+        return null;
+    }
+    const result: usize = @intCast(pos.y * Config.level_width + pos.x);
+    if (result >= Config.level_width * Config.level_height) {
+        return null;
+    }
+    return result;
+}

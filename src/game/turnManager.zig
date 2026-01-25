@@ -61,6 +61,9 @@ pub fn update(game: *Game.Game) !void {
             }
 
             if (updatingEntity) |e| {
+                std.debug.print("updating: {}\n", .{e});
+                std.debug.print("\n\n", .{});
+
                 try e.update(game);
                 if (e.turnTaken) {
                     updatingEntity = null;

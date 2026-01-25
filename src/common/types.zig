@@ -34,6 +34,18 @@ pub const Vector3Int = struct {
     }
 };
 
+pub const Location = struct {
+    worldPos: Vector3Int = Vector3Int,
+    pos: Vector2Int,
+
+    pub fn init(worldPos: Vector3Int, pos: Vector2Int) Location {
+        return Location{
+            .worldPos = worldPos,
+            .pos = pos,
+        };
+    }
+};
+
 pub fn vector2IntCompare(a: Vector2Int, b: Vector2Int) bool {
     return a.x == b.x and a.y == b.y;
 }

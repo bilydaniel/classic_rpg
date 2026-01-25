@@ -131,10 +131,20 @@ pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entit
     return null;
 }
 
+pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
+    for (entities_.items) |*e| {
+        if (Types.vector2IntCompare(e.pos, pos) and Types.vector3IntCompare(e.worldPos, worldPos)) {
+            return e;
+        }
+    }
+    return null;
+}
+
 pub fn resetTurnFlags() void {
     for (entities.items) |*entity| {
         entity.hasMoved = false;
         entity.hasAttacked = false;
         entity.turnTaken = false;
+        entity.movedDistance = 0;
     }
 }

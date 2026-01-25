@@ -36,8 +36,7 @@ pub const Entity = struct {
     mana: i32,
     tp: i32,
     attack: i32,
-    pos: Types.Vector2Int,
-    worldPos: Types.Vector3Int = Types.Vector3Int.init(0, 0, 0),
+    Location: Types.Location,
     goal: ?Types.Vector2Int = null,
     path: ?Pathfinder.Path,
     speed: f32,
@@ -76,13 +75,16 @@ pub const Entity = struct {
         for (0..len) |i| {
             ascii_array[i] = asciiChar[i];
         }
+        const worldPos = Types.Vector3Int.init(0, 0, 0);
+        const location = Types.Location.init(worldPos, pos);
+
         const entity = Entity{
             .id = entity_id,
             .health = 10,
             .mana = 10,
             .tp = 0,
             .attack = 3,
-            .pos = pos,
+            .location = location,
             .textureID = null,
             .sourceRect = null,
             .movementCooldown = 0,
@@ -130,10 +132,11 @@ pub const Entity = struct {
 
     pub fn endCombat(this: *Entity) void {
         if (this.data == .player) {
-            this.data.player.state = .walking;
             this.data.player.inCombatWith.clearRetainingCapacity();
             this.returnPuppets();
         }
+
+        this.inCombat = false;
     }
 
     pub fn returnPuppets(this: *Entity) void {
@@ -186,7 +189,7 @@ pub const Entity = struct {
     }
 
     pub fn wander(this: *Entity, pos: Types.Vector2Int, ctx: *Game.Context) void {
-        const index = Systems.posToIndex(pos);
+        const index = Utils.posToIndex(pos);
         if (index) |idx| {
             const tile = ctx.grid.*[idx];
             if (!tile.solid) {
@@ -204,6 +207,7 @@ pub const Entity = struct {
         }
         this.path = null;
     }
+
     pub fn resetTurnTakens(this: *Entity) void {
         if (this.data == .player) {
             this.hasMoved = false;
@@ -255,12 +259,6 @@ pub const Entity = struct {
     }
 };
 
-pub const playerStateEnum = enum {
-    walking,
-    deploying_puppets,
-    in_combat,
-};
-
 pub const PlayerData = struct {
     //TODO: player is gonna be a puppetmaster, with his puppets as an army
     //the player himself doesent fight, can swap into a combat mode
@@ -275,7 +273,6 @@ pub const PlayerData = struct {
     // dark magic like fear to protect the puppetmaster from enemies
 
     inCombatWith: std.ArrayList(u32),
-    state: playerStateEnum,
     puppets: std.ArrayList(u32), //TODO: you can actually loose a puppet
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
@@ -283,7 +280,6 @@ pub const PlayerData = struct {
         const puppets = std.ArrayList(u32).init(allocator);
 
         return PlayerData{
-            .state = .walking,
             .inCombatWith = inCombatWith,
             .puppets = puppets,
         };
