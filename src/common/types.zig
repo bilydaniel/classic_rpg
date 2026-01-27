@@ -35,7 +35,7 @@ pub const Vector3Int = struct {
 };
 
 pub const Location = struct {
-    worldPos: Vector3Int = Vector3Int,
+    worldPos: Vector3Int,
     pos: Vector2Int,
 
     pub fn init(worldPos: Vector3Int, pos: Vector2Int) Location {

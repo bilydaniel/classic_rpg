@@ -6,6 +6,75 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const EntityManager = @import("entityManager.zig");
 const Config = @import("../common/config.zig");
+const Game = @import("game.zig");
+const Pathfinder = @import("../game/pathfinder.zig");
+
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game) !void {
+    if (entity.path == null and entity.goal != null) {
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        if (newPath) |new_path| {
+            entity.setNewPath(new_path);
+            entity.stuck = 0;
+        } else {
+            entity.stuck += 1;
+            return;
+        }
+    }
+
+    if (entity.hasMoved or entity.path == null) {
+        return;
+    }
+
+    if (entity.inCombat) {
+        entity.movementCooldown += game.delta;
+        if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
+            return;
+        }
+        entity.movementCooldown = 0;
+    }
+
+    const path = &entity.path.?;
+    const nextIndex = path.currIndex + 1;
+
+    //TODO: @remove
+    if (entity.data == .player) {
+        std.debug.print("p: {?}\n", .{path.nodes.items.len});
+        std.debug.print("i: {}\n", .{nextIndex});
+        std.debug.print("g: {?}\n", .{entity.goal});
+    }
+    if (nextIndex >= path.nodes.items.len) {
+        if (entity.data == .player) {
+            std.debug.print("reseting...\n", .{});
+        }
+        entity.removePathGoal();
+        entity.finishMovement();
+        return;
+    }
+
+    const new_pos = path.nodes.items[nextIndex];
+    const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
+
+    // position has entity, recalculate
+    if (new_pos_entity) |_| {
+        entity.removePath();
+        entity.stuck += 1;
+        return;
+    }
+
+    entity.move(new_pos);
+    entity.stuck = 0;
+    path.currIndex = nextIndex;
+
+    if (entity.inCombat) {
+        entity.movedDistance += 1;
+        if (entity.movedDistance >= entity.movementDistance) {
+            entity.finishMovement();
+            entity.removePath();
+        }
+    } else {
+        entity.hasMoved = true;
+    }
+}
 
 pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entities: std.ArrayList(Entity.Entity)) bool {
     const pos_index = Utils.posToIndex(pos);
@@ -26,15 +95,15 @@ pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entities: std.ArrayLis
     return false;
 }
 
-pub fn getAvailableTileAround(pos: Types.Vector2Int) ?Types.Vector2Int {
-    if (canMove(pos)) {
+pub fn getAvailableTileAround(pos: Types.Vector2Int, grid: []Level.Tile, entities: std.ArrayList(Entity.Entity)) ?Types.Vector2Int {
+    if (canMove(pos, grid, entities)) {
         return pos;
     }
 
     const neighbours = neighboursAll(pos);
     for (neighbours) |neighbor| {
         const neigh = neighbor orelse continue;
-        if (canMove(neigh)) {
+        if (canMove(neigh, grid, entities)) {
             return neigh;
         }
     }

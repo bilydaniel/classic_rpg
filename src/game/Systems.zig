@@ -679,51 +679,6 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     }
 }
 
-pub fn updateEntityMovementOOC(entity: *Entity.Entity, game: *Game.Game) !void {
-    _ = game;
-
-    if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
-        if (newPath) |new_path| {
-            entity.setNewPath(new_path);
-            entity.stuck = 0;
-        } else {
-            entity.stuck += 1;
-        }
-    }
-
-    if (entity.hasMoved) {
-        return;
-    }
-
-    if (entity.path) |_| {
-        const path = &entity.path.?;
-
-        if (path.currIndex + 1 >= path.nodes.items.len) {
-            entity.removePathGoal();
-            entity.finishMovement();
-            return;
-        }
-        path.currIndex += 1;
-
-        const new_pos = path.nodes.items[path.currIndex];
-        const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
-
-        // position has entity, recalculate
-        if (new_pos_entity) |_| {
-            entity.removePath();
-            entity.stuck += 1;
-            return;
-        }
-
-        if (!entity.hasMoved) {
-            entity.move(new_pos);
-            entity.hasMoved = true;
-            entity.stuck = 0;
-        }
-    }
-}
-
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
@@ -788,57 +743,6 @@ pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
         }
     } else {
         entity.hasMoved = true;
-    }
-}
-
-pub fn updateEntityMovementIC(entity: *Entity.Entity, game: *Game.Game) !void {
-    if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
-        if (newPath) |new_path| {
-            entity.setNewPath(new_path);
-            entity.stuck = 0;
-        } else {
-            entity.stuck += 1;
-        }
-    }
-
-    if (entity.hasMoved) {
-        return;
-    }
-
-    if (entity.path) |_| {
-        const path = &entity.path.?;
-
-        entity.movementCooldown += game.delta;
-        if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
-            return;
-        }
-        entity.movementCooldown = 0;
-
-        if (path.currIndex + 1 >= path.nodes.items.len) {
-            entity.removePathGoal();
-            entity.finishMovement();
-            return;
-        }
-        path.currIndex += 1;
-
-        const new_pos = path.nodes.items[path.currIndex];
-        const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
-
-        // position has entity, recalculate
-        if (new_pos_entity) |_| {
-            entity.removePath();
-            entity.stuck += 1;
-            return;
-        }
-
-        if (!entity.hasMoved) {
-            entity.move(new_pos);
-            entity.movedDistance += 1;
-            if (entity.movedDistance >= entity.movementDistance) {
-                entity.finishMovement();
-            }
-        }
     }
 }
 

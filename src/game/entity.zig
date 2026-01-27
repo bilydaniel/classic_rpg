@@ -8,7 +8,9 @@ const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
 const Level = @import("level.zig");
 const Game = @import("game.zig");
+const Movement = @import("movement.zig");
 const EntityManager = @import("entityManager.zig");
+const TurnManager = @import("../game/turnManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -36,7 +38,8 @@ pub const Entity = struct {
     mana: i32,
     tp: i32,
     attack: i32,
-    Location: Types.Location,
+    pos: Types.Vector2Int,
+    worldPos: Types.Vector3Int = Types.Vector3Int.init(0, 0, 0),
     goal: ?Types.Vector2Int = null,
     path: ?Pathfinder.Path,
     speed: f32,
@@ -75,16 +78,13 @@ pub const Entity = struct {
         for (0..len) |i| {
             ascii_array[i] = asciiChar[i];
         }
-        const worldPos = Types.Vector3Int.init(0, 0, 0);
-        const location = Types.Location.init(worldPos, pos);
-
         const entity = Entity{
             .id = entity_id,
             .health = 10,
             .mana = 10,
             .tp = 0,
             .attack = 3,
-            .location = location,
+            .pos = pos,
             .textureID = null,
             .sourceRect = null,
             .movementCooldown = 0,
@@ -173,12 +173,12 @@ pub const Entity = struct {
         this.sourceRect = Utils.makeSourceRect(id);
     }
 
-    pub fn update(this: *Entity, ctx: *Game.Game) !void {
+    pub fn update(this: *Entity, game: *Game.Game) !void {
         switch (this.data) {
             //TODO: see if it needs to be separated or not, change later
-            .player => try Systems.updatePlayer(ctx),
-            .puppet => try Systems.updatePuppet(this, ctx),
-            .enemy => try Systems.updateEnemy(this, ctx),
+            .player => try updatePlayer(game.player, game),
+            .puppet => try updatePuppet(this, game),
+            .enemy => try updateEnemy(this, game),
             .item => {}, //TODO: later
         }
     }
@@ -259,6 +259,22 @@ pub const Entity = struct {
     }
 };
 
+pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
+    _ = entity;
+    _ = game;
+}
+pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
+    if (TurnManager.turn != .player) {
+        return;
+    }
+
+    try Movement.updateEntity(entity, game);
+}
+pub fn updateEnemy(entity: *Entity, game: *Game.Game) !void {
+    _ = entity;
+    _ = game;
+}
+
 pub const PlayerData = struct {
     //TODO: player is gonna be a puppetmaster, with his puppets as an army
     //the player himself doesent fight, can swap into a combat mode
@@ -317,9 +333,12 @@ pub const PuppetData = struct {
 
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
+    const grid = World.getCurrentLevel().grid;
+    const entities = EntityManager.entities;
+
     if (entity.goal == null or entity.stuck >= 2) {
         const position = game.player.pos;
-        const availablePosition = Systems.getAvailableTileAround(position);
+        const availablePosition = Movement.getAvailableTileAround(position, grid, entities);
         entity.goal = availablePosition;
     }
 

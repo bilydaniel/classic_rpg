@@ -1,5 +1,6 @@
 const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
+const Movement = @import("movement.zig");
 const std = @import("std");
 const Level = @import("level.zig");
 const Entity = @import("entity.zig");
@@ -53,7 +54,7 @@ pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
 }
 
-pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
+pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: []Level.Tile, entities: std.ArrayList(Entity.Entity)) !?Path {
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
     var open_list = std.ArrayList(Node).init(allocator);
@@ -77,11 +78,11 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int) !?Path {
             return path;
         }
 
-        const neighbours = Systems.neighboursAll(current_node.pos);
+        const neighbours = Movement.neighboursAll(current_node.pos);
 
         for (neighbours) |neighbour| {
             const neigh = neighbour orelse continue;
-            if (!Systems.canMove(neigh)) {
+            if (!Movement.canMove(neigh, grid, entities)) {
                 continue;
             }
 
