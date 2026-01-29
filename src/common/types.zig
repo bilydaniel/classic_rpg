@@ -1,8 +1,14 @@
 const std = @import("std");
 const Config = @import("../common/config.zig");
+const Level = @import("../game/level.zig");
+const EntityManager = @import("../game/entityManager.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
+
+pub const Grid = []Level.Tile;
+pub const PositionHash = std.AutoHashMap(Vector2Int, usize);
+pub const IdHash = std.AutoHashMap(u32, usize);
 
 const ErrorSet = error{
     value_missing,

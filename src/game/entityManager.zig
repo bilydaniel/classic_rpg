@@ -14,12 +14,19 @@ const c = @cImport({
 
 var entity_allocator: std.mem.Allocator = undefined;
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
+pub var positionHash: std.AutoHashMap(Types.Vector2Int, usize) = undefined;
+pub var idHash: std.AutoHashMap(u32, usize) = undefined;
+
+//TODO: add a hash map position => index into entities, gonna have to keep the indexes correct when removing from entities
+//
 
 const PLAYER_INDEX = 0; //always 0
 
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
     entities = std.ArrayList(Entity.Entity).init(allocator);
+    positionHash = std.AutoHashMap(Types.Vector2Int, usize).init(allocator);
+    idHash = std.AutoHashMap(u32, usize).init(allocator);
 }
 
 // just a helper funciton, returns the player so it can be used to fill into context
@@ -66,6 +73,23 @@ pub fn fillEntities() !void {
 
 pub fn addEntity(entity: Entity.Entity) !void {
     try entities.append(entity);
+    try positionHash.put(entity.pos, entities.items.len - 1);
+    try idHash.put(entity.id, entities.items.len - 1);
+}
+
+pub fn removeEntityID(id: u32) !void {
+    const entityIndex = idHash.get(id);
+
+    const entity = entities.swapRemove(entityIndex);
+    positionHash.remove(entity.pos);
+    idHash.remove(entity.id);
+}
+
+pub fn moveEntityHash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
+    const keyValue = positionHash.fetchRemove(from);
+    if (keyValue) |kv| {
+        positionHash.put(to, kv.value);
+    }
 }
 
 pub fn update(game: *Game.Game) !void {

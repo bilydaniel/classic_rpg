@@ -76,26 +76,24 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game) !void {
     }
 }
 
-pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entities: std.ArrayList(Entity.Entity)) bool {
+pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const std.AutoHashMap(Types.Vector2Int, usize)) bool {
     const pos_index = Utils.posToIndex(pos);
     if (pos_index) |index| {
-        if (index < grid.len) {
-            if (grid[index].solid) {
-                //TODO: probably gonna add something like walkable
-                return false;
-            }
+        if (index < grid.len and grid[index].solid) {
+            //TODO: probably gonna add something like walkable
+            return false;
         }
     }
 
-    const entity = EntityManager.filterEntityByPos(entities, pos, World.currentLevel);
-    if (entity == null) {
+    const entityID = entitiesHash.get(pos);
+    if (entityID == null) {
         return true;
     }
 
     return false;
 }
 
-pub fn getAvailableTileAround(pos: Types.Vector2Int, grid: []Level.Tile, entities: std.ArrayList(Entity.Entity)) ?Types.Vector2Int {
+pub fn getAvailableTileAround(pos: Types.Vector2Int, grid: []Level.Tile, entities: *const std.AutoHashMap(Types.Vector2Int, usize)) ?Types.Vector2Int {
     if (canMove(pos, grid, entities)) {
         return pos;
     }

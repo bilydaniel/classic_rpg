@@ -13,6 +13,8 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
+//TODO: gonna do one level at a time, no possibility for going back
+
 pub var currentLevel: Types.Vector3Int = undefined;
 pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
 
@@ -38,6 +40,10 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
 pub fn getCurrentLevel() *Level.Level {
     return levels.getPtr(currentLevel).?;
+}
+
+pub fn getLevelAt(worldPos: Types.Vector3Int) ?*Level.Level {
+    return levels.getPtr(worldPos);
 }
 
 pub fn draw() void {

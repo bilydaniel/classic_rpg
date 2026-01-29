@@ -680,6 +680,8 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
 }
 
 pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+    //const grid = World.getLevelAt(entity.worldPos) orelse return;
+    //const entities = //WHERE I NEED TO GET THE ENTITIES;
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
         if (newPath) |new_path| {

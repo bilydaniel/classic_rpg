@@ -184,6 +184,7 @@ pub const Entity = struct {
     }
 
     pub fn move(this: *Entity, pos: Types.Vector2Int) void {
+        EntityManager.moveEntityHash(this.pos, pos);
         this.pos = pos;
         Systems.calculateFOV(pos, 8);
     }
@@ -334,11 +335,10 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     const grid = World.getCurrentLevel().grid;
-    const entities = EntityManager.entities;
-
+    const entitiesPosHash = EntityManager.positionHash;
     if (entity.goal == null or entity.stuck >= 2) {
         const position = game.player.pos;
-        const availablePosition = Movement.getAvailableTileAround(position, grid, entities);
+        const availablePosition = Movement.getAvailableTileAround(position, grid, &entitiesPosHash);
         entity.goal = availablePosition;
     }
 
@@ -346,7 +346,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.turnTaken = true;
     }
 
-    try Systems.updateEntityMovement(entity, game);
+    try Movement.updateEntity(entity, game);
     if (entity.hasMoved) {
         //TODO: make more complex
         entity.turnTaken = true;
@@ -359,7 +359,7 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
         entity.goal = position;
     }
 
-    try Systems.updateEntityMovement(entity, game);
+    try Movement.updateEntity(entity, game);
 
     if (entity.hasMoved) {
         entity.turnTaken = true;
