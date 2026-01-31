@@ -16,11 +16,10 @@ var entity_allocator: std.mem.Allocator = undefined;
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
 pub var positionHash: std.AutoHashMap(Types.Vector2Int, usize) = undefined;
 pub var idHash: std.AutoHashMap(u32, usize) = undefined;
+pub var playerID: u32 = undefined;
 
 //TODO: add a hash map position => index into entities, gonna have to keep the indexes correct when removing from entities
 //
-
-const PLAYER_INDEX = 0; //always 0
 
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
@@ -32,6 +31,8 @@ pub fn init(allocator: std.mem.Allocator) void {
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
     var playerData = try Entity.PlayerData.init(entity_allocator);
+    var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData }, "@");
+    playerID = player.id;
 
     const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
     var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } }, "&");
@@ -40,7 +41,6 @@ pub fn fillEntities() !void {
     puppet.setTextureID(50);
     try playerData.puppets.append(puppet.id);
 
-    var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData }, "@");
     player.setTextureID(76);
     try addEntity(player);
     try addEntity(puppet);
@@ -83,12 +83,19 @@ pub fn removeEntityID(id: u32) !void {
     const entity = entities.swapRemove(entityIndex);
     positionHash.remove(entity.pos);
     idHash.remove(entity.id);
+
+    // if we swapremoved any elemnt other than the last
+    if (entityIndex < entities.items.len) {
+        const swappedEntity = entities.items[entityIndex];
+        try positionHash.put(swappedEntity.pos, entityIndex);
+        try idHash.put(swappedEntity.id, entityIndex);
+    }
 }
 
 pub fn moveEntityHash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
     const keyValue = positionHash.fetchRemove(from);
     if (keyValue) |kv| {
-        positionHash.put(to, kv.value);
+        try positionHash.put(to, kv.value);
     }
 }
 
@@ -128,22 +135,19 @@ pub fn allEnemiesTurnTaken() bool {
 }
 
 pub fn getPlayer() *Entity.Entity {
-    return &entities.items[PLAYER_INDEX];
+    const playerIndex = idHash.get(playerID) orelse unreachable;
+    return &entities.items[playerIndex];
 }
 
 pub fn getEnemies() []*Entity.Entity {}
 
 pub fn getPuppets() []*Entity.Entity {
-    return &entities.items[PLAYER_INDEX];
+    //return &entities.items[PLAYER_INDEX];
 }
 
 pub fn getEntityID(id: u32) ?*Entity.Entity {
-    for (entities.items) |*entity| {
-        if (entity.id == id) {
-            return entity;
-        }
-    }
-    return null;
+    const entityIndex = idHash.get(id) orelse return null;
+    return &entities.items[entityIndex];
 }
 
 pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {

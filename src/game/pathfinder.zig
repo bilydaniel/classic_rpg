@@ -168,6 +168,7 @@ pub fn printList(list: std.ArrayList(Node)) void {
     std.debug.print("*********************\n", .{});
 }
 
+//TODO: make this a gameplay mechanic, you can find an item that shows enemy pathing?
 pub fn drawPath(path: Path) void {
     if (Config.drawPathDebug) {
         for (path.nodes.items[path.currIndex..]) |value| {

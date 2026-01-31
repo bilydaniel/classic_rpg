@@ -1,4 +1,5 @@
 const Window = @import("../game/window.zig");
+const Level = @import("../game/level.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("types.zig");
 const std = @import("std");
@@ -88,4 +89,35 @@ pub fn posToIndex(pos: Types.Vector2Int) ?usize {
         return null;
     }
     return result;
+}
+
+pub fn indexToPos(index: i32) Types.Vector2Int {
+    const x = (index % Config.level_width);
+    const y = (@divFloor(index, Config.level_width));
+    return Types.Vector2Int.init(x, y);
+}
+
+pub fn indexToPixel(index: i32) c.Vector2 {
+    const x = (index % Config.level_width) * Config.tile_width;
+    const y = (@divFloor(index, Config.level_width)) * Config.tile_height;
+    return c.Vector2{ .x = x, .y = y };
+}
+
+pub fn getTileIdx(grid: Types.Grid, index: usize) ?Level.Tile {
+    if (index < 0) {
+        return null;
+    }
+
+    if (index >= grid.len) {
+        return null;
+    }
+    return grid[index];
+}
+
+pub fn getTilePos(grid: []Level.Tile, pos: Types.Vector2Int) ?Level.Tile {
+    const idx = posToIndex(pos);
+    if (idx) |index| {
+        return getTileIdx(grid, index);
+    }
+    return null;
 }

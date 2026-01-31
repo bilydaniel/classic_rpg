@@ -183,10 +183,13 @@ pub const Entity = struct {
         }
     }
 
-    pub fn move(this: *Entity, pos: Types.Vector2Int) void {
-        EntityManager.moveEntityHash(this.pos, pos);
+    pub fn move(this: *Entity, pos: Types.Vector2Int) !void {
+        if (this.data == .player or this.data == .puppet) {
+            Systems.calculateFOV(pos, 8);
+        }
+
+        try EntityManager.moveEntityHash(this.pos, pos);
         this.pos = pos;
-        Systems.calculateFOV(pos, 8);
     }
 
     pub fn wander(this: *Entity, pos: Types.Vector2Int, ctx: *Game.Context) void {
@@ -261,19 +264,52 @@ pub const Entity = struct {
 };
 
 pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
-    _ = entity;
-    _ = game;
+    if (TurnManager.turn == .player and !game.player.inCombat) {
+        // everything else is handled in the playerController
+        return;
+    }
+    //TODO: figure out update out of combat
+    if (TurnManager.turn != .player or !entity.inCombat) {
+        return;
+    }
+    const grid = World.getCurrentLevel().grid;
+    const entitiesPosHash = &EntityManager.positionHash;
+
+    try Movement.updateEntity(game.player, game, grid, entitiesPosHash);
 }
 pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
     if (TurnManager.turn != .player) {
         return;
     }
 
-    try Movement.updateEntity(entity, game);
+    const grid = World.getCurrentLevel().grid;
+    const entitiesPosHash = &EntityManager.positionHash;
+
+    try Movement.updateEntity(entity, game, grid, entitiesPosHash);
+
+    if (entity.hasMoved) {
+        entity.turnTaken = true;
+    }
 }
 pub fn updateEnemy(entity: *Entity, game: *Game.Game) !void {
-    _ = entity;
-    _ = game;
+    //TODO: figure out where to put this,
+    //good for now, might need some updating
+    //late even if its not mu turn
+    if (TurnManager.turn != .enemy) {
+        return;
+    }
+
+    if (entity.inCombat) {
+        if (entity.aiBehaviourCombat == null) {
+            return error.value_missing;
+        }
+        try entity.aiBehaviourCombat.?(entity, game);
+    } else {
+        if (entity.aiBehaviourWalking == null) {
+            return error.value_missing;
+        }
+        try entity.aiBehaviourWalking.?(entity, game);
+    }
 }
 
 pub const PlayerData = struct {
@@ -335,10 +371,10 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     const grid = World.getCurrentLevel().grid;
-    const entitiesPosHash = EntityManager.positionHash;
+    const entitiesPosHash = &EntityManager.positionHash;
     if (entity.goal == null or entity.stuck >= 2) {
         const position = game.player.pos;
-        const availablePosition = Movement.getAvailableTileAround(position, grid, &entitiesPosHash);
+        const availablePosition = Movement.getAvailableTileAround(position, grid, entitiesPosHash);
         entity.goal = availablePosition;
     }
 
@@ -346,7 +382,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.turnTaken = true;
     }
 
-    try Movement.updateEntity(entity, game);
+    try Movement.updateEntity(entity, game, grid, entitiesPosHash);
     if (entity.hasMoved) {
         //TODO: make more complex
         entity.turnTaken = true;
@@ -354,12 +390,15 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
+    const grid = World.getCurrentLevel().grid;
+    const entitiesPosHash = &EntityManager.positionHash;
+
     if (entity.goal == null or entity.stuck >= 2) {
         const position = Systems.getRandomValidPosition(World.getCurrentLevel().grid);
         entity.goal = position;
     }
 
-    try Movement.updateEntity(entity, game);
+    try Movement.updateEntity(entity, game, grid, entitiesPosHash);
 
     if (entity.hasMoved) {
         entity.turnTaken = true;

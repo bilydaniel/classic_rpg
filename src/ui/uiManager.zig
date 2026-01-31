@@ -151,6 +151,15 @@ pub fn makeUIElements() !void {
     if (currentTurnElement) |element| {
         element.updateFn = updateCurrentTurnText;
     }
+
+    const combatIndicatorPos = RelativePos.init(.top_right, 0, 150);
+    const combatIndicatorSize = c.Vector2{ .x = 100, .y = 100 };
+
+    const combatIndicatorID = try makeText(combatIndicatorPos, combatIndicatorSize, "");
+    const combatIndicatorElement = getElementByID(combatIndicatorID);
+    if (combatIndicatorElement) |element| {
+        element.updateFn = updateCombatIndicatorText;
+    }
 }
 
 pub fn hideElementGroup(id: i32) void {
@@ -683,5 +692,16 @@ pub fn updateCurrentTurnText(this: *Element, game: *Game.Game) anyerror!void {
         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Player"});
     } else if (TurnManager.turn == .enemy) {
         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Enemy"});
+    }
+}
+
+pub fn updateCombatIndicatorText(this: *Element, game: *Game.Game) anyerror!void {
+    _ = game;
+    const player = EntityManager.getPlayer();
+
+    if (player.inCombat) {
+        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Combat..."});
+    } else {
+        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Exploring..."});
     }
 }

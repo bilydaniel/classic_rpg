@@ -17,7 +17,7 @@ pub const PhaseEnum = enum {
 pub var turn: TurnEnum = .player;
 pub var phase: PhaseEnum = .setup;
 pub var turnNumber: i32 = 1;
-var updatingEntity: ?*Entity.Entity = null;
+var updatingEntity: ?u32 = null;
 
 //TODO: swap arraylist for a ring buffer queue
 pub var entityQueue: std.ArrayList(u32) = undefined;
@@ -40,8 +40,10 @@ pub fn update(game: *Game.Game) !void {
             }
 
             for (EntityManager.entities.items) |e| {
-                if (e.data == .player or e.data == .enemy) {
-                    try entityQueue.append(e.id);
+                if (!e.inCombat) {
+                    if (e.data == .player or e.data == .enemy) {
+                        try entityQueue.append(e.id);
+                    }
                 }
             }
 
@@ -60,12 +62,10 @@ pub fn update(game: *Game.Game) !void {
                 turn = .player;
             }
 
-            if (updatingEntity) |e| {
-                std.debug.print("updating: {}\n", .{e});
-                std.debug.print("\n\n", .{});
-
-                try e.update(game);
-                if (e.turnTaken) {
+            if (updatingEntity) |id| {
+                var entity = EntityManager.getEntityID(id) orelse return;
+                try entity.update(game);
+                if (entity.turnTaken) {
                     updatingEntity = null;
                     entityQueueIndex += 1;
                 }
@@ -75,7 +75,7 @@ pub fn update(game: *Game.Game) !void {
                     entityQueueIndex += 1;
                     return;
                 };
-                updatingEntity = entity;
+                updatingEntity = entity.id;
             }
         },
         .cleanup => {

@@ -9,9 +9,9 @@ const Config = @import("../common/config.zig");
 const Game = @import("game.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 
-pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game) !void {
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, grid: Types.Grid, entities: *const Types.PositionHash) !void {
     if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?, grid, entities);
         if (newPath) |new_path| {
             entity.setNewPath(new_path);
             entity.stuck = 0;
@@ -36,16 +36,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game) !void {
     const path = &entity.path.?;
     const nextIndex = path.currIndex + 1;
 
-    //TODO: @remove
-    if (entity.data == .player) {
-        std.debug.print("p: {?}\n", .{path.nodes.items.len});
-        std.debug.print("i: {}\n", .{nextIndex});
-        std.debug.print("g: {?}\n", .{entity.goal});
-    }
     if (nextIndex >= path.nodes.items.len) {
-        if (entity.data == .player) {
-            std.debug.print("reseting...\n", .{});
-        }
         entity.removePathGoal();
         entity.finishMovement();
         return;
@@ -61,7 +52,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game) !void {
         return;
     }
 
-    entity.move(new_pos);
+    try entity.move(new_pos);
     entity.stuck = 0;
     path.currIndex = nextIndex;
 
@@ -128,4 +119,44 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
         }
     }
     return result;
+}
+
+pub fn staircaseTransition(newPos: Types.Vector2Int, grid: Types.Grid) Types.Vector2Int {
+    //TODO: add normal transitions
+    const tile = Utils.getTilePos(grid, newPos);
+    var worldPosDelta = Types.Vector3Int.init(0, 0, 0);
+    if (tile) |t| {
+        switch (t.tileType) {
+            .staircase_up => {
+                worldPosDelta.z = 1;
+            },
+            .staircase_down => {
+                worldPosDelta.z = -1;
+            },
+            else => {
+                return newPos;
+            },
+        }
+    }
+
+    var player = EntityManager.getPlayer();
+    player.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);
+    World.changeCurrentLevelDelta(worldPosDelta);
+
+    return newPos;
+}
+
+pub fn isTileWalkable(grid: []Level.Tile, pos: Types.Vector2Int) bool {
+    const index = Utils.posToIndex(pos) orelse return false;
+    const tile = grid[index];
+
+    if (tile.solid) {
+        return false;
+    }
+
+    if (!tile.walkable) {
+        return false;
+    }
+
+    return true;
 }

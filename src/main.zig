@@ -17,6 +17,9 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
+    //TODO: @check leaks
+    //defer _ = gpa.deinit();
+
     Window.init();
     const game = try Game.Game.init(allocator);
 

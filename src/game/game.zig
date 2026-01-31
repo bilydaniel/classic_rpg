@@ -11,6 +11,7 @@ const Window = @import("../game/window.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
+const PlayerController = @import("playerController.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -26,6 +27,7 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
 
+        PlayerController.init();
         Gamestate.init(allocator);
         EntityManager.init(allocator);
 
@@ -61,6 +63,7 @@ pub const Game = struct {
 
         try UiManager.update(this);
         //try EntityManager.update(this);
+        try PlayerController.update(this);
         try TurnManager.update(this);
 
         CameraManager.update(delta);

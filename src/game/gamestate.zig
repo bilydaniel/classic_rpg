@@ -133,6 +133,21 @@ pub fn highlightMovement(entity: *Entity.Entity) !void {
     }
 }
 
+//TODO: @refactor, take the type in too
+pub fn highlightTile(pos: Types.Vector2Int) !void {
+    try highlightedTiles.append(Highlight{
+        .pos = pos,
+        .type = .pup_deploy,
+    });
+}
+
+pub fn highlightEntity(pos: Types.Vector2Int) void {
+    selectedEntityHighlight = Highlight{
+        .pos = pos,
+        .type = .circle,
+    };
+}
+
 pub fn highlightAttack(entity: *Entity.Entity) !void {
     if (!attackHighlighted) {
         try Systems.neighboursDistance(entity.pos, entity.attackDistance, &attackableTiles);
