@@ -30,7 +30,8 @@ pub fn init(allocator: std.mem.Allocator) void {
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
-    var playerData = try Entity.PlayerData.init(entity_allocator);
+    const playerData = try Entity.PlayerData.init(entity_allocator);
+
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData }, "@");
     playerID = player.id;
 
@@ -39,7 +40,7 @@ pub fn fillEntities() !void {
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(50);
-    try playerData.puppets.append(puppet.id);
+    try player.data.player.puppets.append(puppet.id);
 
     player.setTextureID(76);
     try addEntity(player);

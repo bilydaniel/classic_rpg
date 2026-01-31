@@ -36,7 +36,7 @@ pub fn update(game: *Game.Game) !void {
     if (game.player.data != .player) {
         return;
     }
-    var playerData = game.player.data.player;
+    var playerData = &game.player.data.player;
     var nextState = state;
     const currState = state;
     switch (currState) {
@@ -66,7 +66,8 @@ pub fn update(game: *Game.Game) !void {
                 nextState = .walking;
             }
 
-            if (playerData.inCombatWith.items.len == 0) {
+            // in combat with isnt filled yet, if deploying
+            if (currState != .deploying_puppets and playerData.inCombatWith.items.len == 0) {
                 nextState = .walking;
             }
         },
@@ -99,9 +100,12 @@ pub fn update(game: *Game.Game) !void {
 
                 game.player.inCombat = true;
                 for (EntityManager.entities.items) |*entity| {
-                    try playerData.inCombatWith.append(entity.id);
-                    entity.resetPathing();
-                    entity.inCombat = true;
+                    //TODO: all enemies for now
+                    if (entity.data == .enemy) {
+                        try playerData.inCombatWith.append(entity.id);
+                        entity.resetPathing();
+                        entity.inCombat = true;
+                    }
                 }
             },
             .in_combat => {

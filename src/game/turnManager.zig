@@ -64,6 +64,8 @@ pub fn update(game: *Game.Game) !void {
 
             if (updatingEntity) |id| {
                 var entity = EntityManager.getEntityID(id) orelse return;
+                std.debug.print("updateing: {}\n\n\n", .{entity});
+
                 try entity.update(game);
                 if (entity.turnTaken) {
                     updatingEntity = null;

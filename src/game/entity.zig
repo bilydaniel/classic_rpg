@@ -168,6 +168,17 @@ pub const Entity = struct {
         return true;
     }
 
+    pub fn setAllPupsTurnTaken(this: *Entity) void {
+        if (this.data == .player) {
+            for (this.data.player.puppets.items) |pupID| {
+                const puppet = EntityManager.getEntityID(pupID);
+                if (puppet) |pup| {
+                    pup.turnTaken = true;
+                }
+            }
+        }
+    }
+
     pub fn setTextureID(this: *Entity, id: i32) void {
         this.textureID = id;
         this.sourceRect = Utils.makeSourceRect(id);
@@ -276,6 +287,9 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     const entitiesPosHash = &EntityManager.positionHash;
 
     try Movement.updateEntity(game.player, game, grid, entitiesPosHash);
+    if (entity.hasMoved) {
+        entity.setAllPupsTurnTaken();
+    }
 }
 pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
     if (TurnManager.turn != .player) {
@@ -289,6 +303,8 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
 
     if (entity.hasMoved) {
         entity.turnTaken = true;
+        const player = EntityManager.getPlayer();
+        player.turnTaken = true;
     }
 }
 pub fn updateEnemy(entity: *Entity, game: *Game.Game) !void {
@@ -339,6 +355,7 @@ pub const PlayerData = struct {
     }
 
     pub fn allPupsDeployed(this: *PlayerData) bool {
+        std.debug.print("test: {}\n", .{this});
         for (this.puppets.items) |pupID| {
             const puppet = EntityManager.getEntityID(pupID);
             if (puppet) |pup| {
