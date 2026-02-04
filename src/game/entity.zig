@@ -296,6 +296,11 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
         return;
     }
 
+    if (!entity.inCombat) {
+        entity.turnTaken = true;
+        return;
+    }
+
     const grid = World.getCurrentLevel().grid;
     const entitiesPosHash = &EntityManager.positionHash;
 

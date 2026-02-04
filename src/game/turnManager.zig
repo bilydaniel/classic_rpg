@@ -41,9 +41,7 @@ pub fn update(game: *Game.Game) !void {
 
             for (EntityManager.entities.items) |e| {
                 if (!e.inCombat) {
-                    if (e.data == .player or e.data == .enemy) {
-                        try entityQueue.append(e.id);
-                    }
+                    try entityQueue.append(e.id);
                 }
             }
 
@@ -62,9 +60,13 @@ pub fn update(game: *Game.Game) !void {
                 turn = .player;
             }
 
+            //TODO: @fix
+            //if i try to move a puppe as first it
+            //doesent move, because the player
+            //is first in the queue and so the
+            //puppet cant move
             if (updatingEntity) |id| {
                 var entity = EntityManager.getEntityID(id) orelse return;
-                std.debug.print("updateing: {}\n\n\n", .{entity});
 
                 try entity.update(game);
                 if (entity.turnTaken) {
@@ -72,6 +74,11 @@ pub fn update(game: *Game.Game) !void {
                     entityQueueIndex += 1;
                 }
             } else {
+                if (turn == .player) {
+                    //TODO: probably just copy selected entity?
+                } else {
+                    //TODO: separate queue for enemies??
+                }
                 const entityID = entityQueue.items[entityQueueIndex];
                 const entity = EntityManager.getEntityID(entityID) orelse {
                     entityQueueIndex += 1;
