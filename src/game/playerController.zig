@@ -33,6 +33,9 @@ pub fn init() void {
 }
 
 pub fn update(game: *Game.Game) !void {
+    if (TurnManager.updatingEntity != null) {
+        return;
+    }
     if (game.player.data != .player) {
         return;
     }
@@ -283,6 +286,8 @@ pub fn entityAction(game: *Game.Game) !void {
                             const entityPosHash = EntityManager.positionHash;
                             entity.path = try Pathfinder.findPath(entity.pos, cur, grid, &entityPosHash);
 
+                            TurnManager.updatingEntity = entity.id;
+
                             Gamestate.resetMovementHighlight();
                             Gamestate.removeCursor();
                             Gamestate.selectedAction = null;
@@ -307,6 +312,7 @@ pub fn entityAction(game: *Game.Game) !void {
                             try ShaderManager.spawnSlash(entity.pos, cur);
                             try ShaderManager.spawnImpact(cur);
 
+                            TurnManager.updatingEntity = entity.id;
                             attack(game, entity, attackedEntity);
                             Gamestate.resetAttackHighlight();
                             Gamestate.removeCursor();

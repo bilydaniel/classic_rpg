@@ -125,6 +125,18 @@ pub fn draw() void {
     }
 }
 
+pub fn allPlayerUnitsTurnTaken() bool {
+    var turnTaken = true;
+    for (entities.items) |e| {
+        if (e.data == .player or e.data == .puppet) {
+            if (!e.turnTaken) {
+                turnTaken = false;
+            }
+        }
+    }
+    return turnTaken;
+}
+
 pub fn allEnemiesTurnTaken() bool {
     var turnTaken = true;
     for (entities.items) |entity| {

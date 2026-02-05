@@ -17,31 +17,24 @@ pub const PhaseEnum = enum {
 pub var turn: TurnEnum = .player;
 pub var phase: PhaseEnum = .setup;
 pub var turnNumber: i32 = 1;
-var updatingEntity: ?u32 = null;
 
-//TODO: swap arraylist for a ring buffer queue
-pub var entityQueue: std.ArrayList(u32) = undefined;
-var entityQueueIndex: u32 = 0;
+pub var updatingEntity: ?u32 = null;
+
+pub var enemyQueue: std.ArrayList(u32) = undefined;
+var enemyQueueIndex: u32 = 0;
 
 pub fn init(allocator: std.mem.Allocator) void {
-    entityQueue = std.ArrayList(u32).init(allocator);
+    enemyQueue = std.ArrayList(u32).init(allocator);
 }
 
 pub fn update(game: *Game.Game) !void {
     switch (phase) {
         .setup => {
             std.debug.print("setup\n", .{});
-            //TODO: figure out the order of entities
-            // combat entities update first
-            for (EntityManager.entities.items) |e| {
-                if (e.inCombat) {
-                    try entityQueue.append(e.id);
-                }
-            }
 
             for (EntityManager.entities.items) |e| {
-                if (!e.inCombat) {
-                    try entityQueue.append(e.id);
+                if (e.data == .enemy) {
+                    try enemyQueue.append(e.id);
                 }
             }
 
@@ -49,55 +42,70 @@ pub fn update(game: *Game.Game) !void {
             phase = .acting;
         },
         .acting => {
-            if (entityQueueIndex >= entityQueue.items.len) {
-                phase = .cleanup;
-                return;
-            }
-
-            if (game.player.turnTaken) {
-                turn = .enemy;
-            } else if (EntityManager.allEnemiesTurnTaken()) {
-                turn = .player;
-            }
-
-            //TODO: @fix
-            //if i try to move a puppe as first it
-            //doesent move, because the player
-            //is first in the queue and so the
-            //puppet cant move
-            if (updatingEntity) |id| {
-                var entity = EntityManager.getEntityID(id) orelse return;
-
-                try entity.update(game);
-                if (entity.turnTaken) {
-                    updatingEntity = null;
-                    entityQueueIndex += 1;
-                }
-            } else {
-                if (turn == .player) {
-                    //TODO: probably just copy selected entity?
-                } else {
-                    //TODO: separate queue for enemies??
-                }
-                const entityID = entityQueue.items[entityQueueIndex];
-                const entity = EntityManager.getEntityID(entityID) orelse {
-                    entityQueueIndex += 1;
-                    return;
-                };
-                updatingEntity = entity.id;
+            switch (turn) {
+                .player => try updatePlayerTurn(game),
+                .enemy => try updateEnemyTurn(game),
             }
         },
         .cleanup => {
             std.debug.print("cleanup\n", .{});
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
 
-            entityQueueIndex = 0;
+            enemyQueueIndex = 0;
 
-            entityQueue.clearRetainingCapacity();
+            enemyQueue.clearRetainingCapacity();
 
             switchTurn(.player);
             phase = .setup;
         },
+    }
+}
+
+fn updatePlayerTurn(game: *Game.Game) !void {
+    if (updatingEntity) |id| {
+        var entity = EntityManager.getEntityID(id) orelse {
+            updatingEntity = null;
+            return;
+        };
+
+        try entity.update(game);
+
+        if (entity.turnTaken) {
+            updatingEntity = null;
+
+            if (EntityManager.allPlayerUnitsTurnTaken()) {
+                switchTurn(.enemy);
+            }
+        }
+    }
+}
+fn updateEnemyTurn(game: *Game.Game) !void {
+    if (enemyQueueIndex >= enemyQueue.items.len) {
+        phase = .cleanup;
+        return;
+    }
+
+    // if (EntityManager.allEnemiesTurnTaken()) {
+    //     turn = .player;
+    //     return;
+    // }
+
+    const entityID = enemyQueue.items[enemyQueueIndex];
+    const entity = EntityManager.getEntityID(entityID) orelse {
+        enemyQueueIndex += 1;
+        return;
+    };
+
+    if (entity.data != .enemy) {
+        enemyQueueIndex += 1;
+        return;
+    }
+
+    updatingEntity = entity.id;
+    try entity.update(game);
+    if (entity.turnTaken) {
+        updatingEntity = null;
+        enemyQueueIndex += 1;
     }
 }
 

@@ -275,6 +275,7 @@ pub const Entity = struct {
 };
 
 pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
+    //TODO: fix, player doesent path around puppet
     if (TurnManager.turn == .player and !game.player.inCombat) {
         // everything else is handled in the playerController
         return;
@@ -287,8 +288,10 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     const entitiesPosHash = &EntityManager.positionHash;
 
     try Movement.updateEntity(game.player, game, grid, entitiesPosHash);
+
+    //TODO: add attack
     if (entity.hasMoved) {
-        entity.setAllPupsTurnTaken();
+        entity.turnTaken = true;
     }
 }
 pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
@@ -308,8 +311,6 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
 
     if (entity.hasMoved) {
         entity.turnTaken = true;
-        const player = EntityManager.getPlayer();
-        player.turnTaken = true;
     }
 }
 pub fn updateEnemy(entity: *Entity, game: *Game.Game) !void {
@@ -360,7 +361,6 @@ pub const PlayerData = struct {
     }
 
     pub fn allPupsDeployed(this: *PlayerData) bool {
-        std.debug.print("test: {}\n", .{this});
         for (this.puppets.items) |pupID| {
             const puppet = EntityManager.getEntityID(pupID);
             if (puppet) |pup| {
