@@ -35,7 +35,7 @@ pub fn fillEntities() !void {
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData }, "@");
     playerID = player.id;
 
-    const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 };
+    const pup_pos = Types.Vector2Int{ .x = -1, .y = -1 }; //TODO: @fix put some normal position, check for deployed, check canmove when deploying
     var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } }, "&");
     puppet.visible = false;
     puppet.name = "Pamama";

@@ -31,6 +31,7 @@ pub fn update(game: *Game.Game) !void {
     switch (phase) {
         .setup => {
             std.debug.print("setup\n", .{});
+            EntityManager.resetTurnFlags();
 
             for (EntityManager.entities.items) |e| {
                 if (e.data == .enemy) {

@@ -374,7 +374,7 @@ pub fn deployPuppet(pupId: u32) !void {
     if (puppet) |pup| {
         if (!pup.data.puppet.deployed) {
             if (Gamestate.cursor) |curs| {
-                pup.pos = curs;
+                try pup.move(curs);
                 pup.data.puppet.deployed = true;
                 pup.visible = true;
                 //TODO: @check if correct
