@@ -31,13 +31,13 @@ pub fn update(game: *Game.Game) !void {
     switch (phase) {
         .setup => {
             std.debug.print("setup\n", .{});
-            EntityManager.resetTurnFlags();
 
             for (EntityManager.entities.items) |e| {
                 if (e.data == .enemy) {
                     try enemyQueue.append(e.id);
                 }
             }
+            //TODO: order enemies, some heuristic(distance to goal)
 
             // setup done
             phase = .acting;
@@ -63,6 +63,18 @@ pub fn update(game: *Game.Game) !void {
 }
 
 fn updatePlayerTurn(game: *Game.Game) !void {
+    //TODO: fix the out of combat player movement turn switching
+    if (EntityManager.allPlayerUnitsTurnTaken()) {
+        switchTurn(.enemy);
+        return;
+    }
+
+    if (!game.player.inCombat) {
+        if (game.player.hasMoved) {
+            game.player.turnTaken = true;
+        }
+    }
+
     if (updatingEntity) |id| {
         var entity = EntityManager.getEntityID(id) orelse {
             updatingEntity = null;
@@ -73,14 +85,11 @@ fn updatePlayerTurn(game: *Game.Game) !void {
 
         if (entity.turnTaken) {
             updatingEntity = null;
-
-            if (EntityManager.allPlayerUnitsTurnTaken()) {
-                switchTurn(.enemy);
-            }
         }
     }
 }
 fn updateEnemyTurn(game: *Game.Game) !void {
+    //TODO: entities in combat need to be updated through updatingEntity
     if (enemyQueueIndex >= enemyQueue.items.len) {
         phase = .cleanup;
         return;

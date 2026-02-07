@@ -61,7 +61,6 @@ pub fn update(game: *Game.Game) !void {
         }
     }
 
-    //TODO: @continue add items into menu based on the context
     for (elements.items) |*element| {
         try element.update(game);
     }
@@ -461,8 +460,6 @@ pub const ElementMenuItem = struct {
     enabled: bool = true,
     data: MenuItemData,
 
-    //TODO: @continue @finish
-
     pub fn initPupItem(text: []const u8, puppet_id: u32) ElementMenuItem {
         const elementData = MenuItemData{ .puppet_id = puppet_id };
         return ElementMenuItem{
@@ -652,12 +649,10 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
 
     //TODO: this is ridicolous, maybe make a getter or something?
     for (game.player.data.player.puppets.items) |pupID| {
-        const puppet = EntityManager.getEntityID(pupID);
+        const puppet = EntityManager.getInactiveEntityID(pupID);
         if (puppet) |pup| {
-            if (!pup.data.puppet.deployed) {
-                const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-                try this.data.menu.menuItems.append(item);
-            }
+            const item = ElementMenuItem.initPupItem(pup.name, pup.id);
+            try this.data.menu.menuItems.append(item);
         }
     }
 }

@@ -95,6 +95,7 @@ pub fn update(game: *Game.Game) !void {
                 Gamestate.reset();
                 game.player.endCombat();
                 Gamestate.showMenu = .none;
+                EntityManager.deactivatePuppets();
             },
             .deploying_puppets => {
                 //TODO: filter out entities that are supposed to be in the combat
@@ -148,7 +149,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     }
     if (skipMove) {
         game.player.movementCooldown = 0;
-        game.player.turnTaken = true;
+        game.player.hasMoved = true;
         return;
     }
 
@@ -156,6 +157,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     const grid = World.getCurrentLevel().grid;
     const entityPosHash = EntityManager.positionHash;
     if (!Movement.canMove(new_pos, grid, &entityPosHash)) {
+        //TODO: print to the player he cant move
         return;
     }
 
@@ -164,7 +166,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
 
     try game.player.move(new_pos);
     game.player.movementCooldown = 0;
-    game.player.turnTaken = true;
+    game.player.hasMoved = true;
 }
 
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
@@ -370,18 +372,16 @@ pub fn canDeploy(player: *Entity.Entity) bool {
 }
 
 pub fn deployPuppet(pupId: u32) !void {
-    const puppet = EntityManager.getEntityID(pupId);
+    const puppet = EntityManager.getInactiveEntityID(pupId);
     if (puppet) |pup| {
-        if (!pup.data.puppet.deployed) {
-            if (Gamestate.cursor) |curs| {
-                try pup.move(curs);
-                pup.data.puppet.deployed = true;
-                pup.visible = true;
-                //TODO: @check if correct
-                pup.inCombat = true;
-                Gamestate.selectedPupId = null; //TODO: maybe wrong, check
-                return;
-            }
+        if (Gamestate.cursor) |curs| {
+            try pup.move(curs);
+            pup.data.puppet.deployed = true;
+            pup.visible = true;
+            //TODO: @check if correct
+            pup.inCombat = true;
+            Gamestate.selectedPupId = null; //TODO: maybe wrong, check
+            return;
         }
     }
 }

@@ -69,15 +69,9 @@ pub const Entity = struct {
         pos: Types.Vector2Int,
         speed: f32,
         entityData: anytype,
-        asciiChar: []const u8,
     ) !Entity {
         //const entity = try allocator.create(Entity);
         _ = allocator;
-        var ascii_array: [4]u8 = .{ 0, 0, 0, 0 };
-        const len = @min(asciiChar.len, 3);
-        for (0..len) |i| {
-            ascii_array[i] = asciiChar[i];
-        }
         const entity = Entity{
             .id = entity_id,
             .health = 10,
