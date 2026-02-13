@@ -125,20 +125,22 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
 pub fn staircaseTransition(newPos: Types.Vector2Int, grid: Types.Grid) Types.Vector2Int {
     //TODO: add normal transitions
     const tile = Utils.getTilePos(grid, newPos);
-    var worldPosDelta = Types.Vector3Int.init(0, 0, 0);
+    var zDelta: i32 = 0;
     if (tile) |t| {
         switch (t.tileType) {
             .staircase_up => {
-                worldPosDelta.z = 1;
+                zDelta = 1;
             },
             .staircase_down => {
-                worldPosDelta.z = -1;
+                zDelta = -1;
             },
             else => {
                 return newPos;
             },
         }
     }
+    var worldPosDelta = Types.Vector3Int.init(0, 0, 0);
+    worldPosDelta.z = zDelta;
 
     var player = EntityManager.getPlayer();
     player.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);

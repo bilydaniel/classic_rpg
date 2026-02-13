@@ -33,6 +33,7 @@ pub fn init() void {
 }
 
 pub fn update(game: *Game.Game) !void {
+    //TODO: figure out what happens if i dont have any puppet, wasnt possible before, now it is
     if (TurnManager.updatingEntity != null) {
         return;
     }
@@ -69,10 +70,15 @@ pub fn update(game: *Game.Game) !void {
                 nextState = .walking;
             }
 
-            // in combat with isnt filled yet, if deploying
-            if (currState != .deploying_puppets and playerData.inCombatWith.items.len == 0) {
+            //TODO: @fix check this condition when deploying works
+            if (playerData.inCombatWith.items.len == 0) {
                 nextState = .walking;
             }
+
+            // in combat with isnt filled yet, if deploying
+            // if (currState != .deploying_puppets and playerData.inCombatWith.items.len == 0) {
+            //     nextState = .walking;
+            // }
         },
     }
 
@@ -95,7 +101,7 @@ pub fn update(game: *Game.Game) !void {
                 Gamestate.reset();
                 game.player.endCombat();
                 Gamestate.showMenu = .none;
-                EntityManager.deactivatePuppets();
+                try EntityManager.deactivatePuppets();
             },
             .deploying_puppets => {
                 //TODO: filter out entities that are supposed to be in the combat
@@ -118,7 +124,6 @@ pub fn update(game: *Game.Game) !void {
                 game.player.movementCooldown = 0;
             },
         }
-
         state = nextState;
     }
 
@@ -177,6 +182,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
         Gamestate.showMenu = .puppet_select;
 
         if (UiManager.getMenuSelect()) |menu_item| {
+            std.debug.print("selected: {}\n\n", .{menu_item});
             switch (menu_item) {
                 .puppet_id => |pid| {
                     Gamestate.selectedPupId = pid;
@@ -192,6 +198,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     // puppet deploy
     //
     if (Gamestate.selectedPupId) |selected_pup| {
+        std.debug.print("selected_pup: {}\n", .{selected_pup});
         Gamestate.showMenu = .none;
         Gamestate.makeUpdateCursor(game.player.pos);
 
@@ -376,11 +383,17 @@ pub fn deployPuppet(pupId: u32) !void {
     if (puppet) |pup| {
         if (Gamestate.cursor) |curs| {
             try pup.move(curs);
+
             pup.data.puppet.deployed = true;
             pup.visible = true;
             //TODO: @check if correct
             pup.inCombat = true;
             Gamestate.selectedPupId = null; //TODO: maybe wrong, check
+
+            //activating makes the pup pointer dangling,
+            //has to be at the end
+            try EntityManager.activateEntity(pupId);
+
             return;
         }
     }

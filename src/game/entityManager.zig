@@ -91,16 +91,21 @@ pub fn addInactiveEntity(entity: Entity.Entity) !void {
 }
 
 pub fn activateEntity(id: u32) !void {
-    const entity = idInactiveHash.get(id) orelse return;
+    std.debug.print("id: {}\n", .{id});
+    const index = idInactiveHash.get(id) orelse return;
+
+    std.debug.print("index: {}\n", .{index});
+    const entity = getInactiveEntityIndex(index) orelse return;
+    std.debug.print("et: {}\n", .{entity});
     try removeInactiveEntity(id);
-    addActiveEntity(entity);
+    try addActiveEntity(entity.*);
 }
 
 pub fn deactivateEntity(id: u32) !void {
     const index = idHash.get(id) orelse return;
-    const entity = entities[index];
+    const entity = getEntityIndex(index) orelse return;
     try removeEntityID(id);
-    addInactiveEntity(entity);
+    try addInactiveEntity(entity.*);
 }
 
 pub fn removeEntityID(id: u32) !void {
@@ -152,6 +157,7 @@ pub fn update(game: *Game.Game) !void {
 pub fn draw() void {
     for (entities.items) |*e| {
         if (Types.vector3IntCompare(e.worldPos, World.currentLevel)) {
+            std.debug.print("draw: {}\n\n", .{e.data});
             e.draw();
         }
     }
@@ -235,6 +241,17 @@ pub fn deactivatePuppets() !void {
 }
 
 pub fn getEntityIndex(index: usize) ?*Entity.Entity {
-    //TODO: @continue, chceck size < index etc
+    if (index >= entities.items.len) {
+        return null;
+    }
 
+    return &entities.items[index];
+}
+
+pub fn getInactiveEntityIndex(index: usize) ?*Entity.Entity {
+    if (index >= inactiveEntities.items.len) {
+        return null;
+    }
+
+    return &inactiveEntities.items[index];
 }

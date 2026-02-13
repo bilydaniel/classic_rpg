@@ -649,8 +649,10 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
 
     //TODO: this is ridicolous, maybe make a getter or something?
     for (game.player.data.player.puppets.items) |pupID| {
+        //TODO: @continue @finish
         const puppet = EntityManager.getInactiveEntityID(pupID);
         if (puppet) |pup| {
+            //std.debug.print("pup: {}\n\n", .{pup});
             const item = ElementMenuItem.initPupItem(pup.name, pup.id);
             try this.data.menu.menuItems.append(item);
         }

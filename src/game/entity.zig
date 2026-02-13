@@ -31,6 +31,10 @@ pub const EntityData = union(EntityType) {
     item: ItemData,
 };
 
+//TODO: lets not add rpg stats,
+//too complicated for balancing
+//would be alot more work
+// make the game without progression / balance first
 pub const Entity = struct {
     id: u32,
     name: []const u8 = "",
@@ -189,6 +193,7 @@ pub const Entity = struct {
     }
 
     pub fn move(this: *Entity, pos: Types.Vector2Int) !void {
+        //TODO: add if targetable
         if (this.data == .player or this.data == .puppet) {
             Systems.calculateFOV(pos, 8);
         }
@@ -355,12 +360,14 @@ pub const PlayerData = struct {
     }
 
     pub fn allPupsDeployed(this: *PlayerData) bool {
+        if (this.puppets.items.len == 0) {
+            return true;
+        }
+
         for (this.puppets.items) |pupID| {
-            const puppet = EntityManager.getEntityID(pupID);
-            if (puppet) |pup| {
-                if (!pup.data.puppet.deployed) {
-                    return false;
-                }
+            const puppet = EntityManager.getInactiveEntityID(pupID);
+            if (puppet != null) {
+                return false;
             }
         }
         return true;
