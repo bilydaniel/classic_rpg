@@ -70,13 +70,17 @@ pub fn vector2Cmp(a: c.Vector2, b: c.Vector2) bool {
 }
 
 pub fn makeSourceRect(id: i32) c.Rectangle {
-    const x: f32 = @floatFromInt(@mod((id * Config.tile_width), (Config.tileset_width * Config.tile_width)));
-    const y: f32 = @floatFromInt(@divFloor((id * Config.tile_width), (Config.tileset_width)));
+    const column = @mod(id, Config.tileset_width);
+    const row = @divFloor(id, Config.tileset_width);
+
+    const x: f32 = @floatFromInt(Config.tileset_margin + (column * Config.tileset_stride));
+    const y: f32 = @floatFromInt(Config.tileset_margin + (row * Config.tileset_stride));
+
     return c.Rectangle{
         .x = x,
         .y = y,
-        .width = Config.tile_width,
-        .height = Config.tile_height,
+        .width = @floatFromInt(Config.tile_width),
+        .height = @floatFromInt(Config.tile_height),
     };
 }
 

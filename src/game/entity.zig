@@ -1,6 +1,6 @@
 const std = @import("std");
 const World = @import("world.zig");
-const TilesetManager = @import("tilesetManager.zig");
+const TilesetManager = @import("assetManager.zig");
 const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
@@ -274,12 +274,7 @@ pub const Entity = struct {
 };
 
 pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
-    //TODO: fix, player doesent path around puppet
-    if (TurnManager.turn == .player and !game.player.inCombat) {
-        // everything else is handled in the playerController
-        return;
-    }
-    //TODO: figure out update out of combat
+    // everything else is handled in the playerController
     if (TurnManager.turn != .player or !entity.inCombat) {
         return;
     }
@@ -288,8 +283,7 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
 
     try Movement.updateEntity(game.player, game, grid, entitiesPosHash);
 
-    //TODO: add attack
-    if (entity.hasMoved) {
+    if (entity.hasAttacked) {
         entity.turnTaken = true;
     }
 }
@@ -299,7 +293,6 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
     }
 
     if (!entity.inCombat) {
-        entity.turnTaken = true;
         return;
     }
 
@@ -308,14 +301,14 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
 
     try Movement.updateEntity(entity, game, grid, entitiesPosHash);
 
-    if (entity.hasMoved) {
+    if (entity.hasAttacked) {
         entity.turnTaken = true;
     }
 }
 pub fn updateEnemy(entity: *Entity, game: *Game.Game) !void {
     //TODO: figure out where to put this,
     //good for now, might need some updating
-    //late even if its not mu turn
+    //later even if its not mu turn
     if (TurnManager.turn != .enemy) {
         return;
     }
@@ -401,6 +394,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.goal = availablePosition;
     }
 
+    //TODO: change this
     if (entity.stuck > 2) {
         entity.turnTaken = true;
     }

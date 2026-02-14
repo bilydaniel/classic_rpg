@@ -20,10 +20,16 @@ pub const turn_speed: f32 = 0.1;
 
 pub const ascii_mode: bool = false;
 
-pub const tile_width: i32 = if (!ascii_mode) 12 else 16;
-pub const tile_height: i32 = if (!ascii_mode) 12 else 24;
+pub const tile_width: i32 = 12;
+pub const tile_height: i32 = 12;
 
-pub const tileset_width = 25;
+pub const tileset_width_pixels = 2678;
+pub const tileset_height_pixels = 650;
+pub const tileset_margin = 1;
+pub const tileset_stride = tile_width + tileset_margin;
+
+pub const tileset_width = tileset_width_pixels / (tileset_stride); // 2678 / 13
+pub const tileset_height = tileset_height_pixels / (tile_height + tileset_margin); // 650 / 13
 
 pub const movement_animation_duration: f32 = 0.2;
 pub const movement_animation_duration_in_combat: f32 = 0.4;

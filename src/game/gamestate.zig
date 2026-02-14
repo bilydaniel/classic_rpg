@@ -7,6 +7,7 @@ const Entity = @import("entity.zig");
 const Level = @import("level.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const EntityManager = @import("entityManager.zig");
+const Movement = @import("movement.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -189,7 +190,11 @@ pub fn removeHighlightOfType(highType: HighlightTypeEnum) void {
     }
 }
 
-pub fn isinMovable(pos: Types.Vector2Int) bool {
+pub fn isinMovable(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const Types.PositionHash) bool {
+    if (!Movement.canMove(pos, grid, entitiesHash)) {
+        return false;
+    }
+
     for (movableTiles.items) |item| {
         if (Types.vector2IntCompare(item, pos)) {
             return true;

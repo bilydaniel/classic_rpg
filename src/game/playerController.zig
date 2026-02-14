@@ -34,12 +34,14 @@ pub fn init() void {
 
 pub fn update(game: *Game.Game) !void {
     //TODO: figure out what happens if i dont have any puppet, wasnt possible before, now it is
-    if (TurnManager.updatingEntity != null) {
-        return;
-    }
     if (game.player.data != .player) {
         return;
     }
+
+    if (TurnManager.updatingEntity != null) {
+        return;
+    }
+
     var playerData = &game.player.data.player;
     var nextState = state;
     const currState = state;
@@ -154,7 +156,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     }
     if (skipMove) {
         game.player.movementCooldown = 0;
-        game.player.hasMoved = true;
+        game.player.turnTaken = true;
         return;
     }
 
@@ -171,7 +173,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
 
     try game.player.move(new_pos);
     game.player.movementCooldown = 0;
-    game.player.hasMoved = true;
+    game.player.turnTaken = true;
 }
 
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
@@ -182,7 +184,6 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
         Gamestate.showMenu = .puppet_select;
 
         if (UiManager.getMenuSelect()) |menu_item| {
-            std.debug.print("selected: {}\n\n", .{menu_item});
             switch (menu_item) {
                 .puppet_id => |pid| {
                     Gamestate.selectedPupId = pid;
@@ -198,7 +199,6 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     // puppet deploy
     //
     if (Gamestate.selectedPupId) |selected_pup| {
-        std.debug.print("selected_pup: {}\n", .{selected_pup});
         Gamestate.showMenu = .none;
         Gamestate.makeUpdateCursor(game.player.pos);
 
@@ -243,7 +243,6 @@ pub fn entitySelect(game: *Game.Game) void {
     Gamestate.resetAttackHighlight();
     UiManager.resetActiveMenuIndex();
     //TODO: reset the active menu index
-    //TODO: make a menu for swapping puppets in the array(different index => different keybind)
     if (entityIndex == 0) {
         //Player
         Gamestate.selectedEntity = game.player;
@@ -281,6 +280,10 @@ pub fn entityAction(game: *Game.Game) !void {
         }
 
         const selectedAction = Gamestate.selectedAction orelse return;
+
+        const grid = World.getCurrentLevel().grid;
+        const entityPosHash = EntityManager.positionHash;
+
         switch (selectedAction) {
             .move => {
                 Gamestate.showMenu = .none;
@@ -289,10 +292,8 @@ pub fn entityAction(game: *Game.Game) !void {
 
                 if (UiManager.getConfirm()) {
                     if (Gamestate.cursor) |cur| {
-                        if (Gamestate.isinMovable(cur)) {
+                        if (Gamestate.isinMovable(cur, grid, &entityPosHash)) {
                             //TODO: @fix
-                            const grid = World.getCurrentLevel().grid;
-                            const entityPosHash = EntityManager.positionHash;
                             entity.path = try Pathfinder.findPath(entity.pos, cur, grid, &entityPosHash);
 
                             TurnManager.updatingEntity = entity.id;
@@ -321,11 +322,12 @@ pub fn entityAction(game: *Game.Game) !void {
                             try ShaderManager.spawnSlash(entity.pos, cur);
                             try ShaderManager.spawnImpact(cur);
 
-                            TurnManager.updatingEntity = entity.id;
                             attack(game, entity, attackedEntity);
+                            entity.hasAttacked = true;
+                            TurnManager.updatingEntity = entity.id;
+
                             Gamestate.resetAttackHighlight();
                             Gamestate.removeCursor();
-                            entity.hasAttacked = true;
                             Gamestate.selectedAction = null;
                         }
                     }
@@ -336,14 +338,6 @@ pub fn entityAction(game: *Game.Game) !void {
                     skipAttack();
                 }
             },
-        }
-
-        if (entity.hasMoved and !entity.canAttack()) {
-            //TODO:
-        }
-
-        if (entity.hasMoved and entity.hasAttacked) {
-            entity.turnTaken = true;
         }
     }
 }

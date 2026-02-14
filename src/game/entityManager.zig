@@ -40,7 +40,7 @@ pub fn fillEntities() !void {
     const playerData = try Entity.PlayerData.init(entity_allocator);
 
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
-    player.setTextureID(76);
+    player.setTextureID(206);
     playerID = player.id;
 
     const pup_pos = Types.Vector2Int{ .x = 1, .y = 1 };
@@ -91,12 +91,9 @@ pub fn addInactiveEntity(entity: Entity.Entity) !void {
 }
 
 pub fn activateEntity(id: u32) !void {
-    std.debug.print("id: {}\n", .{id});
     const index = idInactiveHash.get(id) orelse return;
 
-    std.debug.print("index: {}\n", .{index});
     const entity = getInactiveEntityIndex(index) orelse return;
-    std.debug.print("et: {}\n", .{entity});
     try removeInactiveEntity(id);
     try addActiveEntity(entity.*);
 }
@@ -143,21 +140,9 @@ pub fn moveEntityHash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
     }
 }
 
-pub fn update(game: *Game.Game) !void {
-    if (Gamestate.currentTurn != .player and allEnemiesTurnTaken()) {
-        Gamestate.switchTurn(.player);
-        resetTurnFlags();
-    }
-
-    for (entities.items) |*entity| {
-        try entity.update(game);
-    }
-}
-
 pub fn draw() void {
     for (entities.items) |*e| {
         if (Types.vector3IntCompare(e.worldPos, World.currentLevel)) {
-            std.debug.print("draw: {}\n\n", .{e.data});
             e.draw();
         }
     }

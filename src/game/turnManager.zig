@@ -1,5 +1,6 @@
 const Game = @import("../game/game.zig");
 const EntityManager = @import("../game/entityManager.zig");
+const CameraManager = @import("../game/cameraManager.zig");
 const Entity = @import("../game/entity.zig");
 const std = @import("std");
 
@@ -53,7 +54,6 @@ pub fn update(game: *Game.Game) !void {
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
 
             enemyQueueIndex = 0;
-
             enemyQueue.clearRetainingCapacity();
 
             switchTurn(.player);
@@ -63,19 +63,13 @@ pub fn update(game: *Game.Game) !void {
 }
 
 fn updatePlayerTurn(game: *Game.Game) !void {
-    //TODO: fix the out of combat player movement turn switching
     if (EntityManager.allPlayerUnitsTurnTaken()) {
         switchTurn(.enemy);
         return;
     }
 
-    if (!game.player.inCombat) {
-        if (game.player.hasMoved) {
-            game.player.turnTaken = true;
-        }
-    }
-
     if (updatingEntity) |id| {
+        CameraManager.targetEntity = id;
         var entity = EntityManager.getEntityID(id) orelse {
             updatingEntity = null;
             return;
@@ -95,10 +89,22 @@ fn updateEnemyTurn(game: *Game.Game) !void {
         return;
     }
 
-    // if (EntityManager.allEnemiesTurnTaken()) {
-    //     turn = .player;
-    //     return;
-    // }
+    if (updatingEntity) |id| {
+        CameraManager.targetEntity = id;
+        var entity = EntityManager.getEntityID(id) orelse {
+            updatingEntity = null;
+            enemyQueueIndex += 1;
+            return;
+        };
+
+        try entity.update(game);
+
+        if (entity.turnTaken) {
+            updatingEntity = null;
+            enemyQueueIndex += 1;
+        }
+        return;
+    }
 
     const entityID = enemyQueue.items[enemyQueueIndex];
     const entity = EntityManager.getEntityID(entityID) orelse {
@@ -111,11 +117,13 @@ fn updateEnemyTurn(game: *Game.Game) !void {
         return;
     }
 
-    updatingEntity = entity.id;
-    try entity.update(game);
-    if (entity.turnTaken) {
-        updatingEntity = null;
-        enemyQueueIndex += 1;
+    if (entity.inCombat) {
+        updatingEntity = entity.id;
+    } else {
+        try entity.update(game);
+        if (entity.turnTaken) {
+            enemyQueueIndex += 1;
+        }
     }
 }
 

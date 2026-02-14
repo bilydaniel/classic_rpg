@@ -5,6 +5,7 @@ const Level = @import("level.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const EntityManager = @import("entityManager.zig");
+const TurnManager = @import("turnManager.zig");
 const Config = @import("../common/config.zig");
 const Game = @import("game.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
@@ -40,6 +41,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, grid: Types.Grid, 
     if (nextIndex >= path.nodes.items.len) {
         entity.removePathGoal();
         entity.finishMovement();
+        TurnManager.updatingEntity = null;
         return;
     }
 
@@ -62,6 +64,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, grid: Types.Grid, 
         if (entity.movedDistance >= entity.movementDistance) {
             entity.finishMovement();
             entity.removePath();
+            TurnManager.updatingEntity = null;
         }
     } else {
         entity.hasMoved = true;
