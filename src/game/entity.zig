@@ -8,6 +8,7 @@ const Types = @import("../common/types.zig");
 const Systems = @import("Systems.zig");
 const Level = @import("level.zig");
 const Game = @import("game.zig");
+const AssetManager = @import("assetManager.zig");
 const Movement = @import("movement.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("../game/turnManager.zig");
@@ -177,7 +178,8 @@ pub const Entity = struct {
         }
     }
 
-    pub fn setTextureID(this: *Entity, id: i32) void {
+    pub fn setTextureID(this: *Entity, asset: AssetManager.TileNames) void {
+        const id = @intFromEnum(asset);
         this.textureID = id;
         this.sourceRect = Utils.makeSourceRect(id);
     }

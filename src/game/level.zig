@@ -3,6 +3,7 @@ const Pathfinder = @import("pathfinder.zig");
 const Utils = @import("../common/utils.zig");
 const Entity = @import("entity.zig");
 const TilesetManager = @import("assetManager.zig");
+const AssetManager = @import("assetManager.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const EntityManager = @import("entityManager.zig");
@@ -12,7 +13,6 @@ const c = @cImport({
 });
 
 pub const TileType = enum {
-    empty,
     wall,
     floor,
     water,
@@ -22,135 +22,80 @@ pub const TileType = enum {
 
 pub const Tile = struct {
     //TODO: add movement cost? can be derived from tile_type
-    textureID: ?i32,
-    sourceRect: ?c.Rectangle,
+    textureID: i32 = undefined,
+    sourceRect: c.Rectangle = undefined,
+
     tileType: TileType,
+
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
     walkable: bool,
+
     backgroundColor: c.Color,
-    tempBackground: ?c.Color,
-    seen: bool,
-    visible: bool,
 
-    pub fn initFloor() Tile {
-        var texture_id: ?i32 = null;
-        var source_rect: ?c.Rectangle = null;
-        if (!Config.ascii_mode) {
-            texture_id = 100; // try: 1, 100
-            if (texture_id) |text_id| {
-                source_rect = Utils.makeSourceRect(text_id);
-            }
-        }
-        return Tile{
-            .textureID = texture_id,
-            .sourceRect = source_rect,
-            .tileType = .floor,
-            .solid = false,
-            .walkable = true,
-            .backgroundColor = c.BLACK,
-            .seen = false,
-            .visible = false,
-            .tempBackground = null,
-        };
-    }
-    pub fn initWall() Tile {
-        var texture_id: ?i32 = null;
-        var source_rect: ?c.Rectangle = null;
-        texture_id = 1; //try: 2,3,4
-        if (texture_id) |text_id| {
-            source_rect = Utils.makeSourceRect(text_id);
-        }
-        return Tile{
-            .textureID = texture_id,
-            .sourceRect = source_rect,
-            .tileType = .wall,
-            .solid = true,
-            .walkable = false,
-            .backgroundColor = c.WHITE,
-            .seen = false,
-            .visible = false,
-            .tempBackground = null,
-        };
-    }
+    seen: bool = false,
+    visible: bool = false,
 
-    pub fn initDoor() Tile {
-        var texture_id: ?i32 = null;
-        var source_rect: ?c.Rectangle = null;
-        texture_id = 25; //26 for open
-        if (texture_id) |text_id| {
-            source_rect = Utils.makeSourceRect(text_id);
+    pub fn init(tileType: TileType) Tile {
+        switch (tileType) {
+            .wall => {
+                var tile = Tile{
+                    .tileType = tileType,
+                    .solid = true,
+                    .walkable = false,
+                    .backgroundColor = c.WHITE,
+                };
+                //TODO: make some logic for different textureIDs so it looks nice and is dynamic, not always the same one
+                tile.setTextureID(AssetManager.TileNames.wall_1);
+                return tile;
+            },
+
+            .floor => {
+                var tile = Tile{
+                    .tileType = tileType,
+                    .solid = false,
+                    .walkable = true,
+                    .backgroundColor = c.WHITE,
+                };
+                tile.setTextureID(AssetManager.TileNames.floor_1);
+                return tile;
+            },
+            .water => {
+                var tile = Tile{
+                    .tileType = tileType,
+                    .solid = false,
+                    .walkable = true,
+                    .backgroundColor = c.WHITE,
+                };
+                tile.setTextureID(AssetManager.TileNames.water_1);
+                return tile;
+            },
+            .staircase_up => {
+                var tile = Tile{
+                    .tileType = tileType,
+                    .solid = false,
+                    .walkable = true,
+                    .backgroundColor = c.WHITE,
+                };
+                tile.setTextureID(AssetManager.TileNames.staircase_up);
+                return tile;
+            },
+            .staircase_down => {
+                var tile = Tile{
+                    .tileType = tileType,
+                    .solid = false,
+                    .walkable = true,
+                    .backgroundColor = c.WHITE,
+                };
+                tile.setTextureID(AssetManager.TileNames.staircase_down);
+                return tile;
+            },
         }
-        return Tile{
-            .textureID = texture_id,
-            .sourceRect = source_rect,
-            .tileType = .floor,
-            .solid = false,
-            .walkable = false,
-            .backgroundColor = c.BROWN,
-            .seen = false,
-            .visible = false,
-            .tempBackground = null,
-        };
     }
 
-    pub fn initWater() Tile {
-        var texture_id: ?i32 = null;
-        var source_rect: ?c.Rectangle = null;
-        texture_id = 119;
-        if (texture_id) |text_id| {
-            source_rect = Utils.makeSourceRect(text_id);
-        }
-        return Tile{
-            .textureID = texture_id,
-            .sourceRect = source_rect,
-            .tileType = .water, // You might want to add a water tile type
-            .solid = false,
-            .walkable = false,
-            .backgroundColor = c.BLUE,
-            .seen = false,
-            .visible = false,
-            .tempBackground = null,
-        };
-    }
-
-    pub fn initStaircaseUp() Tile {
-        var texture_id: ?i32 = null;
-        var source_rect: ?c.Rectangle = null;
-        texture_id = 17; //18 for up
-        if (texture_id) |text_id| {
-            source_rect = Utils.makeSourceRect(text_id);
-        }
-        return Tile{
-            .textureID = texture_id,
-            .sourceRect = source_rect,
-            .tileType = .staircase_up,
-            .solid = false,
-            .walkable = true,
-            .backgroundColor = c.PURPLE,
-            .seen = false,
-            .visible = false,
-            .tempBackground = null,
-        };
-    }
-
-    pub fn initStaircaseDown() Tile {
-        var texture_id: ?i32 = null;
-        var source_rect: ?c.Rectangle = null;
-        texture_id = 17; //18 for up
-        if (texture_id) |text_id| {
-            source_rect = Utils.makeSourceRect(text_id);
-        }
-        return Tile{
-            .textureID = texture_id,
-            .sourceRect = source_rect,
-            .tileType = .staircase_down,
-            .solid = false,
-            .walkable = true,
-            .backgroundColor = c.PURPLE,
-            .seen = false,
-            .visible = false,
-            .tempBackground = null,
-        };
+    pub fn setTextureID(this: *Tile, asset: AssetManager.TileNames) void {
+        const id = @intFromEnum(asset);
+        this.textureID = id;
+        this.sourceRect = Utils.makeSourceRect(id);
     }
 };
 
@@ -163,8 +108,12 @@ pub const Level = struct {
         const tileCount = Config.level_height * Config.level_width;
         const grid = try allocator.alloc(Tile, tileCount);
 
+        // const tile_test = Tile.init(.wall, c.BLACK);
+        // std.debug.print("t: {}\n", .{tile_test});
+
         for (0..grid.len) |i| {
-            grid[i] = Tile.initFloor();
+            //grid[i] = Tile.initFloor();
+            grid[i] = Tile.init(.wall);
         }
 
         return Level{
@@ -180,15 +129,11 @@ pub const Level = struct {
             const y = @as(c_int, @intCast((@divFloor(index, Config.level_width)) * Config.tile_height));
 
             if (tile.seen) {
-                if (tile.sourceRect) |source_rect| {
-                    const pos = c.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
-                    var background = c.WHITE;
-                    if (tile.tempBackground) |back| {
-                        background = back;
-                    }
-                    //TODO: pridat scaling podle Wwindow.scale ???
-                    c.DrawTextureRec(TilesetManager.tileset, source_rect, pos, background);
-                }
+                const pos = c.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+                //TODO: pridat scaling podle Wwindow.scale ???
+                //TODO: figure out the color scheme, would like something purple-ish in the style
+                // of caves of qud
+                c.DrawTextureRec(TilesetManager.tileset, tile.sourceRect, pos, tile.backgroundColor);
             }
         }
     }
@@ -199,7 +144,7 @@ pub const Level = struct {
 
         // First, fill everything with walls
         for (0..level.grid.len) |i| {
-            level.grid[i] = Tile.initWall();
+            level.grid[i] = Tile.init(.wall);
         }
 
         // Create some rooms
@@ -217,7 +162,7 @@ pub const Level = struct {
                 for (room.x..room.x + room.w) |x| {
                     if (x < width and y < height) {
                         const idx = y * width + x;
-                        level.grid[idx] = Tile.initFloor();
+                        level.grid[idx] = Tile.init(.floor);
                     }
                 }
             }
@@ -241,7 +186,7 @@ pub const Level = struct {
                 for (start_x..end_x + 1) |x| {
                     if (x < width and corridor.y1 < height) {
                         const idx = corridor.y1 * width + x;
-                        level.grid[idx] = Tile.initFloor();
+                        level.grid[idx] = Tile.init(.floor);
                     }
                 }
             }
@@ -252,7 +197,7 @@ pub const Level = struct {
                 for (start_y..end_y + 1) |y| {
                     if (corridor.x1 < width and y < height) {
                         const idx = y * width + corridor.x1;
-                        level.grid[idx] = Tile.initFloor();
+                        level.grid[idx] = Tile.init(.floor);
                     }
                 }
             }
@@ -269,7 +214,7 @@ pub const Level = struct {
         for (treasures) |treasure| {
             if (treasure.x < width and treasure.y < height) {
                 const idx = treasure.y * width + treasure.x;
-                level.grid[idx] = Tile.initFloor();
+                level.grid[idx] = Tile.init(.floor);
             }
         }
 
@@ -283,8 +228,9 @@ pub const Level = struct {
 
         for (doors) |door| {
             if (door.x < width and door.y < height) {
-                const idx = door.y * width + door.x;
-                level.grid[idx] = Tile.initDoor();
+                //TODO: implement door
+                //const idx = door.y * width + door.x;
+                //level.grid[idx] = Tile.init(.door);
             }
         }
 
@@ -299,18 +245,18 @@ pub const Level = struct {
         for (hazards) |hazard| {
             if (hazard.x < width and hazard.y < height) {
                 const idx = hazard.y * width + hazard.x;
-                level.grid[idx] = Tile.initWater();
+                level.grid[idx] = Tile.init(.water);
             }
         }
 
         // Add a staircase
         if (22 < width and 18 < height) {
             const idx = 18 * width + 22;
-            level.grid[idx] = Tile.initStaircaseDown();
+            level.grid[idx] = Tile.init(.staircase_down);
         }
 
         const idx = 2 * width + 2;
-        level.grid[idx] = Tile.initStaircaseDown();
+        level.grid[idx] = Tile.init(.staircase_down);
     }
 
     pub fn generateInterestingLevel2(level: *Level) void {
@@ -319,7 +265,7 @@ pub const Level = struct {
 
         // First, fill everything with walls
         for (0..level.grid.len) |i| {
-            level.grid[i] = Tile.initWall();
+            level.grid[i] = Tile.init(.wall);
         }
 
         // Create larger rooms to fill the 80x25 space
@@ -343,7 +289,7 @@ pub const Level = struct {
                 for (room.x..room.x + room.w) |x| {
                     if (x < width and y < height) {
                         const idx = y * width + x;
-                        level.grid[idx] = Tile.initFloor();
+                        level.grid[idx] = Tile.init(.floor);
                     }
                 }
             }
@@ -373,7 +319,7 @@ pub const Level = struct {
                 for (start_x..end_x + 1) |x| {
                     if (x < width and corridor.y1 < height) {
                         const idx = corridor.y1 * width + x;
-                        level.grid[idx] = Tile.initFloor();
+                        level.grid[idx] = Tile.init(.floor);
                     }
                 }
             }
@@ -384,7 +330,7 @@ pub const Level = struct {
                 for (start_y..end_y + 1) |y| {
                     if (corridor.x1 < width and y < height) {
                         const idx = y * width + corridor.x1;
-                        level.grid[idx] = Tile.initFloor();
+                        level.grid[idx] = Tile.init(.floor);
                     }
                 }
             }
@@ -406,7 +352,7 @@ pub const Level = struct {
         for (treasures) |treasure| {
             if (treasure.x < width and treasure.y < height) {
                 const idx = treasure.y * width + treasure.x;
-                level.grid[idx] = Tile.initFloor();
+                level.grid[idx] = Tile.init(.floor);
             }
         }
 
@@ -428,7 +374,7 @@ pub const Level = struct {
         for (doors) |door| {
             if (door.x < width and door.y < height) {
                 const idx = door.y * width + door.x;
-                level.grid[idx] = Tile.initFloor();
+                level.grid[idx] = Tile.init(.floor);
             }
         }
 
@@ -452,7 +398,7 @@ pub const Level = struct {
         for (hazards) |hazard| {
             if (hazard.x < width and hazard.y < height) {
                 const idx = hazard.y * width + hazard.x;
-                level.grid[idx] = Tile.initWater();
+                level.grid[idx] = Tile.init(.water);
             }
         }
 
@@ -464,7 +410,7 @@ pub const Level = struct {
         for (staircases) |stair| {
             if (stair.x < width and stair.y < height) {
                 const idx = stair.y * width + stair.x;
-                level.grid[idx] = Tile.initStaircaseDown();
+                level.grid[idx] = Tile.init(.staircase_down);
             }
         }
     }

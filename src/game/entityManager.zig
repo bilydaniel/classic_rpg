@@ -1,5 +1,6 @@
 const std = @import("std");
 const Game = @import("../game/game.zig");
+const AssetManager = @import("assetManager.zig");
 const Entity = @import("../game/entity.zig");
 const Window = @import("../game/window.zig");
 const Types = @import("../common/types.zig");
@@ -40,39 +41,35 @@ pub fn fillEntities() !void {
     const playerData = try Entity.PlayerData.init(entity_allocator);
 
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
-    player.setTextureID(206);
+    player.setTextureID(AssetManager.TileNames.player);
     playerID = player.id;
 
     const pup_pos = Types.Vector2Int{ .x = 1, .y = 1 };
     var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
     puppet.visible = false;
     puppet.name = "Pamama";
-    puppet.setTextureID(50);
+    puppet.setTextureID(AssetManager.TileNames.puppet_1);
     try player.data.player.puppets.append(puppet.id);
 
     try addActiveEntity(player);
     try addInactiveEntity(puppet);
 
     const pos = Types.Vector2Int{ .x = 5, .y = 15 };
-    const enemy_tile = 55;
-    const enemy_rect = Utils.makeSourceRect(enemy_tile);
+    const enemy_tile = AssetManager.TileNames.robot_1;
     const enemy_goal = Types.Vector2Int.init(2, 2);
 
     var entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity.goal = enemy_goal;
 
-    entity.textureID = enemy_tile;
-    entity.sourceRect = enemy_rect;
+    entity.setTextureID(enemy_tile);
 
     const pos2 = Types.Vector2Int{ .x = 6, .y = 16 };
     var entity2 = try Entity.Entity.init(entity_allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
-    entity2.textureID = enemy_tile;
-    entity2.sourceRect = enemy_rect;
+    entity2.setTextureID(enemy_tile);
 
     const pos3 = Types.Vector2Int{ .x = 7, .y = 17 };
     var entity3 = try Entity.Entity.init(entity_allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
-    entity3.textureID = enemy_tile;
-    entity3.sourceRect = enemy_rect;
+    entity3.setTextureID(enemy_tile);
 
     try addActiveEntity(entity);
     try addActiveEntity(entity2);
