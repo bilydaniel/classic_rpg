@@ -318,12 +318,19 @@ pub fn entityAction(game: *Game.Game) !void {
                 if (UiManager.getConfirm()) {
                     if (Gamestate.cursor) |cur| {
                         if (Gamestate.isinAttackable(cur)) {
+                            //TODO: maybe gonna make some attack animation / resolving similar
+                            // to movement
                             const attackedEntity = EntityManager.getEntityByPos(cur, World.currentLevel);
                             try ShaderManager.spawnSlash(entity.pos, cur);
                             try ShaderManager.spawnImpact(cur);
 
                             attack(game, entity, attackedEntity);
+
                             entity.hasAttacked = true;
+
+                            //cant move after attack
+                            entity.hasMoved = true;
+
                             TurnManager.updatingEntity = entity.id;
 
                             Gamestate.resetAttackHighlight();
