@@ -3,11 +3,9 @@ const Level = @import("../game/level.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("types.zig");
 const std = @import("std");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
-pub fn screenToRenderTextureCoords(screen_pos: c.Vector2) c.Vector2 {
+pub fn screenToRenderTextureCoords(screen_pos: rl.Vector2) rl.Vector2 {
     return .{
         .x = (screen_pos.x - @as(f32, @floatFromInt(Window.offsetx))) / Window.scale,
         .y = (screen_pos.y - @as(f32, @floatFromInt(Window.offsety))) / Window.scale,

@@ -1,6 +1,6 @@
 .{
     .name = .classic_rpg,
-    .version = "0.15.2",
+    .version = "0.15.1",
     .dependencies = .{
         .raylib_zig = .{
             // Pointing to the latest commit on the devel branch which supports Zig 0.15+

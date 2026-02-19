@@ -34,6 +34,7 @@ pub fn build(b: *std.Build) void {
     // Link the fetched Raylib instead of system library
     game.linkLibrary(raylib_artifact);
     game.linkLibC();
+    game.root_module.addImport("raylib", raylib_dep.module("raylib"));
 
     // Faster iteration settings
     if (fast_debug) {
@@ -65,6 +66,7 @@ pub fn build(b: *std.Build) void {
 
         editor.linkLibrary(raylib_artifact);
         editor.linkLibC();
+        editor.root_module.addImport("raylib", raylib_dep.module("raylib"));
 
         if (!fast_debug) {
             b.installArtifact(editor);
@@ -118,6 +120,7 @@ pub fn build(b: *std.Build) void {
     // Use the dependency for debug build too
     game_debug.linkLibrary(raylib_artifact);
     game_debug.linkLibC();
+    game_debug.root_module.addImport("raylib", raylib_dep.module("raylib"));
 
     b.installArtifact(game_debug);
 
