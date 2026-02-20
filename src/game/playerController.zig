@@ -125,6 +125,7 @@ pub fn update(game: *Game.Game) !void {
             .in_combat => {
                 Gamestate.reset();
                 Gamestate.showMenu = .none;
+                EntityManager.resetTurnFlags();
                 game.player.movementCooldown = 0;
             },
         }
@@ -382,7 +383,7 @@ pub fn canDeploy(player: *Entity.Entity) bool {
 }
 
 pub fn deployPuppet(pupId: u32) !void {
-    const puppet = EntityManager.getInactiveEntityID(pupId);
+    const puppet = EntityManager.getEntityID(pupId);
     if (puppet) |pup| {
         if (Gamestate.cursor) |curs| {
             try pup.move(curs);
@@ -393,8 +394,6 @@ pub fn deployPuppet(pupId: u32) !void {
             pup.inCombat = true;
             Gamestate.selectedPupId = null; //TODO: maybe wrong, check
 
-            //activating makes the pup pointer dangling,
-            //has to be at the end
             try EntityManager.activateEntity(pupId);
 
             return;

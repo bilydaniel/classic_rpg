@@ -650,10 +650,12 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
     //TODO: this is ridicolous, maybe make a getter or something?
     for (game.player.data.player.puppets.items) |pupID| {
         //TODO: @continue @finish
-        const puppet = EntityManager.getInactiveEntityID(pupID);
+        const puppet = EntityManager.getEntityID(pupID);
         if (puppet) |pup| {
-            const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-            try this.data.menu.menuItems.append(allocator, item);
+            if (!pup.active) {
+                const item = ElementMenuItem.initPupItem(pup.name, pup.id);
+                try this.data.menu.menuItems.append(allocator, item);
+            }
         }
     }
 }

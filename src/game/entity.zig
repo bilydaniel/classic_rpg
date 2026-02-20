@@ -37,6 +37,7 @@ pub const EntityData = union(EntityType) {
 pub const Entity = struct {
     id: u32,
     name: [:0]const u8 = "",
+    active: bool = true,
     health: i32,
     mana: i32,
     tp: i32,
@@ -360,9 +361,12 @@ pub const PlayerData = struct {
         }
 
         for (this.puppets.items) |pupID| {
-            const puppet = EntityManager.getInactiveEntityID(pupID);
-            if (puppet != null) {
-                return false;
+            const puppet = EntityManager.getEntityID(pupID);
+            std.debug.assert(puppet != null);
+            if (puppet) |pup| {
+                if (!pup.active) {
+                    return false;
+                }
             }
         }
         return true;
