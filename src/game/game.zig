@@ -12,9 +12,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 pub const Game = struct {
     delta: f32,
@@ -27,7 +25,8 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
 
-        PlayerController.init();
+        Systems.init(allocator);
+        PlayerController.init(allocator);
         Gamestate.init(allocator);
         EntityManager.init(allocator);
 
@@ -36,7 +35,7 @@ pub const Game = struct {
 
         TurnManager.init(allocator);
 
-        TilesetManager.init();
+        try TilesetManager.init();
         try Pathfinder.init(allocator);
         try CameraManager.init(allocator, player.id);
         try World.init(allocator);
@@ -55,7 +54,7 @@ pub const Game = struct {
     }
 
     pub fn update(this: *Game) !void {
-        const delta = c.GetFrameTime();
+        const delta = rl.getFrameTime();
         this.player = EntityManager.getPlayer();
         this.delta = delta;
         //TODO: decide on a game loop, look into the book
@@ -74,10 +73,10 @@ pub const Game = struct {
     }
 
     pub fn draw(this: *Game) !void {
-        c.BeginDrawing();
-        c.ClearBackground(c.BLACK);
-        c.DrawFPS(0, 0);
-        c.BeginMode2D(CameraManager.camera.*);
+        rl.beginDrawing();
+        rl.clearBackground(rl.Color.black);
+        rl.drawFPS(0, 0);
+        rl.beginMode2D(CameraManager.camera.*);
         World.draw();
         this.player.draw();
         EntityManager.draw();
@@ -85,9 +84,9 @@ pub const Game = struct {
 
         try Gamestate.draw();
 
-        c.EndMode2D();
-        //try UiManager.draw();
+        rl.endMode2D();
+        try UiManager.draw();
 
-        c.EndDrawing();
+        rl.endDrawing();
     }
 };

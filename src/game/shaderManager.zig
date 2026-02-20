@@ -15,7 +15,7 @@ var texture: c.Texture2D = undefined;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
-    effects = std.ArrayList(Effect).init(allocator);
+    effects = std.ArrayList(Effect).empty;
     slashShader = try Shader.init("src/shaders/slash.fs");
     impactShader = try Shader.init("src/shaders/impact.fs");
     explosionShader = try Shader.init("src/shaders/explosion.fs");
@@ -25,6 +25,7 @@ pub fn init(alloc: std.mem.Allocator) !void {
 }
 
 pub fn update(delta: f32) void {
+    //TODO: deinit the effect?
     var i: usize = 0;
     while (i < effects.items.len) {
         if (!effects.items[i].update(delta)) {
@@ -158,7 +159,7 @@ pub fn spawnSlash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
     };
 
     const effect = Effect.init(from_pixel, to_pixel, .slash, 0.3);
-    try effects.append(effect);
+    try effects.append(allocator, effect);
 }
 
 pub fn spawnExplosion(pos: Types.Vector2Int) !void {
@@ -168,7 +169,7 @@ pub fn spawnExplosion(pos: Types.Vector2Int) !void {
     };
 
     const effect = Effect.init(pos_pixel, null, .explosion, 0.5);
-    try effects.append(effect);
+    try effects.append(allocator, effect);
 }
 
 pub fn spawnImpact(pos: Types.Vector2Int) !void {
@@ -178,7 +179,7 @@ pub fn spawnImpact(pos: Types.Vector2Int) !void {
     };
 
     const effect = Effect.init(pos_pixel, null, .impact, 0.3);
-    try effects.append(effect);
+    try effects.append(allocator, effect);
 }
 
 pub fn draw() void {

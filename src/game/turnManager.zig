@@ -24,8 +24,11 @@ pub var updatingEntity: ?u32 = null;
 pub var enemyQueue: std.ArrayList(u32) = undefined;
 var enemyQueueIndex: u32 = 0;
 
-pub fn init(allocator: std.mem.Allocator) void {
-    enemyQueue = std.ArrayList(u32).init(allocator);
+var allocator: std.mem.Allocator = undefined;
+
+pub fn init(alloc: std.mem.Allocator) void {
+    enemyQueue = std.ArrayList(u32).empty;
+    allocator = alloc;
 }
 
 pub fn update(game: *Game.Game) !void {
@@ -35,7 +38,7 @@ pub fn update(game: *Game.Game) !void {
 
             for (EntityManager.entities.items) |e| {
                 if (e.data == .enemy) {
-                    try enemyQueue.append(e.id);
+                    try enemyQueue.append(allocator, e.id);
                 }
             }
             //TODO: order enemies, some heuristic(distance to goal)
@@ -50,6 +53,7 @@ pub fn update(game: *Game.Game) !void {
             }
         },
         .cleanup => {
+            //TODO: remove all the dead entities here so i dont fuck up any pointers during the update
             std.debug.print("cleanup\n", .{});
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
 

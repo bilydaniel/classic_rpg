@@ -21,6 +21,7 @@ const c = @cImport({
 });
 
 pub var state: playerStateEnum = undefined;
+var allocator: std.mem.Allocator = undefined;
 
 pub const playerStateEnum = enum {
     walking,
@@ -28,7 +29,8 @@ pub const playerStateEnum = enum {
     in_combat,
 };
 
-pub fn init() void {
+pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
     state = .walking;
 }
 
@@ -114,7 +116,7 @@ pub fn update(game: *Game.Game) !void {
                 for (EntityManager.entities.items) |*entity| {
                     //TODO: all enemies for now
                     if (entity.data == .enemy) {
-                        try playerData.inCombatWith.append(entity.id);
+                        try playerData.inCombatWith.append(allocator, entity.id);
                         entity.resetPathing();
                         entity.inCombat = true;
                     }

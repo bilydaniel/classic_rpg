@@ -1,4 +1,10 @@
 
+TODO: figure out memory management first, finalize how iam gonna do memory,
+main reason is the zig 0.15 change, cant continue without proper memory management, 
+would have to rewrite alot of shit later
+
+
+
 TODO: assets
 TODO: make the uimanager immeadeate mode, fix the ui, the puppet select is closing
 TODO: arena allocators?? / preallocated ram
