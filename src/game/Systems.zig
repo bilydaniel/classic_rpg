@@ -24,6 +24,12 @@ const c = @cImport({
 // TODO: go through all the state management, make some fool proof system
 // of writing the state transitions / resets of variables
 
+var allocator: std.mem.Allocator = undefined;
+
+pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+}
+
 // pub fn updatePlayer(game: *Game.Game) !void {
 //
 //     if (TurnManager.turn != .player) {
@@ -209,7 +215,7 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
                 continue;
             }
             const newPos = Types.vector2IntAdd(start, Types.Vector2Int{ .x = x, .y = y });
-            try result.append(newPos);
+            try result.append(allocator, newPos);
         }
         x = 0;
     }

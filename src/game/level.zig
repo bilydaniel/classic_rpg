@@ -8,9 +8,7 @@ const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const EntityManager = @import("entityManager.zig");
 const World = @import("world.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 pub const TileType = enum {
     wall,
@@ -23,14 +21,14 @@ pub const TileType = enum {
 pub const Tile = struct {
     //TODO: add movement cost? can be derived from tile_type
     textureID: i32 = undefined,
-    sourceRect: c.Rectangle = undefined,
+    sourceRect: rl.Rectangle = undefined,
 
     tileType: TileType,
 
     solid: bool, //TODO: no idea if needed, tile_type already says if solid
     walkable: bool,
 
-    backgroundColor: c.Color,
+    backgroundColor: rl.Color,
 
     seen: bool = false,
     visible: bool = false,
@@ -42,7 +40,7 @@ pub const Tile = struct {
                     .tileType = tileType,
                     .solid = true,
                     .walkable = false,
-                    .backgroundColor = c.WHITE,
+                    .backgroundColor = rl.Color.white,
                 };
                 //TODO: make some logic for different textureIDs so it looks nice and is dynamic, not always the same one
                 tile.setTextureID(AssetManager.TileNames.wall_1);
@@ -54,7 +52,7 @@ pub const Tile = struct {
                     .tileType = tileType,
                     .solid = false,
                     .walkable = true,
-                    .backgroundColor = c.WHITE,
+                    .backgroundColor = rl.Color.white,
                 };
                 tile.setTextureID(AssetManager.TileNames.floor_1);
                 return tile;
@@ -64,7 +62,7 @@ pub const Tile = struct {
                     .tileType = tileType,
                     .solid = false,
                     .walkable = true,
-                    .backgroundColor = c.WHITE,
+                    .backgroundColor = rl.Color.white,
                 };
                 tile.setTextureID(AssetManager.TileNames.water_1);
                 return tile;
@@ -74,7 +72,7 @@ pub const Tile = struct {
                     .tileType = tileType,
                     .solid = false,
                     .walkable = true,
-                    .backgroundColor = c.WHITE,
+                    .backgroundColor = rl.Color.white,
                 };
                 tile.setTextureID(AssetManager.TileNames.staircase_up);
                 return tile;
@@ -84,7 +82,7 @@ pub const Tile = struct {
                     .tileType = tileType,
                     .solid = false,
                     .walkable = true,
-                    .backgroundColor = c.WHITE,
+                    .backgroundColor = rl.Color.white,
                 };
                 tile.setTextureID(AssetManager.TileNames.staircase_down);
                 return tile;
@@ -129,11 +127,11 @@ pub const Level = struct {
             const y = @as(c_int, @intCast((@divFloor(index, Config.level_width)) * Config.tile_height));
 
             if (tile.seen) {
-                const pos = c.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+                const pos = rl.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
                 //TODO: pridat scaling podle Wwindow.scale ???
                 //TODO: figure out the color scheme, would like something purple-ish in the style
                 // of caves of qud
-                c.DrawTextureRec(TilesetManager.tileset, tile.sourceRect, pos, tile.backgroundColor);
+                rl.drawTextureRec(TilesetManager.tileset, tile.sourceRect, pos, tile.backgroundColor);
             }
         }
     }

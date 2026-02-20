@@ -56,15 +56,18 @@ pub var selectedAction: ?UiManager.ActionType = null;
 
 pub var showMenu: UiManager.MenuType = .none;
 
-pub fn init(allocator: std.mem.Allocator) void {
-    const highlighted_tiles = std.ArrayList(Highlight).init(allocator);
+var allocator: std.mem.Allocator = undefined;
+
+pub fn init(alloc: std.mem.Allocator) void {
+    const highlighted_tiles = std.ArrayList(Highlight).empty;
     highlightedTiles = highlighted_tiles;
 
-    const movable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
+    const movable_tiles = std.ArrayList(Types.Vector2Int).empty;
     movableTiles = movable_tiles;
 
-    const attackable_tiles = std.ArrayList(Types.Vector2Int).init(allocator);
+    const attackable_tiles = std.ArrayList(Types.Vector2Int).empty;
     attackableTiles = attackable_tiles;
+    allocator = alloc;
 }
 
 pub fn update() void {
@@ -136,7 +139,7 @@ pub fn highlightMovement(entity: *Entity.Entity) !void {
 
 //TODO: @refactor, take the type in too
 pub fn highlightTile(pos: Types.Vector2Int) !void {
-    try highlightedTiles.append(Highlight{
+    try highlightedTiles.append(allocator, Highlight{
         .pos = pos,
         .type = .pup_deploy,
     });
@@ -159,7 +162,7 @@ pub fn highlightAttack(entity: *Entity.Entity) !void {
 
 pub fn highlightTiles(tiles: std.ArrayList(Types.Vector2Int), highType: HighlightTypeEnum) !void {
     for (tiles.items) |tile| {
-        try highlightedTiles.append(Highlight{
+        try highlightedTiles.append(allocator, Highlight{
             .pos = Types.Vector2Int.init(tile.x, tile.y),
             .type = highType,
         });

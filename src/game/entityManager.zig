@@ -15,6 +15,11 @@ const c = @cImport({
 
 var entity_allocator: std.mem.Allocator = undefined;
 
+//TODO: use segmentlist
+//TODO: use a list of free sposts in the array, dont remove directly so indexes stay the same once entity is made
+//TODO: use generation + index to the array
+//TODO: probably the best idea: use an index into the entities array + the id of the enityt as an identifier
+//TODO: REMOVE THE TWO ARRAYS, keep one
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
 pub var inactiveEntities: std.ArrayList(Entity.Entity) = undefined;
 
@@ -29,8 +34,8 @@ pub var playerID: u32 = undefined;
 
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
-    entities = std.ArrayList(Entity.Entity).init(allocator);
-    inactiveEntities = std.ArrayList(Entity.Entity).init(allocator);
+    entities = std.ArrayList(Entity.Entity).empty;
+    inactiveEntities = std.ArrayList(Entity.Entity).empty;
     positionHash = std.AutoHashMap(Types.Vector2Int, usize).init(allocator);
     idHash = std.AutoHashMap(u32, usize).init(allocator);
     idInactiveHash = std.AutoHashMap(u32, usize).init(allocator);
@@ -49,7 +54,7 @@ pub fn fillEntities() !void {
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
-    try player.data.player.puppets.append(puppet.id);
+    try player.data.player.puppets.append(entity_allocator, puppet.id);
 
     try addActiveEntity(player);
     try addInactiveEntity(puppet);
@@ -77,13 +82,13 @@ pub fn fillEntities() !void {
 }
 
 pub fn addActiveEntity(entity: Entity.Entity) !void {
-    try entities.append(entity);
+    try entities.append(entity_allocator, entity);
     try positionHash.put(entity.pos, entities.items.len - 1);
     try idHash.put(entity.id, entities.items.len - 1);
 }
 
 pub fn addInactiveEntity(entity: Entity.Entity) !void {
-    try inactiveEntities.append(entity);
+    try inactiveEntities.append(entity_allocator, entity);
     try idInactiveHash.put(entity.id, inactiveEntities.items.len - 1);
 }
 

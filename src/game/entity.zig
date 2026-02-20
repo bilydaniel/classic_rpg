@@ -13,9 +13,6 @@ const Movement = @import("movement.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("../game/turnManager.zig");
 const rl = @import("raylib");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
 
 pub const EntityType = enum {
     player, // there could be an enemy puppet master
@@ -39,7 +36,7 @@ pub const EntityData = union(EntityType) {
 // make the game without progression / balance first
 pub const Entity = struct {
     id: u32,
-    name: []const u8 = "",
+    name: [:0]const u8 = "",
     health: i32,
     mana: i32,
     tp: i32,
@@ -54,10 +51,10 @@ pub const Entity = struct {
     movedDistance: u32 = 0,
     attackDistance: u32,
     textureID: ?i32,
-    sourceRect: ?c.Rectangle,
-    color: c.Color,
-    backgroundColor: c.Color,
-    tempBackground: ?c.Color,
+    sourceRect: ?rl.Rectangle,
+    color: rl.Color,
+    backgroundColor: rl.Color,
+    tempBackground: ?rl.Color,
     visible: bool,
     targetable: bool,
     turnTaken: bool,
@@ -92,8 +89,8 @@ pub const Entity = struct {
             .attackDistance = 1,
             .speed = speed,
             .path = null,
-            .color = c.WHITE,
-            .backgroundColor = c.BLACK,
+            .color = rl.Color.white,
+            .backgroundColor = rl.Color.black,
             .tempBackground = null,
             .visible = true,
             .targetable = true, //TODO: add to the needed places
@@ -113,19 +110,19 @@ pub const Entity = struct {
                 Pathfinder.drawPath(path);
             }
             if (this.goal) |goal| {
-                c.DrawRectangleLines(goal.x * Config.tile_width, goal.y * Config.tile_height, Config.tile_width, Config.tile_height, c.YELLOW);
+                rl.drawRectangleLines(goal.x * Config.tile_width, goal.y * Config.tile_height, Config.tile_width, Config.tile_height, rl.Color.yellow);
             }
 
             if (this.sourceRect) |source_rect| {
                 const x: f32 = @floatFromInt(this.pos.x * Config.tile_width);
                 const y: f32 = @floatFromInt(this.pos.y * Config.tile_height);
-                const pos = c.Vector2{ .x = x, .y = y };
+                const pos = rl.Vector2{ .x = x, .y = y };
 
-                var color = c.WHITE;
+                var color = rl.Color.white;
                 if (this.data == .enemy) {
-                    color = c.RED;
+                    color = rl.Color.red;
                 }
-                c.DrawTextureRec(TilesetManager.tileset, source_rect, pos, color);
+                rl.drawTextureRec(TilesetManager.tileset, source_rect, pos, color);
             }
         }
     }

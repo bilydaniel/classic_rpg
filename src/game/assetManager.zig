@@ -1,14 +1,12 @@
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 const std = @import("std");
 
-pub var tileset: c.Texture2D = undefined;
-pub var urizenTileset: c.Texture2D = undefined;
+pub var tileset: rl.Texture2D = undefined;
+pub var urizenTileset: rl.Texture2D = undefined;
 
-pub fn init() void {
-    urizenTileset = c.LoadTexture("assets/urizen_tileset.png");
-    tileset = c.LoadTexture("assets/tileset.png");
+pub fn init() !void {
+    urizenTileset = try rl.loadTexture("assets/urizen_tileset.png");
+    tileset = try rl.loadTexture("assets/tileset.png");
     tileset = urizenTileset;
 }
 

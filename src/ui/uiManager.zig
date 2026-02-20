@@ -8,9 +8,7 @@ const InputManager = @import("../game/inputManager.zig");
 const EntityManager = @import("../game/entityManager.zig");
 const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 //TODO: how do I do some special shapes / effects for design?
 // maybe attach them to an element or have them separate?
@@ -29,7 +27,7 @@ var nextElementID: i32 = 0;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
-    elements = std.ArrayList(Element).init(allocator);
+    elements = std.ArrayList(Element).empty;
     menus = std.AutoHashMap(MenuType, i32).init(allocator);
 
     try makeUIElements();
@@ -120,21 +118,21 @@ pub fn draw() !void {
 
 pub fn makeUIElements() !void {
     const playerPlatePos = RelativePos.init(.top_left, 10, 30);
-    const playerPlateSize = c.Vector2{ .x = 200, .y = 150 };
+    const playerPlateSize = rl.Vector2{ .x = 200, .y = 150 };
     _ = try makeCharacterPlate(playerPlatePos, playerPlateSize);
 
     const deployMenuPos = RelativePos.init(.bottom_center, 0, 0);
-    const deployMenuSize = c.Vector2{ .x = 200, .y = 150 };
+    const deployMenuSize = rl.Vector2{ .x = 200, .y = 150 };
     const deployMenuID = try makeChoiceMenu(deployMenuPos, deployMenuSize, "Pick a Puppet:", MenuType.puppet_select, updatePuppetMenu);
     hideElementGroup(deployMenuID);
 
     const actionMenuPos = RelativePos.init(.bottom_center, 0, 0);
-    const actionMenuSize = c.Vector2{ .x = 200, .y = 150 };
+    const actionMenuSize = rl.Vector2{ .x = 200, .y = 150 };
     const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
     hideElementGroup(actionMenuID);
 
     const turnNumberPos = RelativePos.init(.top_right, 0, 0);
-    const turnNumberSize = c.Vector2{ .x = 100, .y = 100 };
+    const turnNumberSize = rl.Vector2{ .x = 100, .y = 100 };
 
     const turnElementID = try makeText(turnNumberPos, turnNumberSize, "Turn:");
     const turnElement = getElementByID(turnElementID);
@@ -143,7 +141,7 @@ pub fn makeUIElements() !void {
     }
 
     const currentTurnPos = RelativePos.init(.top_right, 0, 100);
-    const currentTurnSize = c.Vector2{ .x = 100, .y = 100 };
+    const currentTurnSize = rl.Vector2{ .x = 100, .y = 100 };
 
     const currentTurnID = try makeText(currentTurnPos, currentTurnSize, "");
     const currentTurnElement = getElementByID(currentTurnID);
@@ -152,7 +150,7 @@ pub fn makeUIElements() !void {
     }
 
     const combatIndicatorPos = RelativePos.init(.top_right, 0, 150);
-    const combatIndicatorSize = c.Vector2{ .x = 100, .y = 100 };
+    const combatIndicatorSize = rl.Vector2{ .x = 100, .y = 100 };
 
     const combatIndicatorID = try makeText(combatIndicatorPos, combatIndicatorSize, "");
     const combatIndicatorElement = getElementByID(combatIndicatorID);
@@ -246,12 +244,12 @@ pub const AnchorEnum = enum {
 
 pub const RelativePos = struct {
     anchor: AnchorEnum,
-    pos: c.Vector2,
+    pos: rl.Vector2,
 
     pub fn init(anchor: AnchorEnum, x: f32, y: f32) RelativePos {
         return RelativePos{
             .anchor = anchor,
-            .pos = c.Vector2{
+            .pos = rl.Vector2{
                 .x = x,
                 .y = y,
             },
@@ -259,11 +257,11 @@ pub const RelativePos = struct {
     }
 };
 
-fn getScaledSize(size: c.Vector2) c.Vector2 {
+fn getScaledSize(size: rl.Vector2) rl.Vector2 {
     return Utils.vector2Scale(size, Window.scale);
 }
 
-fn relativeToScreenPos(rPos: RelativePos, size: c.Vector2) c.Vector2 {
+fn relativeToScreenPos(rPos: RelativePos, size: rl.Vector2) rl.Vector2 {
     const anchorPosition = getAnchorPosition(rPos.anchor);
     const position = Utils.vector2Scale(rPos.pos, Window.scale);
     var result = Utils.vector2Add(anchorPosition, position);
@@ -292,17 +290,17 @@ fn relativeToScreenPos(rPos: RelativePos, size: c.Vector2) c.Vector2 {
     return result;
 }
 
-fn getAnchorPosition(anchor: AnchorEnum) c.Vector2 {
+fn getAnchorPosition(anchor: AnchorEnum) rl.Vector2 {
     return switch (anchor) {
-        .top_left => c.Vector2{ .x = 0, .y = 0 },
-        .top_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = 0 },
-        .top_right => c.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = 0 },
-        .center_left => c.Vector2{ .x = 0, .y = Window.scaledHeightHalf },
-        .center => c.Vector2{ .x = Window.scaledWidthHalf, .y = Window.scaledHeightHalf },
-        .center_right => c.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = Window.scaledHeightHalf },
-        .bottom_left => c.Vector2{ .x = 0, .y = @floatFromInt(Window.scaledHeight) },
-        .bottom_center => c.Vector2{ .x = Window.scaledWidthHalf, .y = @floatFromInt(Window.scaledHeight) },
-        .bottom_right => c.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = @floatFromInt(Window.scaledHeight) },
+        .top_left => rl.Vector2{ .x = 0, .y = 0 },
+        .top_center => rl.Vector2{ .x = Window.scaledWidthHalf, .y = 0 },
+        .top_right => rl.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = 0 },
+        .center_left => rl.Vector2{ .x = 0, .y = Window.scaledHeightHalf },
+        .center => rl.Vector2{ .x = Window.scaledWidthHalf, .y = Window.scaledHeightHalf },
+        .center_right => rl.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = Window.scaledHeightHalf },
+        .bottom_left => rl.Vector2{ .x = 0, .y = @floatFromInt(Window.scaledHeight) },
+        .bottom_center => rl.Vector2{ .x = Window.scaledWidthHalf, .y = @floatFromInt(Window.scaledHeight) },
+        .bottom_right => rl.Vector2{ .x = @floatFromInt(Window.scaledWidth), .y = @floatFromInt(Window.scaledHeight) },
     };
 }
 
@@ -310,12 +308,12 @@ pub const Element = struct {
     id: i32,
     visible: bool,
     relPos: RelativePos,
-    size: c.Vector2,
+    size: rl.Vector2,
     data: ElementData,
     updateFn: ?Updatefunction = null,
     groupID: i32 = undefined,
 
-    pub fn init(resPos: RelativePos, size: c.Vector2, data: ElementData) Element {
+    pub fn init(resPos: RelativePos, size: rl.Vector2, data: ElementData) Element {
         const element = Element{
             .id = nextElementID,
             .visible = true,
@@ -329,7 +327,7 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn initBar(resPos: RelativePos, size: c.Vector2, data: ElementData) !*Element {
+    pub fn initBar(resPos: RelativePos, size: rl.Vector2, data: ElementData) !*Element {
         const element = Element{
             .visible = true,
             .relPos = resPos,
@@ -340,25 +338,25 @@ pub const Element = struct {
         return element;
     }
 
-    pub fn initBackground(resPos: RelativePos, size: c.Vector2, color: c.Color) Element {
+    pub fn initBackground(resPos: RelativePos, size: rl.Vector2, color: rl.Color) Element {
         var element = Element.init(resPos, size, undefined);
         element.data = ElementData{ .background = ElementBackgroundData{ .color = color } };
         return element;
     }
 
-    pub fn initText(resPos: RelativePos, size: c.Vector2, text: []const u8) Element {
+    pub fn initText(resPos: RelativePos, size: rl.Vector2, text: []const u8) Element {
         var element = Element.init(resPos, size, undefined);
-        element.data = ElementData{ .text = ElementTextData.init(text, c.WHITE) };
+        element.data = ElementData{ .text = ElementTextData.init(text, rl.Color.white) };
         return element;
     }
 
-    pub fn initMenu(resPos: RelativePos, size: c.Vector2, updateFunction: Updatefunction) Element {
+    pub fn initMenu(resPos: RelativePos, size: rl.Vector2, updateFunction: Updatefunction) Element {
         var element = Element.init(resPos, size, undefined);
 
         element.updateFn = updateFunction;
 
         element.data = ElementData{ .menu = ElementMenuData{
-            .menuItems = std.ArrayList(ElementMenuItem).init(allocator),
+            .menuItems = std.ArrayList(ElementMenuItem).empty,
             .index = 0,
             .type = .puppet_select,
         } };
@@ -382,7 +380,7 @@ pub const Element = struct {
                 const size = getScaledSize(this.size);
                 const position = relativeToScreenPos(this.relPos, size);
 
-                c.DrawRectangle(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(size.x), @intFromFloat(size.y), c.ORANGE);
+                rl.drawRectangle(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(size.x), @intFromFloat(size.y), rl.Color.orange);
             },
             .menu => {
                 //TODO: @finish
@@ -398,8 +396,8 @@ pub const Element = struct {
                         text_color = this.data.menu.pickedTextColor;
                     }
 
-                    c.DrawText(
-                        item.text.ptr,
+                    rl.drawText(
+                        item.text,
                         @intFromFloat(x),
                         @intFromFloat(y),
                         this.data.menu.fontSize,
@@ -415,7 +413,7 @@ pub const Element = struct {
                 const position = relativeToScreenPos(this.relPos, size);
                 const fontSize = @as(c_int, @intFromFloat(@as(f32, @floatFromInt(this.data.text.fontSize)) * Window.scale));
 
-                c.DrawText(
+                rl.drawText(
                     &this.data.text.text,
                     @intFromFloat(position.x),
                     @intFromFloat(position.y),
@@ -439,8 +437,8 @@ pub const ElementMenuData = struct {
     index: u32,
     type: MenuType,
     fontSize: i32 = 20,
-    textColor: c.Color = c.YELLOW,
-    pickedTextColor: c.Color = c.RED,
+    textColor: rl.Color = rl.Color.yellow,
+    pickedTextColor: rl.Color = rl.Color.red,
 };
 
 //TODO: no idea if I should do it this way, maybe just use the commandType???
@@ -454,13 +452,13 @@ pub const MenuType = enum {
 };
 
 pub const ElementMenuItem = struct {
-    text: []const u8,
+    text: [:0]const u8,
     fontSize: i32 = 10,
-    textColor: c.Color = c.BLACK,
+    textColor: rl.Color = rl.Color.black,
     enabled: bool = true,
     data: MenuItemData,
 
-    pub fn initPupItem(text: []const u8, puppet_id: u32) ElementMenuItem {
+    pub fn initPupItem(text: [:0]const u8, puppet_id: u32) ElementMenuItem {
         const elementData = MenuItemData{ .puppet_id = puppet_id };
         return ElementMenuItem{
             .text = text,
@@ -468,7 +466,7 @@ pub const ElementMenuItem = struct {
         };
     }
 
-    pub fn initActionItem(text: []const u8, action: ActionType) ElementMenuItem {
+    pub fn initActionItem(text: [:0]const u8, action: ActionType) ElementMenuItem {
         const elementData = MenuItemData{ .action = action };
         return ElementMenuItem{
             .text = text,
@@ -483,22 +481,22 @@ pub const MenuItemData = union(enum) {
 };
 
 pub const ElementBackgroundData = struct {
-    color: c.Color,
+    color: rl.Color,
 };
 
 pub const ElementBarData = struct {
     min: i32,
     max: i32,
     current: i32,
-    //TODO: make a function for copying data from ctx  to bar, I guess make a function separate for each "version" of the bar, => hp, mp, tp, etc.
+    //TODO: make a function for copying data from ctx  to bar, I guess make a function separate for each "version" of the bar, => hp, mp, tp, etrl.
 };
 
 pub const ElementTextData = struct {
     text: [64:0]u8 = undefined,
-    textColor: c.Color,
+    textColor: rl.Color,
     fontSize: i32,
 
-    pub fn init(text: []const u8, textColor: c.Color) ElementTextData {
+    pub fn init(text: []const u8, textColor: rl.Color) ElementTextData {
         var textBuffer: [64:0]u8 = undefined;
         @memcpy(textBuffer[0..text.len], text);
         textBuffer[text.len] = 0;
@@ -593,28 +591,28 @@ pub fn getCombatToggle() bool {
     return combat;
 }
 
-pub fn makeCharacterPlate(relPos: RelativePos, size: c.Vector2) !i32 {
+pub fn makeCharacterPlate(relPos: RelativePos, size: rl.Vector2) !i32 {
     var relativePosition = relPos;
     const background = Element.initBackground(
         relativePosition,
         size,
-        c.BEIGE,
+        rl.Color.beige,
     );
 
     relativePosition.pos.x += 3;
     relativePosition.pos.y += 5;
     const text = Element.initText(relativePosition, size, "Player");
 
-    try elements.append(background);
-    try elements.append(text);
+    try elements.append(allocator, background);
+    try elements.append(allocator, text);
     elementGroupID += 1;
     return background.groupID;
 }
 
-pub fn makeChoiceMenu(relPos: RelativePos, size: c.Vector2, title: []const u8, menuType: MenuType, updateFunction: Updatefunction) !i32 {
+pub fn makeChoiceMenu(relPos: RelativePos, size: rl.Vector2, title: []const u8, menuType: MenuType, updateFunction: Updatefunction) !i32 {
     var relativePosition = relPos;
 
-    const background = Element.initBackground(relativePosition, size, c.BLUE);
+    const background = Element.initBackground(relativePosition, size, rl.Color.blue);
 
     relativePosition.pos.x += 3;
     relativePosition.pos.y += 5;
@@ -627,18 +625,18 @@ pub fn makeChoiceMenu(relPos: RelativePos, size: c.Vector2, title: []const u8, m
     const menu = Element.initMenu(relativePosition, size, updateFunction);
     try menus.put(menuType, menu.id);
 
-    try elements.append(background);
-    try elements.append(titleElement);
-    try elements.append(menu);
+    try elements.append(allocator, background);
+    try elements.append(allocator, titleElement);
+    try elements.append(allocator, menu);
     elementGroupID += 1;
     return background.groupID;
 }
 
-pub fn makeText(relPos: RelativePos, size: c.Vector2, text: []const u8) !i32 {
+pub fn makeText(relPos: RelativePos, size: rl.Vector2, text: []const u8) !i32 {
     //TODO: maybe add some backgrround?
     const relativePosition = relPos;
     const textElement = Element.initText(relativePosition, size, text);
-    try elements.append(textElement);
+    try elements.append(allocator, textElement);
     elementGroupID += 1;
     return textElement.id;
 }
@@ -653,7 +651,7 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
         const puppet = EntityManager.getInactiveEntityID(pupID);
         if (puppet) |pup| {
             const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-            try this.data.menu.menuItems.append(item);
+            try this.data.menu.menuItems.append(allocator, item);
         }
     }
 }
@@ -665,12 +663,12 @@ pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
     if (Gamestate.selectedEntity) |selected_entity| {
         if (!selected_entity.hasMoved) {
             const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
-            try this.data.menu.menuItems.append(itemMove);
+            try this.data.menu.menuItems.append(allocator, itemMove);
         }
 
         if (!selected_entity.hasAttacked) {
             const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
-            try this.data.menu.menuItems.append(itemAttack);
+            try this.data.menu.menuItems.append(allocator, itemAttack);
         }
     }
 }

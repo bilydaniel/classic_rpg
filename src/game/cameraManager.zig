@@ -3,20 +3,18 @@ const Entity = @import("entity.zig");
 const Config = @import("../common/config.zig");
 const Window = @import("window.zig");
 const EntityManager = @import("entityManager.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
-pub var camera: *c.Camera2D = undefined;
+pub var camera: *rl.Camera2D = undefined;
 pub var manual: bool = undefined;
 pub var speed: f32 = undefined;
 pub var targetEntity: ?u32 = undefined;
 
 pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
-    camera = try allocator.create(c.Camera2D);
+    camera = try allocator.create(rl.Camera2D);
     camera.* = .{
-        .offset = c.Vector2{ .x = 0, .y = 0 },
-        .target = c.Vector2{ .x = 0, .y = 0 },
+        .offset = rl.Vector2{ .x = 0, .y = 0 },
+        .target = rl.Vector2{ .x = 0, .y = 0 },
         .rotation = 0.0,
         .zoom = Config.camera_zoom,
     };
@@ -26,29 +24,29 @@ pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
 }
 
 pub fn update(delta: f32) void {
-    if (c.IsKeyPressed(c.KEY_END)) {
+    if (rl.isKeyPressed(rl.KeyboardKey.end)) {
         manual = !manual;
     }
     if (manual) {
-        if (c.IsKeyDown(c.KEY_W)) {
+        if (rl.isKeyDown(rl.KeyboardKey.w)) {
             camera.target.y -= speed * delta;
         }
-        if (c.IsKeyDown(c.KEY_S)) {
+        if (rl.isKeyDown(rl.KeyboardKey.s)) {
             camera.target.y += speed * delta;
         }
-        if (c.IsKeyDown(c.KEY_A)) {
+        if (rl.isKeyDown(rl.KeyboardKey.a)) {
             camera.target.x -= speed * delta;
         }
-        if (c.IsKeyDown(c.KEY_D)) {
+        if (rl.isKeyDown(rl.KeyboardKey.d)) {
             camera.target.x += speed * delta;
         }
     }
-    if (c.IsKeyPressed(c.KEY_DELETE)) {
+    if (rl.isKeyPressed(rl.KeyboardKey.delete)) {
         if (camera.zoom < Config.camera_zoom_max) {
             camera.zoom += Config.camera_zoom_step;
         }
     }
-    if (c.IsKeyPressed(c.KEY_INSERT)) {
+    if (rl.isKeyPressed(rl.KeyboardKey.insert)) {
         if (camera.zoom > Config.camera_zoom_min) {
             camera.zoom -= Config.camera_zoom_step;
         }
