@@ -390,10 +390,12 @@ pub const Element = struct {
 
                 var x = position.x;
                 var y = position.y;
-                for (this.data.menu.menuItems.items, 0..) |item, i| {
+                for (this.data.menu.menuItems.items, 0..) |*item, i| {
                     var text_color = this.data.menu.textColor;
                     if (this.data.menu.index == i) {
                         text_color = this.data.menu.pickedTextColor;
+                        //std.mem.copyForwards(const u8, item.text[2..], item.text);
+                        //TODO: @continue @finish add some arrows to the item being picked
                     }
 
                     rl.drawText(
