@@ -36,15 +36,15 @@ pub const Path = struct {
     nodes: std.ArrayList(Types.Vector2Int),
     currIndex: usize,
 
-    pub fn init(alloc: std.mem.Allocator) Path {
+    pub fn init() Path {
         return Path{
-            .nodes = std.ArrayList(Types.Vector2Int).init(alloc),
+            .nodes = .empty,
             .currIndex = 0,
         };
     }
 
     pub fn deinit(this: *Path) void {
-        this.nodes.deinit();
+        this.nodes.deinit(allocator);
     }
 };
 
@@ -57,19 +57,19 @@ pub fn init(alloc: std.mem.Allocator) !void {
 pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid, entities: *const Types.PositionHash) !?Path {
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
-    var open_list = std.ArrayList(Node).init(allocator);
-    defer open_list.deinit();
+    var open_list: std.ArrayList(Node) = .empty;
+    defer open_list.deinit(allocator);
 
-    var closed_list = std.ArrayList(Node).init(allocator);
-    defer closed_list.deinit();
+    var closed_list: std.ArrayList(Node) = .empty;
+    defer closed_list.deinit(allocator);
 
-    try open_list.append(Node.init(start, null, 0, heuristic(start, end)));
+    try open_list.append(allocator, Node.init(start, null, 0, heuristic(start, end)));
 
     while (open_list.items.len > 0) {
         const current_index = lowestF(open_list);
         const current_open_node = open_list.swapRemove(current_index);
 
-        try closed_list.append(current_open_node);
+        try closed_list.append(allocator, current_open_node);
         var current_node = closed_list.getLast();
         const current_node_index = closed_list.items.len - 1;
 
@@ -99,7 +99,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid
                     open_list.items[found_node.index].parent = current_node_index;
                 }
             } else {
-                try open_list.append(Node.init(neigh, current_node_index, new_g, heuristic(neigh, end)));
+                try open_list.append(allocator, Node.init(neigh, current_node_index, new_g, heuristic(neigh, end)));
             }
         }
     }
@@ -108,13 +108,13 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid
 }
 
 pub fn reconstructPath(closed_list: std.ArrayList(Node), node: *Node) !Path {
-    var path = Path.init(allocator);
-    var temp_path = Path.init(allocator);
-    defer temp_path.nodes.deinit();
+    var path = Path.init();
+    var temp_path = Path.init();
+    defer temp_path.nodes.deinit(allocator);
 
     var current: ?*Node = node;
     while (current) |current_node| {
-        try temp_path.nodes.append(current_node.pos);
+        try temp_path.nodes.append(allocator, current_node.pos);
         const parentIndex = current_node.parent;
 
         if (parentIndex) |parent_index| {
@@ -127,7 +127,7 @@ pub fn reconstructPath(closed_list: std.ArrayList(Node), node: *Node) !Path {
     var i = temp_path.nodes.items.len;
     while (i > 0) {
         i -= 1;
-        try path.nodes.append(temp_path.nodes.items[i]);
+        try path.nodes.append(allocator, temp_path.nodes.items[i]);
     }
     return path;
 }

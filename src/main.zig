@@ -2,17 +2,15 @@ const std = @import("std");
 const Game = @import("game/game.zig");
 const Config = @import("common/config.zig");
 const Window = @import("game/window.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 pub fn main() !void {
-    c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE);
+    rl.setConfigFlags(.{ .window_resizable = true });
     //c.SetConfigFlags(c.FLAG_FULLSCREEN_MODE);
     //c.ToggleFullscreen();
 
-    c.InitWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
-    defer c.CloseWindow();
+    rl.initWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
+    defer rl.closeWindow();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -24,7 +22,7 @@ pub fn main() !void {
     const game = try Game.Game.init(allocator);
 
     const running = true;
-    while (!c.WindowShouldClose() and running) {
+    while (!rl.WindowShouldClose() and running) {
         try game.update();
         try game.draw();
     }

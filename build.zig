@@ -9,31 +9,41 @@ pub fn build(b: *std.Build) void {
     const build_editor = b.option(bool, "editor", "Build editor") orelse false;
     const build_example = b.option(bool, "example", "Build example") orelse false;
 
-    const actual_optimize =
-        if (fast_debug) .ReleaseFast else optimize;
+    const actual_optimize = if (fast_debug) .ReleaseFast else optimize;
+
+    // ----- Raylib Dependency -----
+    // This looks for "raylib" in your build.zig.zon
+    const raylib_dep = b.dependency("raylib_zig", .{
+        .target = target,
+        .optimize = actual_optimize,
+    });
+    const raylib_artifact = raylib_dep.artifact("raylib");
 
     // =========================
     // Game executable
     // =========================
     const game = b.addExecutable(.{
         .name = "classic_rpg",
-        .root_source_file = .{ .cwd_relative = "src/main.zig" },
-        .target = target,
-        .optimize = actual_optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = actual_optimize,
+        }),
     });
 
+    // Link the fetched Raylib instead of system library
+    game.linkLibrary(raylib_artifact);
     game.linkLibC();
-    game.linkSystemLibrary("raylib");
+    game.root_module.addImport("raylib", raylib_dep.module("raylib"));
 
     // Faster iteration settings
     if (fast_debug) {
-        game.root_module.strip = true; // no debug symbols
+        game.root_module.strip = true;
         game.root_module.omit_frame_pointer = true;
-        game.root_module.sanitize_c = false;
+        game.root_module.sanitize_c = .off; // Enum fix
         game.root_module.sanitize_thread = false;
     }
 
-    // Only install for non-fast builds
     if (!fast_debug) {
         b.installArtifact(game);
     }
@@ -47,13 +57,16 @@ pub fn build(b: *std.Build) void {
     if (build_editor) {
         const editor = b.addExecutable(.{
             .name = "editor",
-            .root_source_file = .{ .cwd_relative = "src/editor.zig" },
-            .target = target,
-            .optimize = actual_optimize,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/editor.zig"),
+                .target = target,
+                .optimize = actual_optimize,
+            }),
         });
 
+        editor.linkLibrary(raylib_artifact);
         editor.linkLibC();
-        editor.linkSystemLibrary("raylib");
+        editor.root_module.addImport("raylib", raylib_dep.module("raylib"));
 
         if (!fast_debug) {
             b.installArtifact(editor);
@@ -69,13 +82,15 @@ pub fn build(b: *std.Build) void {
     if (build_example) {
         const example = b.addExecutable(.{
             .name = "example",
-            .root_source_file = .{ .cwd_relative = "examples/slashing_animation.zig" },
-            .target = target,
-            .optimize = actual_optimize,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("examples/slashing_animation.zig"),
+                .target = target,
+                .optimize = actual_optimize,
+            }),
         });
 
+        example.linkLibrary(raylib_artifact);
         example.linkLibC();
-        example.linkSystemLibrary("raylib");
 
         if (!fast_debug) {
             b.installArtifact(example);
@@ -86,22 +101,26 @@ pub fn build(b: *std.Build) void {
     }
 
     // =========================
-    // Full debug build (slow but debuggable)
+    // Full debug build
     // =========================
     const game_debug = b.addExecutable(.{
         .name = "classic_rpg_debug",
-        .root_source_file = .{ .cwd_relative = "src/main.zig" },
-        .target = target,
-        .optimize = .Debug,
-        .single_threaded = true,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = .Debug,
+            .single_threaded = true,
+        }),
     });
 
     game_debug.root_module.omit_frame_pointer = false;
     game_debug.root_module.strip = false;
     game_debug.root_module.red_zone = false;
 
+    // Use the dependency for debug build too
+    game_debug.linkLibrary(raylib_artifact);
     game_debug.linkLibC();
-    game_debug.linkSystemLibrary("raylib");
+    game_debug.root_module.addImport("raylib", raylib_dep.module("raylib"));
 
     b.installArtifact(game_debug);
 

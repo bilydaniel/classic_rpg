@@ -12,6 +12,7 @@ const AssetManager = @import("assetManager.zig");
 const Movement = @import("movement.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("../game/turnManager.zig");
+const rl = @import("raylib");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -343,14 +344,16 @@ pub const PlayerData = struct {
 
     inCombatWith: std.ArrayList(u32),
     puppets: std.ArrayList(u32), //TODO: you can actually loose a puppet
+    allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
-        const inCombatWith = std.ArrayList(u32).init(allocator);
-        const puppets = std.ArrayList(u32).init(allocator);
+        const inCombatWith: std.ArrayList(u32) = .empty;
+        const puppets: std.ArrayList(u32) = .empty;
 
         return PlayerData{
             .inCombatWith = inCombatWith,
             .puppets = puppets,
+            .allocator = allocator,
         };
     }
 
