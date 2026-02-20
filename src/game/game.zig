@@ -61,7 +61,8 @@ pub const Game = struct {
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
 
-        try UiManager.update(this);
+        //try UiManager.update(this);
+        try UiManager.updateAndDraw(this);
         //try EntityManager.update(this);
         try PlayerController.update(this);
         try TurnManager.update(this);
@@ -85,7 +86,7 @@ pub const Game = struct {
         try Gamestate.draw();
 
         c.EndMode2D();
-        try UiManager.draw();
+        //try UiManager.draw();
 
         c.EndDrawing();
     }

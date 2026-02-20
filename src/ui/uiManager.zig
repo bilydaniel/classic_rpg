@@ -16,23 +16,81 @@ const c = @cImport({
 // maybe attach them to an element or have them separate?
 //
 // TODO: switch to immeadeate mode ui watch caseys video
-pub const Updatefunction = *const fn (*Element, *Game.Game) anyerror!void;
 
-pub var uiCommand: UiCommand = undefined;
-
+//
+//IMMEDEATE
+//
+//TODO: have a look at how this is supposed to work
 var allocator: std.mem.Allocator = undefined;
+var activeElement: ?i32 = undefined;
+pub var uiCommand: UiCommand = undefined;
+var nextElementID: i32 = 0; // i think iam going to need this
+
+//
+//RETAINED
+//
+pub const Updatefunction = *const fn (*Element, *Game.Game) anyerror!void;
 var elements: std.ArrayList(Element) = undefined;
 var menus: std.AutoHashMap(MenuType, i32) = undefined; //element id
 var activeMenu: ?i32 = null;
 var elementGroupID: i32 = 0;
-var nextElementID: i32 = 0;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
     elements = std.ArrayList(Element).init(allocator);
     menus = std.AutoHashMap(MenuType, i32).init(allocator);
 
-    try makeUIElements();
+    //try makeUIElements();
+}
+
+pub fn updateAndDraw(game: *Game.Game) !void {
+    uiCommand = UiCommand{};
+
+    //TODO: @continue @finish
+    for (elements.items) |*element| {
+        try element.update(game);
+    }
+
+    //confirm
+    var confirm = InputManager.takeConfirmInput();
+
+    //cancel
+    const cancel = InputManager.takeCancelInput();
+
+    //move
+    const move = InputManager.takePositionInput();
+
+    //menu select
+    if (move) |_move| {
+        updateActiveMenu(_move);
+    }
+
+    var menuSelect: ?MenuItemData = null;
+    if (confirm) {
+        menuSelect = getSelectedItem();
+        if (menuSelect != null) {
+            confirm = false;
+        }
+    }
+
+    //quick select
+    const quickSelect = InputManager.takeQuickSelectInput();
+
+    //combat toggle
+    const combatToggle = InputManager.takeCombatToggle();
+
+    const skip = InputManager.takeSkipInput();
+
+    const uicommand = UiCommand{
+        .confirm = confirm,
+        .cancel = cancel,
+        .move = move,
+        .menuSelect = menuSelect,
+        .quickSelect = quickSelect,
+        .combatToggle = combatToggle,
+        .skip = skip,
+    };
+    uiCommand = uicommand;
 }
 
 pub fn update(game: *Game.Game) !void {
