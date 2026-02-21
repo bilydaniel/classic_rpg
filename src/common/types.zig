@@ -7,7 +7,7 @@ const c = @cImport({
 });
 
 pub const Grid = []Level.Tile;
-pub const PositionHash = std.AutoHashMap(Vector2Int, usize);
+pub const PositionHash = std.AutoHashMap(Location, usize);
 pub const IdHash = std.AutoHashMap(u32, usize);
 
 const ErrorSet = error{

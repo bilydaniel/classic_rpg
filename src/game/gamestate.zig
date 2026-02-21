@@ -38,7 +38,7 @@ pub var cursor: ?Types.Vector2Int = null;
 pub var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
 pub var deployHighlighted: bool = false;
 
-pub var selectedEntity: ?*Entity.Entity = null; //TODO: maybe switch to id?
+pub var selectedEntity: ?u32 = null;
 pub var selectedEntityMode: EntityModeEnum = .none;
 pub var selectedEntityHighlight: ?Highlight = null;
 

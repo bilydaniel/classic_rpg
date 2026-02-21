@@ -69,6 +69,9 @@ pub const Game = struct {
         Gamestate.update();
 
         ShaderManager.update(delta);
+
+        EntityManager.despawn();
+        EntityManager.spawn();
     }
 
     pub fn draw(this: *Game) !void {

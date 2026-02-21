@@ -15,27 +15,35 @@ const c = @cImport({
 
 var entity_allocator: std.mem.Allocator = undefined;
 
-//TODO: use segmentlist
-//TODO: use a list of free sposts in the array, dont remove directly so indexes stay the same once entity is made
-//TODO: use generation + index to the array
-//TODO: probably the best idea: use an index into the entities array + the id of the enityt as an identifier
-//TODO: REMOVE THE TWO ARRAYS, keep one
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
 
-pub var positionHash: std.AutoHashMap(Types.Vector2Int, usize) = undefined;
-pub var idHash: std.AutoHashMap(u32, usize) = undefined;
+pub var positionHash: Types.PositionHash = undefined;
+pub var idHash: Types.IdHash = undefined;
 
 pub var playerID: u32 = undefined;
 
-//TODO: add a hash map position => index into entities, gonna have to keep the indexes correct when removing from entities
-//
+pub var spawnQueue: std.ArrayList(Entity.Entity) = undefined;
+pub var despawnQueue: std.ArrayList(u32) = undefined;
 
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
+
     entities = std.ArrayList(Entity.Entity).empty;
-    positionHash = std.AutoHashMap(Types.Vector2Int, usize).init(allocator);
-    idHash = std.AutoHashMap(u32, usize).init(allocator);
+
+    positionHash = Types.PositionHash.init(allocator);
+    idHash = Types.IdHash.init(allocator);
+
+    spawnQueue = std.ArrayList(Entity.Entity).empty;
+    despawnQueue = std.ArrayList(u32).empty;
+    //TODO: uncomment, testing for now if dangling pointers happen
+    //entities.ensureTotalCapacity(allocator, 256);
 }
+
+//TODO:finish
+// pub fn spawn() !void {}
+// pub fn despawn() !void {
+//     for (despawnQueue.items) |id| {}
+// }
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
@@ -82,7 +90,9 @@ pub fn addActiveEntity(entity: Entity.Entity) !void {
     e.active = true;
     try entities.append(entity_allocator, e);
     try idHash.put(entity.id, entities.items.len - 1);
-    try positionHash.put(e.pos, entities.items.len - 1);
+
+    const location = Types.Location.init(e.worldPos, e.pos);
+    try positionHash.put(location, entities.items.len - 1);
 }
 
 pub fn addInactiveEntity(entity: Entity.Entity) !void {
@@ -96,7 +106,9 @@ pub fn activateEntity(id: u32) !void {
     const index = idHash.get(id) orelse return;
     const entity = getEntityIndex(index) orelse return;
     entity.active = true;
-    try positionHash.put(entity.pos, index);
+
+    const location = Types.Location.init(entity.worldPos, entity.pos);
+    try positionHash.put(location, index);
 }
 
 pub fn deactivateEntity(id: u32) !void {
@@ -104,25 +116,28 @@ pub fn deactivateEntity(id: u32) !void {
     const entity = getEntityIndex(index) orelse return;
     entity.active = false;
     //TODO: check this, not sure if correct, tired
-    _ = positionHash.remove(entity.pos);
+    const location = Types.Location.init(entity.worldPos, entity.pos);
+    _ = positionHash.remove(location);
 }
 
 pub fn removeEntityID(id: u32) !void {
     const entityIndex = idHash.get(id) orelse return;
 
     const entity = entities.swapRemove(entityIndex);
-    _ = positionHash.remove(entity.pos);
+    const location = Types.Location.init(entity.worldPos, entity.pos);
+    _ = positionHash.remove(location);
     _ = idHash.remove(entity.id);
 
     // if we swapremoved any elemnt other than the last
     if (entityIndex < entities.items.len) {
         const swappedEntity = entities.items[entityIndex];
-        try positionHash.put(swappedEntity.pos, entityIndex);
+        const swappedLocation = Types.Location.init(swappedEntity.worldPos, swappedEntity.pos);
+        try positionHash.put(swappedLocation, entityIndex);
         try idHash.put(swappedEntity.id, entityIndex);
     }
 }
 
-pub fn moveEntityHash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
+pub fn moveEntityHash(from: Types.Location, to: Types.Location) !void {
     const keyValue = positionHash.fetchRemove(from);
     if (keyValue) |kv| {
         try positionHash.put(to, kv.value);
