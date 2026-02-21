@@ -163,18 +163,34 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         return;
     }
 
-    var new_pos = Types.vector2IntAdd(game.player.pos, moveDelta.?);
-    const grid = World.getCurrentLevel().grid;
+    const currentLocation = Types.Location.init(game.player.worldPos, game.player.pos);
+    var newLocation = Types.Location.init(game.player.worldPos, game.player.pos);
+    newLocation.pos = Types.vector2IntAdd(newLocation.pos, moveDelta.?);
+
+    var grid = World.getCurrentLevel().grid;
     const entityPosHash = EntityManager.positionHash;
-    if (!Movement.canMove(new_pos, grid, &entityPosHash)) {
+
+    //TODO: @test the broundry transition and staircase
+    newLocation = Movement.boundryTransition(newLocation);
+    newLocation = Movement.staircaseTransition(newLocation, grid);
+
+    const changingLevel = !Types.vector3IntCompare(currentLocation.worldPos, newLocation.worldPos);
+    if (changingLevel) {
+        const newLevel = World.getLevelAt(newLocation.worldPos);
+        if (newLevel) |l| {
+            grid = l.grid;
+        }
+    }
+
+    if (!Movement.canMove(newLocation, grid, &entityPosHash)) {
         //TODO: print to the player he cant move
         return;
     }
 
-    //TODO: only staircase for now, add boundry transitions
-    new_pos = Movement.staircaseTransition(new_pos, grid);
-
-    try game.player.move(new_pos);
+    if (changingLevel) {
+        World.changeCurrentLevel(newLocation.worldPos);
+    }
+    try game.player.move(newLocation);
     game.player.movementCooldown = 0;
     game.player.turnTaken = true;
 }

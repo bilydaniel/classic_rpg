@@ -55,6 +55,7 @@ pub fn init(alloc: std.mem.Allocator) !void {
 }
 
 pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid, entities: *const Types.PositionHash) !?Path {
+    //TODO: @continue add locations for start and end
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
     var open_list: std.ArrayList(Node) = .empty;

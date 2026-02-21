@@ -193,14 +193,17 @@ pub const Entity = struct {
         }
     }
 
-    pub fn move(this: *Entity, pos: Types.Vector2Int) !void {
-        //TODO: add if targetable
-        if (this.data == .player or this.data == .puppet) {
-            Systems.calculateFOV(pos, 8);
-        }
+    pub fn move(this: *Entity, moveTo: Types.Location) !void {
+        const location = Types.Location.init(this.worldPos, this.pos);
+        try EntityManager.moveEntityHash(location, moveTo);
+        this.pos = moveTo.pos;
+        this.worldPos = moveTo.worldPos;
 
-        try EntityManager.moveEntityHash(this.pos, pos);
-        this.pos = pos;
+        if (this.active) {
+            if (this.data == .player or this.data == .puppet) {
+                Systems.calculateFOV(this.pos, 8);
+            }
+        }
     }
 
     pub fn wander(this: *Entity, pos: Types.Vector2Int, ctx: *Game.Context) void {
@@ -391,12 +394,14 @@ pub const PuppetData = struct {
 };
 
 //TODO: maybe put into another file?
+//TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     const grid = World.getCurrentLevel().grid;
     const entitiesPosHash = &EntityManager.positionHash;
     if (entity.goal == null or entity.stuck >= 2) {
-        const position = game.player.pos;
-        const availablePosition = Movement.getAvailableTileAround(position, grid, entitiesPosHash);
+        const player = game.player;
+        const location = Types.Location.init(player.worldPos, player.pos);
+        const availablePosition = Movement.getAvailableTileAround(location, grid, entitiesPosHash);
         entity.goal = availablePosition;
     }
 

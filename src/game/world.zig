@@ -50,6 +50,10 @@ pub fn draw() void {
 
 pub fn update() void {}
 
+pub fn changeCurrentLevel(to: Types.Vector3Int) void {
+    currentLevel = to;
+}
+
 pub fn changeCurrentLevelDelta(delta: Types.Vector3Int) void {
     //TODO: probably gonna need to be a bit more complex, loading etc.
     currentLevel = Types.vector3IntAdd(currentLevel, delta);

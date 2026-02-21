@@ -39,7 +39,7 @@ pub fn init(allocator: std.mem.Allocator) void {
     //entities.ensureTotalCapacity(allocator, 256);
 }
 
-//TODO:finish
+//TODO: @finish @continue
 // pub fn spawn() !void {}
 // pub fn despawn() !void {
 //     for (despawnQueue.items) |id| {}
@@ -191,12 +191,10 @@ pub fn getEntityID(id: u32) ?*Entity.Entity {
 }
 
 pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
-    for (entities.items) |*e| {
-        if (Types.vector2IntCompare(e.pos, pos) and Types.vector3IntCompare(e.worldPos, worldPos)) {
-            return e;
-        }
-    }
-    return null;
+    //TODO: check if correct
+    const location = Types.Location.init(worldPos, pos);
+    const index = positionHash.get(location) orelse return null;
+    return &entities.items[index];
 }
 
 pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {

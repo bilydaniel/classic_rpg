@@ -71,8 +71,8 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, grid: Types.Grid, 
     }
 }
 
-pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const std.AutoHashMap(Types.Vector2Int, usize)) bool {
-    const pos_index = Utils.posToIndex(pos);
+pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: *const Types.PositionHash) bool {
+    const pos_index = Utils.posToIndex(location.pos);
     if (pos_index) |index| {
         if (index < grid.len and grid[index].solid) {
             //TODO: probably gonna add something like walkable
@@ -80,7 +80,7 @@ pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const s
         }
     }
 
-    const entityID = entitiesHash.get(pos);
+    const entityID = entitiesHash.get(location);
     if (entityID == null) {
         return true;
     }
@@ -88,15 +88,16 @@ pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const s
     return false;
 }
 
-pub fn getAvailableTileAround(pos: Types.Vector2Int, grid: []Level.Tile, entities: *const std.AutoHashMap(Types.Vector2Int, usize)) ?Types.Vector2Int {
-    if (canMove(pos, grid, entities)) {
-        return pos;
+pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: *const Types.PositionHash) ?Types.Vector2Int {
+    if (canMove(location, grid, entities)) {
+        return location.pos;
     }
 
-    const neighbours = neighboursAll(pos);
+    const neighbours = neighboursAll(location.pos);
     for (neighbours) |neighbor| {
         const neigh = neighbor orelse continue;
-        if (canMove(neigh, grid, entities)) {
+        const loc = Types.Location.init(location.worldPos, neigh);
+        if (canMove(loc, grid, entities)) {
             return neigh;
         }
     }
@@ -125,9 +126,54 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
     return result;
 }
 
-pub fn staircaseTransition(newPos: Types.Vector2Int, grid: Types.Grid) Types.Vector2Int {
-    //TODO: add normal transitions
-    const tile = Utils.getTilePos(grid, newPos);
+pub fn boundryTransition(newLocation: Types.Location) Types.Location {
+    //TODO: no transitins during combat
+    var tmpLocation = newLocation;
+    var locationResult = newLocation;
+    const pos = newLocation.pos;
+
+    if (pos.x < 0) {
+        tmpLocation.worldPos.x -= 1;
+        const level = World.getLevelAt(tmpLocation.worldPos);
+        if (level) |_| {
+            tmpLocation.pos.x = Config.level_width - 1;
+            locationResult = tmpLocation;
+        }
+    }
+
+    if (pos.x >= Config.level_width) {
+        tmpLocation.worldPos.x += 1;
+        const level = World.getLevelAt(tmpLocation.worldPos);
+        if (level) |_| {
+            tmpLocation.pos.x = 0;
+            locationResult = tmpLocation;
+        }
+    }
+
+    if (pos.y < 0) {
+        tmpLocation.worldPos.y += 1;
+        const level = World.getLevelAt(tmpLocation.worldPos);
+        if (level) |_| {
+            tmpLocation.pos.y = Config.level_height - 1;
+            locationResult = tmpLocation;
+        }
+    }
+
+    if (pos.y >= Config.level_height) {
+        tmpLocation.worldPos.y -= 1;
+        const level = World.getLevelAt(tmpLocation.worldPos);
+        if (level) |_| {
+            tmpLocation.pos.y = 0;
+            locationResult = tmpLocation;
+        }
+    }
+
+    return locationResult;
+}
+
+pub fn staircaseTransition(newLocation: Types.Location, grid: Types.Grid) Types.Location {
+    //TODO: no transitins during combat
+    const tile = Utils.getTilePos(grid, newLocation.pos);
     var zDelta: i32 = 0;
     if (tile) |t| {
         switch (t.tileType) {
@@ -138,18 +184,26 @@ pub fn staircaseTransition(newPos: Types.Vector2Int, grid: Types.Grid) Types.Vec
                 zDelta = -1;
             },
             else => {
-                return newPos;
+                return newLocation;
             },
         }
     }
-    var worldPosDelta = Types.Vector3Int.init(0, 0, 0);
-    worldPosDelta.z = zDelta;
+    const worldPosDelta = Types.Vector3Int.init(0, 0, zDelta);
 
-    var player = EntityManager.getPlayer();
-    player.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);
-    World.changeCurrentLevelDelta(worldPosDelta);
+    var tmpLocation = newLocation;
 
-    return newPos;
+    const player = EntityManager.getPlayer();
+
+    tmpLocation.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);
+
+    const level = World.getLevelAt(tmpLocation.worldPos);
+    if (level == null) {
+        //TODO: put a log out to player that the path is blocked or something
+        std.debug.print("NO LEVEL IN THAT WAY", .{});
+        return newLocation;
+    }
+
+    return tmpLocation;
 }
 
 pub fn isTileWalkable(grid: []Level.Tile, pos: Types.Vector2Int) bool {
