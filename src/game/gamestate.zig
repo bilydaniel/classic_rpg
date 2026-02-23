@@ -38,7 +38,7 @@ pub var cursor: ?Types.Vector2Int = null;
 pub var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
 pub var deployHighlighted: bool = false;
 
-pub var selectedEntity: ?u32 = null;
+pub var selectedEntityID: ?u32 = null;
 pub var selectedEntityMode: EntityModeEnum = .none;
 pub var selectedEntityHighlight: ?Highlight = null;
 
@@ -73,8 +73,11 @@ pub fn init(alloc: std.mem.Allocator) void {
 pub fn update() void {
     //TODO: maybe update the cursor through this function????
 
-    if (selectedEntity != null and selectedEntityHighlight != null) {
-        selectedEntityHighlight.?.pos = selectedEntity.?.pos;
+    if (selectedEntityID != null and selectedEntityHighlight != null) {
+        const selectedEntity = EntityManager.getEntityID(selectedEntityID);
+        if (selectedEntity) {
+            selectedEntityHighlight.?.pos = selectedEntity.?.pos;
+        }
     }
 }
 
@@ -88,7 +91,7 @@ pub fn reset() void {
     movementHighlighted = false;
 
     highlightedEntity = null;
-    selectedEntity = null;
+    selectedEntityID = null;
     selectedEntityHighlight = null;
     selectedEntityMode = .none;
     selectedAction = null;

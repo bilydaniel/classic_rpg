@@ -54,8 +54,7 @@ pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
 }
 
-pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid, entities: *const Types.PositionHash) !?Path {
-    //TODO: @continue add locations for start and end
+pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Level, entities: *const Types.PositionHash) !?Path {
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
     var open_list: std.ArrayList(Node) = .empty;
@@ -83,7 +82,8 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid
 
         for (neighbours) |neighbour| {
             const neigh = neighbour orelse continue;
-            if (!Movement.canMove(neigh, grid, entities)) {
+            const neighLoc = Types.Location.init(level.worldPos, neigh);
+            if (!Movement.canMove(neighLoc, level.grid, entities)) {
                 continue;
             }
 

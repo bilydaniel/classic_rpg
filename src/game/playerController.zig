@@ -238,7 +238,11 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
         }
         if (UiManager.getConfirm()) {
             if (canDeploy(game.player)) {
-                try deployPuppet(selected_pup);
+                if (Gamestate.cursor) |curs| {
+                    const worldPos = World.getCurrentLevel().worldPos;
+                    const location = Types.Location.init(worldPos, curs);
+                    try deployPuppet(selected_pup, location);
+                }
             }
         }
     }
@@ -264,106 +268,111 @@ pub fn entitySelect(game: *Game.Game) void {
     //TODO: reset the active menu index
     if (entityIndex == 0) {
         //Player
-        Gamestate.selectedEntity = game.player;
+        Gamestate.selectedEntityID = game.player.id;
     } else {
         //Puppets
         if (game.player.data.player.puppets.items.len >= entityIndex) {
             const pupID = game.player.data.player.puppets.items[entityIndex - 1];
-            Gamestate.selectedEntity = EntityManager.getEntityID(pupID);
+            Gamestate.selectedEntityID = pupID;
         }
     }
 
-    if (Gamestate.selectedEntity) |selected_entity| {
-        CameraManager.targetEntity = selected_entity.id;
-        Gamestate.removeCursor();
-        Gamestate.highlightEntity(selected_entity.pos);
-        Gamestate.selectedAction = null;
+    if (Gamestate.selectedEntityID) |id| {
+        const selectedEntity = EntityManager.getEntityID(id);
+        if (selectedEntity) |se| {
+            CameraManager.targetEntity = id;
+            Gamestate.removeCursor();
+            Gamestate.highlightEntity(se.pos);
+            Gamestate.selectedAction = null;
+        }
     }
 }
 
 pub fn entityAction(game: *Game.Game) !void {
-    if (Gamestate.selectedEntity) |entity| {
-        if (Gamestate.selectedAction == null) {
-            Gamestate.showMenu = .action_select;
+    if (Gamestate.selectedEntityID) |id| {
+        const selectedEntity = EntityManager.getEntityID(id);
+        if (selectedEntity) |entity| {
+            if (Gamestate.selectedAction == null) {
+                Gamestate.showMenu = .action_select;
 
-            if (UiManager.getMenuSelect()) |menu_item| {
-                switch (menu_item) {
-                    .puppet_id => {
-                        std.debug.print("menu_item is .puppet_id instead of .action", .{});
-                    },
-                    .action => |action| {
-                        Gamestate.selectedAction = action;
-                    },
+                if (UiManager.getMenuSelect()) |menu_item| {
+                    switch (menu_item) {
+                        .puppet_id => {
+                            std.debug.print("menu_item is .puppet_id instead of .action", .{});
+                        },
+                        .action => |action| {
+                            Gamestate.selectedAction = action;
+                        },
+                    }
                 }
             }
-        }
+            const selectedAction = Gamestate.selectedAction orelse return;
 
-        const selectedAction = Gamestate.selectedAction orelse return;
+            const grid = World.getCurrentLevel().grid;
+            const entityPosHash = EntityManager.positionHash;
 
-        const grid = World.getCurrentLevel().grid;
-        const entityPosHash = EntityManager.positionHash;
+            switch (selectedAction) {
+                .move => {
+                    Gamestate.showMenu = .none;
+                    Gamestate.makeUpdateCursor(entity.pos);
+                    try Gamestate.highlightMovement(entity);
 
-        switch (selectedAction) {
-            .move => {
-                Gamestate.showMenu = .none;
-                Gamestate.makeUpdateCursor(entity.pos);
-                try Gamestate.highlightMovement(entity);
+                    if (UiManager.getConfirm()) {
+                        if (Gamestate.cursor) |cur| {
+                            if (Gamestate.isinMovable(cur, grid, &entityPosHash)) {
+                                //TODO: @fix
+                                entity.path = try Pathfinder.findPath(entity.pos, cur, grid, &entityPosHash);
 
-                if (UiManager.getConfirm()) {
-                    if (Gamestate.cursor) |cur| {
-                        if (Gamestate.isinMovable(cur, grid, &entityPosHash)) {
-                            //TODO: @fix
-                            entity.path = try Pathfinder.findPath(entity.pos, cur, grid, &entityPosHash);
+                                TurnManager.updatingEntity = entity.id;
 
-                            TurnManager.updatingEntity = entity.id;
-
-                            Gamestate.resetMovementHighlight();
-                            Gamestate.removeCursor();
-                            Gamestate.selectedAction = null;
+                                Gamestate.resetMovementHighlight();
+                                Gamestate.removeCursor();
+                                Gamestate.selectedAction = null;
+                            }
                         }
                     }
-                }
 
-                if (c.IsKeyPressed(c.KEY_SPACE)) {
-                    //TODO: manage state after skip
-                    skipMovement();
-                }
-            },
-            .attack => {
-                Gamestate.showMenu = .none;
-                Gamestate.makeUpdateCursor(entity.pos);
-                try Gamestate.highlightAttack(entity);
+                    if (c.IsKeyPressed(c.KEY_SPACE)) {
+                        //TODO: manage state after skip
+                        skipMovement();
+                    }
+                },
+                .attack => {
+                    Gamestate.showMenu = .none;
+                    Gamestate.makeUpdateCursor(entity.pos);
+                    try Gamestate.highlightAttack(entity);
 
-                if (UiManager.getConfirm()) {
-                    if (Gamestate.cursor) |cur| {
-                        if (Gamestate.isinAttackable(cur)) {
-                            //TODO: maybe gonna make some attack animation / resolving similar
-                            // to movement
-                            const attackedEntity = EntityManager.getEntityByPos(cur, World.currentLevel);
-                            try ShaderManager.spawnSlash(entity.pos, cur);
-                            try ShaderManager.spawnImpact(cur);
+                    if (UiManager.getConfirm()) {
+                        if (Gamestate.cursor) |cur| {
+                            if (Gamestate.isinAttackable(cur)) {
+                                //TODO: maybe gonna make some attack animation / resolving similar
+                                // to movement
+                                const attackedEntity = EntityManager.getEntityByPos(cur, World.currentLevel);
+                                try ShaderManager.spawnSlash(entity.pos, cur);
+                                try ShaderManager.spawnImpact(cur);
 
-                            attack(game, entity, attackedEntity);
+                                attack(game, entity, attackedEntity);
 
-                            entity.hasAttacked = true;
+                                entity.hasAttacked = true;
 
-                            //cant move after attack
-                            entity.hasMoved = true;
+                                //cant move after attack
+                                entity.hasMoved = true;
 
-                            TurnManager.updatingEntity = entity.id;
+                                TurnManager.updatingEntity = entity.id;
 
-                            Gamestate.resetAttackHighlight();
-                            Gamestate.removeCursor();
-                            Gamestate.selectedAction = null;
+                                Gamestate.resetAttackHighlight();
+                                Gamestate.removeCursor();
+                                Gamestate.selectedAction = null;
+                            }
                         }
                     }
-                }
 
-                if (c.IsKeyPressed(c.KEY_SPACE)) {
-                    //TODO: manage state after skip
-                    skipAttack();
-                }
-            },
+                    if (c.IsKeyPressed(c.KEY_SPACE)) {
+                        //TODO: manage state after skip
+                        skipAttack();
+                    }
+                },
+            }
         }
     }
 }
@@ -398,22 +407,20 @@ pub fn canDeploy(player: *Entity.Entity) bool {
     return false;
 }
 
-pub fn deployPuppet(pupId: u32) !void {
+pub fn deployPuppet(pupId: u32, location: Types.Location) !void {
     const puppet = EntityManager.getEntityID(pupId);
     if (puppet) |pup| {
-        if (Gamestate.cursor) |curs| {
-            try pup.move(curs);
+        try pup.move(location);
 
-            pup.data.puppet.deployed = true;
-            pup.visible = true;
-            //TODO: @check if correct
-            pup.inCombat = true;
-            Gamestate.selectedPupId = null; //TODO: maybe wrong, check
+        pup.data.puppet.deployed = true;
+        pup.visible = true;
+        //TODO: @check if correct
+        pup.inCombat = true;
+        Gamestate.selectedPupId = null; //TODO: maybe wrong, check
 
-            try EntityManager.activateEntity(pupId);
+        try EntityManager.activateEntity(pupId);
 
-            return;
-        }
+        return;
     }
 }
 

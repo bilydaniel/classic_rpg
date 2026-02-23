@@ -649,7 +649,6 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
 
     //TODO: this is ridicolous, maybe make a getter or something?
     for (game.player.data.player.puppets.items) |pupID| {
-        //TODO: @continue @finish
         const puppet = EntityManager.getEntityID(pupID);
         if (puppet) |pup| {
             if (!pup.active) {
@@ -664,15 +663,18 @@ pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
     _ = game;
     this.data.menu.menuItems.clearRetainingCapacity();
 
-    if (Gamestate.selectedEntity) |selected_entity| {
-        if (!selected_entity.hasMoved) {
-            const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
-            try this.data.menu.menuItems.append(allocator, itemMove);
-        }
+    if (Gamestate.selectedEntityID) |id| {
+        const selectedEntity = EntityManager.getEntityID(id);
+        if (selectedEntity) |se| {
+            if (!se.hasMoved) {
+                const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
+                try this.data.menu.menuItems.append(allocator, itemMove);
+            }
 
-        if (!selected_entity.hasAttacked) {
-            const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
-            try this.data.menu.menuItems.append(allocator, itemAttack);
+            if (!se.hasAttacked) {
+                const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
+                try this.data.menu.menuItems.append(allocator, itemAttack);
+            }
         }
     }
 }

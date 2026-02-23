@@ -396,12 +396,12 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 //TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
-    const grid = World.getCurrentLevel().grid;
+    const level = World.getCurrentLevel();
     const entitiesPosHash = &EntityManager.positionHash;
     if (entity.goal == null or entity.stuck >= 2) {
         const player = game.player;
         const location = Types.Location.init(player.worldPos, player.pos);
-        const availablePosition = Movement.getAvailableTileAround(location, grid, entitiesPosHash);
+        const availablePosition = Movement.getAvailableTileAround(location, level.grid, entitiesPosHash);
         entity.goal = availablePosition;
     }
 
@@ -410,7 +410,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.turnTaken = true;
     }
 
-    try Movement.updateEntity(entity, game, grid, entitiesPosHash);
+    try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
     if (entity.hasMoved) {
         //TODO: make more complex
         entity.turnTaken = true;
@@ -418,7 +418,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
-    const grid = World.getCurrentLevel().grid;
+    const level = World.getCurrentLevel();
     const entitiesPosHash = &EntityManager.positionHash;
 
     if (entity.goal == null or entity.stuck >= 2) {
@@ -426,7 +426,7 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
         entity.goal = position;
     }
 
-    try Movement.updateEntity(entity, game, grid, entitiesPosHash);
+    try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
 
     if (entity.hasMoved) {
         entity.turnTaken = true;
