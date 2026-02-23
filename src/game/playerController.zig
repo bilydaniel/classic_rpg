@@ -319,9 +319,10 @@ pub fn entityAction(game: *Game.Game) !void {
 
                     if (UiManager.getConfirm()) {
                         if (Gamestate.cursor) |cur| {
-                            if (Gamestate.isinMovable(cur, grid, &entityPosHash)) {
-                                //TODO: @fix
-                                entity.path = try Pathfinder.findPath(entity.pos, cur, grid, &entityPosHash);
+                            const level = World.getCurrentLevel();
+                            const location = Types.Location.init(level.worldPos, cur);
+                            if (Gamestate.isinMovable(cur) and Movement.canMove(location, grid, &entityPosHash)) {
+                                entity.path = try Pathfinder.findPath(entity.pos, cur, level.*, &entityPosHash);
 
                                 TurnManager.updatingEntity = entity.id;
 

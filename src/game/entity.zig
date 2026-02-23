@@ -282,10 +282,10 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     if (TurnManager.turn != .player or !entity.inCombat) {
         return;
     }
-    const grid = World.getCurrentLevel().grid;
+    const level = World.getCurrentLevel();
     const entitiesPosHash = &EntityManager.positionHash;
 
-    try Movement.updateEntity(game.player, game, grid, entitiesPosHash);
+    try Movement.updateEntity(game.player, game, level.*, entitiesPosHash);
 
     if (entity.hasAttacked) {
         entity.turnTaken = true;
@@ -300,10 +300,10 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
         return;
     }
 
-    const grid = World.getCurrentLevel().grid;
+    const level = World.getCurrentLevel();
     const entitiesPosHash = &EntityManager.positionHash;
 
-    try Movement.updateEntity(entity, game, grid, entitiesPosHash);
+    try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
 
     if (entity.hasAttacked) {
         entity.turnTaken = true;

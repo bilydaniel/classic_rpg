@@ -196,11 +196,7 @@ pub fn removeHighlightOfType(highType: HighlightTypeEnum) void {
     }
 }
 
-pub fn isinMovable(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const Types.PositionHash) bool {
-    if (!Movement.canMove(pos, grid, entitiesHash)) {
-        return false;
-    }
-
+pub fn isinMovable(pos: Types.Vector2Int) bool {
     for (movableTiles.items) |item| {
         if (Types.vector2IntCompare(item, pos)) {
             return true;
