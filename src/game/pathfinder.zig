@@ -54,6 +54,9 @@ pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
 }
 
+//TODO: have two pathfinders, one with and one withou entities, in combat with entiites
+//outside of combat without, recalculate path when you hit another entity, could ask that entity what is its path
+//and recalculate accordingly
 pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Level, entities: *const Types.PositionHash) !?Path {
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??

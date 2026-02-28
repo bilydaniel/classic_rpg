@@ -409,6 +409,7 @@ pub const Level = struct {
             if (stair.x < width and stair.y < height) {
                 const idx = stair.y * width + stair.x;
                 level.grid[idx] = Tile.init(.staircase_down);
+                level.grid[idx + 1] = Tile.init(.staircase_up);
             }
         }
     }

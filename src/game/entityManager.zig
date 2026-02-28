@@ -40,10 +40,12 @@ pub fn init(allocator: std.mem.Allocator) void {
 }
 
 //TODO: @finish @continue
-// pub fn spawn() !void {}
-// pub fn despawn() !void {
-//     for (despawnQueue.items) |id| {}
-// }
+pub fn spawn() !void {}
+pub fn despawn() !void {
+    for (despawnQueue.items) |id| {
+        _ = id;
+    }
+}
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
@@ -153,15 +155,12 @@ pub fn draw() void {
 }
 
 pub fn allPlayerUnitsTurnTaken() bool {
-    var turnTaken = true;
-    for (entities.items) |e| {
-        if (e.data == .player or e.data == .puppet) {
-            if (!e.turnTaken) {
-                turnTaken = false;
-            }
-        }
+    const player = getPlayer();
+    if (player.inCombat) {
+        return player.turnTaken and player.allPupsTurnTaken();
+    } else {
+        return player.turnTaken;
     }
-    return turnTaken;
 }
 
 pub fn allEnemiesTurnTaken() bool {

@@ -70,8 +70,8 @@ pub const Game = struct {
 
         ShaderManager.update(delta);
 
-        EntityManager.despawn();
-        EntityManager.spawn();
+        try EntityManager.despawn();
+        try EntityManager.spawn();
     }
 
     pub fn draw(this: *Game) !void {

@@ -74,9 +74,9 @@ pub fn update() void {
     //TODO: maybe update the cursor through this function????
 
     if (selectedEntityID != null and selectedEntityHighlight != null) {
-        const selectedEntity = EntityManager.getEntityID(selectedEntityID);
-        if (selectedEntity) {
-            selectedEntityHighlight.?.pos = selectedEntity.?.pos;
+        const selectedEntity = EntityManager.getEntityID(selectedEntityID.?);
+        if (selectedEntity) |se| {
+            selectedEntityHighlight.?.pos = se.pos;
         }
     }
 }

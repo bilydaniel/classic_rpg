@@ -396,8 +396,9 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 //TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
-    const level = World.getCurrentLevel();
+    const level = World.getLevelAt(entity.worldPos) orelse return;
     const entitiesPosHash = &EntityManager.positionHash;
+
     if (entity.goal == null or entity.stuck >= 2) {
         const player = game.player;
         const location = Types.Location.init(player.worldPos, player.pos);
@@ -418,11 +419,11 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 }
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
-    const level = World.getCurrentLevel();
+    const level = World.getLevelAt(entity.worldPos) orelse return;
     const entitiesPosHash = &EntityManager.positionHash;
 
     if (entity.goal == null or entity.stuck >= 2) {
-        const position = Systems.getRandomValidPosition(World.getCurrentLevel().grid);
+        const position = Systems.getRandomValidPosition(World.getLevelAt(entity.worldPos).?.grid);
         entity.goal = position;
     }
 

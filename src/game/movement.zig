@@ -46,7 +46,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 
     const new_pos = path.nodes.items[nextIndex];
-    const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
+    const new_pos_entity = EntityManager.getEntityByPos(new_pos, level.worldPos);
 
     // position has entity, recalculate
     if (new_pos_entity) |_| {

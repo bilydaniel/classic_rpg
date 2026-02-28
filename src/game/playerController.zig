@@ -193,6 +193,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     try game.player.move(newLocation);
     game.player.movementCooldown = 0;
     game.player.turnTaken = true;
+    std.debug.print("turn_take: {}\n", .{game.player.turnTaken});
 }
 
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
@@ -437,8 +438,11 @@ pub fn isDeployable(pos: Types.Vector2Int, cells: []const ?Types.Vector2Int) boo
 }
 
 pub fn skipMovement() void {
-    if (Gamestate.selectedEntity) |entity| {
-        entity.hasMoved = true;
+    if (Gamestate.selectedEntityID) |id| {
+        const entity = EntityManager.getEntityID(id);
+        if (entity) |e| {
+            e.hasMoved = true;
+        }
     }
     Gamestate.resetMovementHighlight();
     Gamestate.removeCursor();
@@ -446,8 +450,11 @@ pub fn skipMovement() void {
 }
 
 pub fn skipAttack() void {
-    if (Gamestate.selectedEntity) |entity| {
-        entity.hasAttacked = true;
+    if (Gamestate.selectedEntityID) |id| {
+        const entity = EntityManager.getEntityID(id);
+        if (entity) |e| {
+            e.hasAttacked = true;
+        }
     }
     Gamestate.resetAttackHighlight();
     Gamestate.removeCursor();
