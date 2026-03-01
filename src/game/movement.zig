@@ -97,6 +97,7 @@ pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, enti
     const neighbours = neighboursAll(location.pos);
     for (neighbours) |neighbor| {
         const neigh = neighbor orelse continue;
+        std.debug.print("neigh: {}\n", .{neigh});
         const loc = Types.Location.init(location.worldPos, neigh);
         if (canMove(loc, grid, entities)) {
             return neigh;
@@ -120,6 +121,8 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
             const result_pos = Types.vector2IntAdd(pos, dif_pos);
             if (result_pos.x >= 0 and result_pos.y >= 0 and result_pos.x < Config.level_width and result_pos.y < Config.level_height) {
                 result[count] = result_pos;
+            } else {
+                result[count] = null;
             }
             count += 1;
         }
@@ -127,7 +130,7 @@ pub fn neighboursAll(pos: Types.Vector2Int) [8]?Types.Vector2Int {
     return result;
 }
 
-pub fn boundryTransition(newLocation: Types.Location) Types.Location {
+pub fn boundryTransition(currentLocation: Types.Location, newLocation: Types.Location) Types.Location {
     //TODO: no transitins during combat
     var tmpLocation = newLocation;
     var locationResult = newLocation;
@@ -139,6 +142,8 @@ pub fn boundryTransition(newLocation: Types.Location) Types.Location {
         if (level) |_| {
             tmpLocation.pos.x = Config.level_width - 1;
             locationResult = tmpLocation;
+        } else {
+            locationResult = currentLocation;
         }
     }
 
@@ -148,6 +153,8 @@ pub fn boundryTransition(newLocation: Types.Location) Types.Location {
         if (level) |_| {
             tmpLocation.pos.x = 0;
             locationResult = tmpLocation;
+        } else {
+            locationResult = currentLocation;
         }
     }
 
@@ -157,6 +164,8 @@ pub fn boundryTransition(newLocation: Types.Location) Types.Location {
         if (level) |_| {
             tmpLocation.pos.y = Config.level_height - 1;
             locationResult = tmpLocation;
+        } else {
+            locationResult = currentLocation;
         }
     }
 
@@ -166,6 +175,8 @@ pub fn boundryTransition(newLocation: Types.Location) Types.Location {
         if (level) |_| {
             tmpLocation.pos.y = 0;
             locationResult = tmpLocation;
+        } else {
+            locationResult = currentLocation;
         }
     }
 

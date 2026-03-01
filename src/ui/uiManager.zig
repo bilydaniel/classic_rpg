@@ -35,6 +35,8 @@ pub fn init(alloc: std.mem.Allocator) !void {
 
 pub fn update(game: *Game.Game) !void {
     uiCommand = UiCommand{};
+
+    std.debug.print("UI: {}\n", .{TurnManager.turn});
     if (TurnManager.turn != .player) {
         return;
     }

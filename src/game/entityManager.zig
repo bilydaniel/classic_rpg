@@ -30,6 +30,7 @@ pub fn init(allocator: std.mem.Allocator) void {
 
     entities = std.ArrayList(Entity.Entity).empty;
 
+    //@memory what allocator for hash?
     positionHash = Types.PositionHash.init(allocator);
     idHash = Types.IdHash.init(allocator);
 
@@ -49,6 +50,7 @@ pub fn despawn() !void {
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
+    //TODO: @memory, remove arraylist, use array
     const playerData = try Entity.PlayerData.init(entity_allocator);
 
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });

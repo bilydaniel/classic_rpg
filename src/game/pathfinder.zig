@@ -60,6 +60,7 @@ pub fn init(alloc: std.mem.Allocator) !void {
 pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Level, entities: *const Types.PositionHash) !?Path {
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
+    //TODO: @memory use arena allocator, maybe just dont deinit?
     var open_list: std.ArrayList(Node) = .empty;
     defer open_list.deinit(allocator);
 

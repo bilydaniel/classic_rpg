@@ -29,8 +29,15 @@ pub fn init(allocator: std.mem.Allocator) !void {
     var level2 = try Level.Level.init(allocator, 1, worldPos);
     level2.generateInterestingLevel2();
 
+    worldPos.z = 0;
+    worldPos.x = -1;
+    var level3 = try Level.Level.init(allocator, 2, worldPos);
+    level3.generateInterestingLevel();
+    std.debug.print("level_pos: {}\n", .{level3.worldPos});
+
     try levels.put(level1.worldPos, level1);
     try levels.put(level2.worldPos, level2);
+    //try levels.put(level3.worldPos, level3);
 
     currentLevel = level1.worldPos;
     //currentLevel = randomLevel;

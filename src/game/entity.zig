@@ -344,6 +344,7 @@ pub const PlayerData = struct {
     // dark magic like fear to protect the puppetmaster from enemies
 
     inCombatWith: std.ArrayList(u32),
+    //TODO: how does this arraylist work in memory?, how is it laid out?
     puppets: std.ArrayList(u32), //TODO: you can actually loose a puppet
     allocator: std.mem.Allocator,
 
@@ -403,6 +404,11 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         const player = game.player;
         const location = Types.Location.init(player.worldPos, player.pos);
         const availablePosition = Movement.getAvailableTileAround(location, level.grid, entitiesPosHash);
+        if (availablePosition == null) {
+            std.debug.print("goal is null", .{});
+        }
+        //TODO: check for null
+        std.debug.print("setting_goal: {?}\n", .{availablePosition});
         entity.goal = availablePosition;
     }
 

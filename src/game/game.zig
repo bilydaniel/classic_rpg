@@ -60,9 +60,9 @@ pub const Game = struct {
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
 
+        try PlayerController.update(this);
         try UiManager.update(this);
         //try EntityManager.update(this);
-        try PlayerController.update(this);
         try TurnManager.update(this);
 
         CameraManager.update(delta);

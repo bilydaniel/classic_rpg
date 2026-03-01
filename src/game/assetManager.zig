@@ -10,6 +10,11 @@ pub fn init() !void {
     tileset = urizenTileset;
 }
 
+pub fn deinit() !void {
+    //@memory how does this work? says its loaded into GPU memory, no clue wtf
+    tileset.unload();
+    urizenTileset.unload();
+}
 pub const TileNames = enum(i32) {
     wall_1 = 0,
 

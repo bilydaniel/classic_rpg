@@ -108,19 +108,27 @@ pub fn update(game: *Game.Game) !void {
                 try EntityManager.deactivatePuppets();
             },
             .deploying_puppets => {
+                std.debug.print("deploying_puppets\n", .{});
                 //TODO: filter out entities that are supposed to be in the combat
                 // could be some mechanic around attention/stealth
                 // smarter entities shout at other to help etc...
+
+                //TODO: @fix enemies seem to go before player
 
                 game.player.inCombat = true;
                 for (EntityManager.entities.items) |*entity| {
                     //TODO: all enemies for now
                     if (entity.data == .enemy) {
+                        //TODO: probably should make it into a static array, like 10 elements if way more then enough
                         try playerData.inCombatWith.append(allocator, entity.id);
                         entity.resetPathing();
                         entity.inCombat = true;
                     }
                 }
+
+                game.player.turnTaken = false;
+                game.player.hasMoved = false;
+                //TODO: @fix @continue reset turn taken for puppets?
             },
             .in_combat => {
                 Gamestate.reset();
@@ -171,7 +179,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     const entityPosHash = EntityManager.positionHash;
 
     //TODO: @test the broundry transition and staircase
-    newLocation = Movement.boundryTransition(newLocation);
+    newLocation = Movement.boundryTransition(currentLocation, newLocation);
     newLocation = Movement.staircaseTransition(newLocation, grid);
 
     const changingLevel = !Types.vector3IntCompare(currentLocation.worldPos, newLocation.worldPos);
@@ -193,7 +201,6 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     try game.player.move(newLocation);
     game.player.movementCooldown = 0;
     game.player.turnTaken = true;
-    std.debug.print("turn_take: {}\n", .{game.player.turnTaken});
 }
 
 pub fn handlePlayerDeploying(game: *Game.Game) !void {

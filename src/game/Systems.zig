@@ -162,7 +162,9 @@ pub fn calculateFOV(center: Types.Vector2Int, radius: usize) void {
             .x = center.x + @as(i32, @intFromFloat(@cos(angle) * @as(f32, @floatFromInt(radius)))),
             .y = center.y + @as(i32, @intFromFloat(@sin(angle) * @as(f32, @floatFromInt(radius)))),
         };
-        castRay(grid, center, target);
+        if (target.x > 0 and target.x < Config.level_width and target.y > 0 and target.y < Config.level_height) {
+            castRay(grid, center, target);
+        }
     }
 }
 
@@ -215,6 +217,7 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
                 continue;
             }
             const newPos = Types.vector2IntAdd(start, Types.Vector2Int{ .x = x, .y = y });
+            //TODO: @memory, could use an arena allocator
             try result.append(allocator, newPos);
         }
         x = 0;

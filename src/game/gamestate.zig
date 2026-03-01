@@ -84,6 +84,7 @@ pub fn update() void {
 pub fn reset() void {
     cursor = null;
 
+    // @memory, is this better? i keep the arraylist, or is arena better and reset the whole thing?
     highlightedTiles.clearRetainingCapacity();
     movableTiles.clearRetainingCapacity();
     deployableCells = null;
@@ -142,6 +143,7 @@ pub fn highlightMovement(entity: *Entity.Entity) !void {
 
 //TODO: @refactor, take the type in too
 pub fn highlightTile(pos: Types.Vector2Int) !void {
+    //@memory arena?
     try highlightedTiles.append(allocator, Highlight{
         .pos = pos,
         .type = .pup_deploy,
@@ -164,6 +166,7 @@ pub fn highlightAttack(entity: *Entity.Entity) !void {
 }
 
 pub fn highlightTiles(tiles: std.ArrayList(Types.Vector2Int), highType: HighlightTypeEnum) !void {
+    //@memory
     for (tiles.items) |tile| {
         try highlightedTiles.append(allocator, Highlight{
             .pos = Types.Vector2Int.init(tile.x, tile.y),
@@ -185,6 +188,7 @@ pub fn resetAttackHighlight() void {
 }
 
 pub fn removeHighlightOfType(highType: HighlightTypeEnum) void {
+    // @memory gpa or arena?
     var i: usize = 0;
     while (i < highlightedTiles.items.len) {
         const tile = highlightedTiles.items[i];

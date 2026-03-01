@@ -14,11 +14,11 @@ pub fn main() !void {
 
     // std.SegmentedList(comptime T: type, comptime prealloc_item_count: usize);
     // https://gemini.google.com/app/492731873f4e47c6
-    // TODO: figure out the lifetimes of evertything, do proper memory management
+    // TODO: @memory figure out the lifetimes of evertything, do proper memory management
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    //TODO: @check leaks
+    //TODO: @memory @check leaks
     //defer _ = gpa.deinit();
 
     Window.init();
