@@ -13,7 +13,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: *const Types.PositionHash) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
     if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?, level, entities);
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level, entities);
         if (newPath) |new_path| {
             entity.setNewPath(new_path);
             entity.stuck = 0;

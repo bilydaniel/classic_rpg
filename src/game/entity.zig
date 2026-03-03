@@ -44,7 +44,7 @@ pub const Entity = struct {
     attack: i32,
     pos: Types.Vector2Int,
     worldPos: Types.Vector3Int = Types.Vector3Int.init(0, 0, 0),
-    goal: ?Types.Vector2Int = null,
+    goal: ?Types.Location = null, //TODO: @continue
     path: ?Pathfinder.Path,
     speed: f32,
     movementCooldown: f32, //TODO: probably do a different way
@@ -111,7 +111,7 @@ pub const Entity = struct {
                 Pathfinder.drawPath(path);
             }
             if (this.goal) |goal| {
-                rl.drawRectangleLines(goal.x * Config.tile_width, goal.y * Config.tile_height, Config.tile_width, Config.tile_height, rl.Color.yellow);
+                rl.drawRectangleLines(goal.pos.x * Config.tile_width, goal.pos.y * Config.tile_height, Config.tile_width, Config.tile_height, rl.Color.yellow);
             }
 
             if (this.sourceRect) |source_rect| {
@@ -409,7 +409,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         }
         //TODO: check for null
         std.debug.print("setting_goal: {?}\n", .{availablePosition});
-        entity.goal = availablePosition;
+        entity.goal = location;
     }
 
     //TODO: change this
@@ -430,7 +430,8 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
 
     if (entity.goal == null or entity.stuck >= 2) {
         const position = Systems.getRandomValidPosition(World.getLevelAt(entity.worldPos).?.grid);
-        entity.goal = position;
+        const location = Types.Location.init(entity.worldPos, position);
+        entity.goal = location;
     }
 
     try Movement.updateEntity(entity, game, level.*, entitiesPosHash);

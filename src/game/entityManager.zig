@@ -69,7 +69,9 @@ pub fn fillEntities() !void {
 
     const pos = Types.Vector2Int{ .x = 5, .y = 15 };
     const enemy_tile = AssetManager.TileNames.robot_1;
-    const enemy_goal = Types.Vector2Int.init(2, 2);
+    const enemy_goal_world = Types.Vector3Int.init(0, 0, 0);
+    const enemy_goal_pos = Types.Vector2Int.init(2, 2);
+    const enemy_goal = Types.Location.init(enemy_goal_world, enemy_goal_pos);
 
     var entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity.goal = enemy_goal;
