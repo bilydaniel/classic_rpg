@@ -37,7 +37,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     try levels.put(level1.worldPos, level1);
     try levels.put(level2.worldPos, level2);
-    //try levels.put(level3.worldPos, level3);
+    try levels.put(level3.worldPos, level3);
 
     currentLevel = level1.worldPos;
     //currentLevel = randomLevel;

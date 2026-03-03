@@ -108,7 +108,9 @@ pub fn update(game: *Game.Game) !void {
                 try EntityManager.deactivatePuppets();
             },
             .deploying_puppets => {
-                std.debug.print("deploying_puppets\n", .{});
+                TurnManager.switchTurn(.player);
+                EntityManager.resetTurnFlags();
+
                 //TODO: filter out entities that are supposed to be in the combat
                 // could be some mechanic around attention/stealth
                 // smarter entities shout at other to help etc...
