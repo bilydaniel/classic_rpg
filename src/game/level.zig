@@ -121,6 +121,10 @@ pub const Level = struct {
         };
     }
 
+    pub fn deinit(this: *Level, allocator: std.mem.Allocator) void {
+        allocator.free(this.grid);
+    }
+
     pub fn draw(this: *Level) void {
         const debugPos = Types.Vector2Int.init(0, 0);
         const testPos = Types.vector2IntToPixels(debugPos);

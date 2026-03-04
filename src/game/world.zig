@@ -43,6 +43,14 @@ pub fn init(allocator: std.mem.Allocator) !void {
     //currentLevel = randomLevel;
 }
 
+pub fn deinit(allocator: std.mem.Allocator) void {
+    var it = levels.valueIterator();
+    while (it.next()) |level| {
+        level.deinit(allocator);
+    }
+    levels.deinit();
+}
+
 pub fn getCurrentLevel() *Level.Level {
     return levels.getPtr(currentLevel).?;
 }

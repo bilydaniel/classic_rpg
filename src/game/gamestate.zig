@@ -70,6 +70,12 @@ pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 }
 
+pub fn deinit() void {
+    highlightedTiles.deinit(allocator);
+    movableTiles.deinit(allocator);
+    attackableTiles.deinit(allocator);
+}
+
 pub fn update() void {
     //TODO: maybe update the cursor through this function????
 

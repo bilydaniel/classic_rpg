@@ -53,6 +53,20 @@ pub const Game = struct {
         return game;
     }
 
+    pub fn deinit(this: *Game) void {
+        Gamestate.deinit();
+        EntityManager.deinit();
+
+        TurnManager.deinit();
+        TilesetManager.deinit();
+        CameraManager.deinit(this.allocator);
+        World.deinit(this.allocator);
+        try ShaderManager.init(allocator);
+        try UiManager.init(allocator);
+
+        this.allocator.destroy(this);
+    }
+
     pub fn update(this: *Game) !void {
         const delta = rl.getFrameTime();
         this.player = EntityManager.getPlayer();

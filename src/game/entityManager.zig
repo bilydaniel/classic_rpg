@@ -40,6 +40,15 @@ pub fn init(allocator: std.mem.Allocator) void {
     //entities.ensureTotalCapacity(allocator, 256);
 }
 
+pub fn deinit() void {
+    const allocator = entity_allocator;
+    entities.deinit(allocator);
+    positionHash.deinit();
+    idHash.deinit();
+    spawnQueue.deinit(allocator);
+    despawnQueue.deinit(allocator);
+}
+
 //TODO: @finish @continue
 pub fn spawn() !void {}
 pub fn despawn() !void {

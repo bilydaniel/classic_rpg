@@ -1,3 +1,4 @@
+memory => ui manager => level generation => pathfinding (need to know how the levels are generated before doing the pathfinding thorugh the world)
 
 TODO: figure out memory management first, finalize how iam gonna do memory,
 main reason is the zig 0.15 change, cant continue without proper memory management, 

@@ -349,6 +349,8 @@ pub const PlayerData = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
+        //TODO: @memory deallocate
+        //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
         const puppets: std.ArrayList(u32) = .empty;
 

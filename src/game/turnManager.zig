@@ -33,6 +33,10 @@ pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 }
 
+pub fn deinit() void {
+    enemyQueue.deinit(allocator);
+}
+
 pub fn update(game: *Game.Game) !void {
 
     //TODO: @fix @continue

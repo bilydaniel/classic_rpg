@@ -24,6 +24,16 @@ pub fn init(alloc: std.mem.Allocator) !void {
     texture = c.LoadTextureFromImage(whiteImage);
 }
 
+pub fn deinit() !void {
+    effects = std.ArrayList(Effect).empty;
+    slashShader = try Shader.init("src/shaders/slash.fs");
+    impactShader = try Shader.init("src/shaders/impact.fs");
+    explosionShader = try Shader.init("src/shaders/explosion.fs");
+
+    const whiteImage = c.GenImageColor(1, 1, c.WHITE);
+    texture = c.LoadTextureFromImage(whiteImage);
+}
+
 pub fn update(delta: f32) void {
     //TODO: deinit the effect?
     var i: usize = 0;
@@ -237,6 +247,20 @@ pub const Shader = struct {
     resolutionLoc: i32,
 
     pub fn init(path: []const u8) !*Shader {
+        const shader = try allocator.create(Shader);
+        const source = c.LoadShader(null, path.ptr);
+
+        std.debug.print("shader: {}\n", .{source});
+
+        shader.* = .{
+            .source = source,
+            .timeLoc = c.GetShaderLocation(source, "time"),
+            .resolutionLoc = c.GetShaderLocation(source, "resolution"),
+        };
+        return shader;
+    }
+
+    pub fn deinit(path: []const u8) !*Shader {
         const shader = try allocator.create(Shader);
         const source = c.LoadShader(null, path.ptr);
 
