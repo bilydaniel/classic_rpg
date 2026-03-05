@@ -90,33 +90,36 @@ pub const Game = struct {
     }
 
     pub fn draw(this: *Game) !void {
-        rl.beginDrawing();
+        // First pass: render game into Window.screen
+        rl.beginTextureMode(Window.screen);
         rl.clearBackground(rl.Color.black);
-        rl.drawFPS(0, 0);
         rl.beginMode2D(CameraManager.camera.*);
         World.draw();
         this.player.draw();
         EntityManager.draw();
         ShaderManager.draw();
-
         try Gamestate.draw();
-
         rl.endMode2D();
+
         try UiManager.draw();
 
-        rl.beginShaderMode(ShaderManager.crtShader.source);
+        rl.endTextureMode();
+
+        // Second pass: draw render texture to screen with CRT shader
+        rl.beginDrawing();
+        rl.clearBackground(rl.Color.black);
+        rl.drawFPS(0, 0);
+
+        const t: f32 = @floatCast(rl.getTime());
+        rl.setShaderValue(ShaderManager.crtShader.source, ShaderManager.crtShader.timeLoc, &t, .float);
 
         const res = [2]f32{
             @floatFromInt(Window.scaledWidth),
             @floatFromInt(Window.scaledHeight),
         };
-        rl.setShaderValue(
-            ShaderManager.crtShader.source,
-            ShaderManager.crtShader.resolutionLoc,
-            &res,
-            .vec2,
-        );
+        rl.setShaderValue(ShaderManager.crtShader.source, ShaderManager.crtShader.resolutionLoc, &res, .vec2);
 
+        rl.beginShaderMode(ShaderManager.crtShader.source);
         rl.drawTexturePro(
             Window.screen.texture,
             .{ .x = 0, .y = 0, .width = Config.game_width, .height = -Config.game_height },
@@ -125,8 +128,10 @@ pub const Game = struct {
             0.0,
             rl.Color.white,
         );
-
         rl.endShaderMode();
+
+        //try UiManager.draw();
+
         rl.endDrawing();
     }
 };

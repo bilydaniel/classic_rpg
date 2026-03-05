@@ -1,33 +1,11 @@
 #version 330 core
 
-// ============================================================
-//  C R T . F S  —  Old School CRT Monitor Shader
-//  GLSL 3.30 Fragment Shader
-// ============================================================
-//
-//  Pair with crt.vs (provided separately).
-//
-//  UNIFORMS:
-//    uniform sampler2D uTexture;    // your scene / framebuffer
-//    uniform vec2      uResolution; // viewport size in pixels
-//    uniform float     uTime;       // elapsed seconds
-//
-//  SETUP CHECKLIST (common black-screen causes):
-//    1. Bind your framebuffer texture to unit 0
-//    2. glUniform1i(loc_uTexture, 0)
-//    3. glUniform2f(loc_uResolution, width, height)
-//    4. glUniform1f(loc_uTime, elapsed)
-//    5. Draw a fullscreen quad with UV [0,1] -> vTexCoord
-// ============================================================
-
-in vec2 vTexCoord; // from vertex shader
+in vec2 fragTexCoord;
 out vec4 fragColor;
 
-uniform sampler2D uTexture;
-uniform vec2 uResolution;
-uniform float uTime;
-
-// ── Tuneable constants ───────────────────────────────────────
+uniform sampler2D texture0;
+uniform vec2 resolution;
+uniform float time;
 
 const float CURVATURE = 0.12;
 const float SCANLINE_DARK = 0.55;
@@ -43,8 +21,6 @@ const float ROLL_SPEED = 0.18;
 const float ROLL_STRENGTH = 0.04;
 const float WARMUP_DUR = 1.5;
 const vec3 PHOSPHOR_TINT = vec3(1.02, 1.00, 0.90);
-
-// ── Utilities ────────────────────────────────────────────────
 
 float hash(vec2 p) {
     p = fract(p * vec2(443.897, 441.423));
@@ -62,22 +38,22 @@ vec2 warpUV(vec2 uv) {
 vec3 chromaticSample(vec2 uv) {
     vec2 dir = uv - 0.5;
     float dist = length(dir);
-    vec2 aberr = normalize(dir + vec2(0.0001)) * dist * (CHROMA_SPREAD / uResolution);
-    float r = texture(uTexture, uv + aberr).r;
-    float g = texture(uTexture, uv).g;
-    float b = texture(uTexture, uv - aberr).b;
+    vec2 aberr = normalize(dir + vec2(0.0001)) * dist * (CHROMA_SPREAD / resolution);
+    float r = texture(texture0, uv + aberr).r;
+    float g = texture(texture0, uv).g;
+    float b = texture(texture0, uv - aberr).b;
     return vec3(r, g, b);
 }
 
 vec3 bloom(vec2 uv) {
     vec3 acc = vec3(0.0);
     float total = 0.0;
-    float blurStep = BLOOM_RADIUS / uResolution.y;
+    float blurStep = BLOOM_RADIUS / resolution.y;
     for (int xi = -2; xi <= 2; xi++) {
         for (int yi = -2; yi <= 2; yi++) {
             vec2 off = vec2(float(xi), float(yi)) * blurStep;
             float w = 1.0 / (1.0 + float(xi * xi + yi * yi));
-            acc += texture(uTexture, uv + off).rgb * w;
+            acc += texture(texture0, uv + off).rgb * w;
             total += w;
         }
     }
@@ -90,7 +66,7 @@ float scanline(vec2 uv) {
 }
 
 vec3 phosphorMask(vec2 uv, vec3 col) {
-    float px = mod(uv.x * uResolution.x, 3.0);
+    float px = mod(uv.x * resolution.x, 3.0);
     vec3 mask = vec3(0.0);
     if (px < 1.0) mask = vec3(1.0, 0.0, 0.0);
     else if (px < 2.0) mask = vec3(0.0, 1.0, 0.0);
@@ -106,15 +82,15 @@ float vignette(vec2 uv) {
 }
 
 float rollBar(vec2 uv) {
-    float bar = sin((uv.y - uTime * ROLL_SPEED) * 6.28318 * 4.0);
+    float bar = sin((uv.y - time * ROLL_SPEED) * 6.28318 * 4.0);
     bar = pow(bar * 0.5 + 0.5, 12.0);
     return 1.0 + bar * ROLL_STRENGTH;
 }
 
 float warmup() {
-    if (uTime >= WARMUP_DUR) return 1.0;
-    float t = uTime / WARMUP_DUR;
-    float flicker = sin(uTime * 80.0) * 0.5 + 0.5;
+    if (time >= WARMUP_DUR) return 1.0;
+    float t = time / WARMUP_DUR;
+    float flicker = sin(time * 80.0) * 0.5 + 0.5;
     return mix(flicker * 0.4, 1.0, smoothstep(0.0, 1.0, t * t));
 }
 
@@ -125,60 +101,45 @@ float bezelGlint(vec2 uv) {
 }
 
 float deadPixel(vec2 uv) {
-    vec2 grid = floor(uv * uResolution / 4.0);
+    vec2 grid = floor(uv * resolution / 4.0);
     float seed = hash(grid);
     if (seed > 0.998)
-        return sin(uTime * (3.0 + seed * 17.0)) * 0.5 + 0.5;
+        return sin(time * (3.0 + seed * 17.0)) * 0.5 + 0.5;
     return 0.0;
 }
 
-// ════════════════════════════════════════════════════════════
 void main() {
-    vec2 uv = vTexCoord;
+    vec2 uv = fragTexCoord;
 
-    // 1. Barrel distort
-    vec2 wuv = warpUV(uv);
+    vec2 wuv = uv; //warpUV(uv);
 
-    // Clip — bezel colour outside screen area
     if (wuv.x < 0.0 || wuv.x > 1.0 || wuv.y < 0.0 || wuv.y > 1.0) {
         fragColor = vec4(0.04, 0.04, 0.04, 1.0);
         return;
     }
 
-    // 2. Sample + chromatic aberration
     vec3 col = chromaticSample(wuv);
 
-    // 3. Bloom
     col = mix(col, max(col, bloom(wuv)), BLOOM_STRENGTH);
 
-    // 4. Phosphor tint
     col *= PHOSPHOR_TINT;
 
-    // 5. Scanlines
     col *= scanline(wuv);
 
-    // 6. Phosphor mask
     col = phosphorMask(wuv, col);
 
-    // 7. Rolling bar
     col *= rollBar(wuv);
 
-    // 8. Grain
-    col += (hash(wuv + fract(uTime * 0.07)) - 0.5) * NOISE_AMOUNT;
+    col += (hash(wuv + fract(time * 0.07)) - 0.5) * NOISE_AMOUNT;
 
-    // 9. Hot pixels
-    col += deadPixel(wuv) * vec3(1.0, 0.9, 0.5) * 0.9;
+    //col += deadPixel(wuv) * vec3(1.0, 0.9, 0.5) * 0.9;
 
-    // 10. Vignette
     col *= vignette(wuv);
 
-    // 11. Bezel glint
-    col += bezelGlint(wuv);
+    //col += bezelGlint(wuv);
 
-    // 12. Warmup flicker
     col *= warmup();
 
-    // 13. CRT gamma (~2.5)
     col = pow(max(col, 0.0), vec3(1.0 / 2.5));
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
