@@ -19,9 +19,9 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     //TODO: @memory @check leaks
-    defer _ = gpa.deinit();
+    //defer _ = gpa.deinit();
 
-    Window.init();
+    try Window.init();
     const game = try Game.Game.init(allocator);
     defer game.deinit();
 

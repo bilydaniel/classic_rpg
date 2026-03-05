@@ -12,6 +12,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
+const Config = @import("../common/config.zig");
 const rl = @import("raylib");
 
 pub const Game = struct {
@@ -61,8 +62,8 @@ pub const Game = struct {
         TilesetManager.deinit();
         CameraManager.deinit(this.allocator);
         World.deinit(this.allocator);
-        try ShaderManager.init(allocator);
-        try UiManager.init(allocator);
+        //try ShaderManager.init(allocator);
+        //try UiManager.init(allocator);
 
         this.allocator.destroy(this);
     }
@@ -103,6 +104,29 @@ pub const Game = struct {
         rl.endMode2D();
         try UiManager.draw();
 
+        rl.beginShaderMode(ShaderManager.crtShader.source);
+
+        const res = [2]f32{
+            @floatFromInt(Window.scaledWidth),
+            @floatFromInt(Window.scaledHeight),
+        };
+        rl.setShaderValue(
+            ShaderManager.crtShader.source,
+            ShaderManager.crtShader.resolutionLoc,
+            &res,
+            .vec2,
+        );
+
+        rl.drawTexturePro(
+            Window.screen.texture,
+            .{ .x = 0, .y = 0, .width = Config.game_width, .height = -Config.game_height },
+            .{ .x = @floatFromInt(Window.offsetx), .y = @floatFromInt(Window.offsety), .width = @floatFromInt(Window.scaledWidth), .height = @floatFromInt(Window.scaledHeight) },
+            .{ .x = 0, .y = 0 },
+            0.0,
+            rl.Color.white,
+        );
+
+        rl.endShaderMode();
         rl.endDrawing();
     }
 };
