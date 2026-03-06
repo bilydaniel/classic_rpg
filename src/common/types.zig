@@ -117,3 +117,18 @@ pub fn vector3IntAdd(a: Vector3Int, b: Vector3Int) Vector3Int {
         .z = a.z + b.z,
     };
 }
+
+pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
+    return struct {
+        items: [capacity]T = undefined,
+        len: usize = 0,
+
+        const This = @This();
+
+        pub fn append(this: *This, item: T) !void {
+            if (this.len >= capacity) return error.NoSpaceLeft;
+            this.items[this.len] = item;
+            this.len += 1;
+        }
+    };
+}

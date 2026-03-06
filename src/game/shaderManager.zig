@@ -6,10 +6,11 @@ const rl = @import("raylib");
 var allocator: std.mem.Allocator = undefined;
 var effects: std.ArrayList(Effect) = undefined;
 
-var slashShader: *Shader = undefined;
-var impactShader: *Shader = undefined;
-var explosionShader: *Shader = undefined;
-pub var crtShader: *Shader = undefined;
+var slashShader: Shader = undefined;
+var impactShader: Shader = undefined;
+var explosionShader: Shader = undefined;
+pub var crtShader: Shader = undefined;
+var whiteImage: rl.Image = undefined;
 var texture: rl.Texture2D = undefined;
 
 pub fn init(alloc: std.mem.Allocator) !void {
@@ -20,18 +21,18 @@ pub fn init(alloc: std.mem.Allocator) !void {
     explosionShader = try Shader.init("src/shaders/explosion.fs");
     crtShader = try Shader.init("src/shaders/crt.fs");
 
-    const whiteImage = rl.genImageColor(1, 1, rl.Color.white);
+    whiteImage = rl.genImageColor(1, 1, rl.Color.white);
     texture = try rl.loadTextureFromImage(whiteImage);
 }
 
 pub fn deinit() !void {
-    effects = std.ArrayList(Effect).empty;
-    slashShader = try Shader.init("src/shaders/slash.fs");
-    impactShader = try Shader.init("src/shaders/impact.fs");
-    explosionShader = try Shader.init("src/shaders/explosion.fs");
+    effects.deinit(allocator);
+    slashShader.deinit();
+    impactShader.deinit();
+    explosionShader.deinit();
 
-    const whiteImage = rl.GenImageColor(1, 1, rl.Color.white);
-    texture = try rl.loadTextureFromImage(whiteImage);
+    whiteImage.unload();
+    texture.unload();
 }
 
 pub fn update(delta: f32) void {
@@ -213,6 +214,7 @@ pub const EffectType = enum {
 };
 
 pub const Effect = struct {
+    //TODO: refactor?
     effectType: EffectType,
     time: f32,
     duration: f32,
@@ -246,29 +248,17 @@ pub const Shader = struct {
     timeLoc: i32,
     resolutionLoc: i32,
 
-    pub fn init(path: [:0]const u8) !*Shader {
-        const shader = try allocator.create(Shader);
+    pub fn init(path: [:0]const u8) !Shader {
         const source = try rl.loadShader(null, path);
 
-        shader.* = .{
+        return Shader{
             .source = source,
             .timeLoc = rl.getShaderLocation(source, "time"),
             .resolutionLoc = rl.getShaderLocation(source, "resolution"),
         };
-        return shader;
     }
 
-    pub fn deinit(path: []const u8) !*Shader {
-        const shader = try allocator.create(Shader);
-        const source = rl.loadShader(null, path.ptr);
-
-        std.debug.print("shader: {}\n", .{source});
-
-        shader.* = .{
-            .source = source,
-            .timeLoc = rl.getShaderLocation(source, "time"),
-            .resolutionLoc = rl.getShaderLocation(source, "resolution"),
-        };
-        return shader;
+    pub fn deinit(this: *Shader) void {
+        this.source.unload();
     }
 };

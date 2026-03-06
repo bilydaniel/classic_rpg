@@ -25,6 +25,7 @@ pub var entity_id: u32 = 0;
 
 pub const EntityData = union(EntityType) {
     player: PlayerData,
+    //TODO: @continue make my own array type, comptime size?
     puppet: PuppetData,
     enemy: EnemyData,
     item: ItemData,
@@ -345,18 +346,19 @@ pub const PlayerData = struct {
 
     inCombatWith: std.ArrayList(u32),
     //TODO: how does this arraylist work in memory?, how is it laid out?
-    puppets: std.ArrayList(u32), //TODO: you can actually loose a puppet
+    puppets: Types.StaticArray(u32, 8),
+    puppets_len: u8,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
-        const puppets: std.ArrayList(u32) = .empty;
 
         return PlayerData{
             .inCombatWith = inCombatWith,
-            .puppets = puppets,
+            .puppets = undefined,
+            .puppets_len = 0,
             .allocator = allocator,
         };
     }

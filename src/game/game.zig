@@ -62,7 +62,7 @@ pub const Game = struct {
         TilesetManager.deinit();
         CameraManager.deinit(this.allocator);
         World.deinit(this.allocator);
-        //try ShaderManager.init(allocator);
+        try ShaderManager.deinit();
         //try UiManager.init(allocator);
 
         this.allocator.destroy(this);
