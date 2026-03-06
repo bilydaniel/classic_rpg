@@ -23,6 +23,10 @@ pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
     targetEntity = entityID;
 }
 
+pub fn deinit(allocator: std.mem.Allocator) void {
+    allocator.destroy(camera);
+}
+
 pub fn update(delta: f32) void {
     if (rl.isKeyPressed(rl.KeyboardKey.end)) {
         manual = !manual;

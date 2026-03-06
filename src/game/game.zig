@@ -12,6 +12,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
+const Config = @import("../common/config.zig");
 const rl = @import("raylib");
 
 pub const Game = struct {
@@ -53,6 +54,20 @@ pub const Game = struct {
         return game;
     }
 
+    pub fn deinit(this: *Game) void {
+        Gamestate.deinit();
+        EntityManager.deinit();
+
+        TurnManager.deinit();
+        TilesetManager.deinit();
+        CameraManager.deinit(this.allocator);
+        World.deinit(this.allocator);
+        try ShaderManager.deinit();
+        //try UiManager.init(allocator);
+
+        this.allocator.destroy(this);
+    }
+
     pub fn update(this: *Game) !void {
         const delta = rl.getFrameTime();
         this.player = EntityManager.getPlayer();
@@ -60,32 +75,63 @@ pub const Game = struct {
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
 
-        //try UiManager.update(this);
-        try UiManager.updateAndDraw(this);
-        //try EntityManager.update(this);
         try PlayerController.update(this);
+        try UiManager.update(this);
+
+        //try EntityManager.update(this);
         try TurnManager.update(this);
 
         CameraManager.update(delta);
         Gamestate.update();
 
         ShaderManager.update(delta);
+
+        try EntityManager.despawn();
+        try EntityManager.spawn();
     }
 
     pub fn draw(this: *Game) !void {
-        rl.beginDrawing();
+        // First pass: render game into Window.screen
+        rl.beginTextureMode(Window.screen);
         rl.clearBackground(rl.Color.black);
-        rl.drawFPS(0, 0);
         rl.beginMode2D(CameraManager.camera.*);
         World.draw();
         this.player.draw();
         EntityManager.draw();
         ShaderManager.draw();
-
         try Gamestate.draw();
-
         rl.endMode2D();
+
         try UiManager.draw();
+
+        rl.endTextureMode();
+
+        // Second pass: draw render texture to screen with CRT shader
+        rl.beginDrawing();
+        rl.clearBackground(rl.Color.black);
+        rl.drawFPS(0, 0);
+
+        const t: f32 = @floatCast(rl.getTime());
+        rl.setShaderValue(ShaderManager.crtShader.source, ShaderManager.crtShader.timeLoc, &t, .float);
+
+        const res = [2]f32{
+            @floatFromInt(Window.scaledWidth),
+            @floatFromInt(Window.scaledHeight),
+        };
+        rl.setShaderValue(ShaderManager.crtShader.source, ShaderManager.crtShader.resolutionLoc, &res, .vec2);
+
+        rl.beginShaderMode(ShaderManager.crtShader.source);
+        rl.drawTexturePro(
+            Window.screen.texture,
+            .{ .x = 0, .y = 0, .width = Config.game_width, .height = -Config.game_height },
+            .{ .x = @floatFromInt(Window.offsetx), .y = @floatFromInt(Window.offsety), .width = @floatFromInt(Window.scaledWidth), .height = @floatFromInt(Window.scaledHeight) },
+            .{ .x = 0, .y = 0 },
+            0.0,
+            rl.Color.white,
+        );
+        rl.endShaderMode();
+
+        //try UiManager.draw();
 
         rl.endDrawing();
     }

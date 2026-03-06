@@ -1,5 +1,6 @@
 const Game = @import("../game/game.zig");
 const EntityManager = @import("../game/entityManager.zig");
+const PlayerController = @import("../game/playerController.zig");
 const CameraManager = @import("../game/cameraManager.zig");
 const Entity = @import("../game/entity.zig");
 const std = @import("std");
@@ -28,10 +29,20 @@ var allocator: std.mem.Allocator = undefined;
 
 pub fn init(alloc: std.mem.Allocator) void {
     enemyQueue = std.ArrayList(u32).empty;
+    //@memory arena?, samme issue as highlight, i use the same arraylist, no idea if better to use arena, id ont actualy need to deinit
     allocator = alloc;
 }
 
+pub fn deinit() void {
+    enemyQueue.deinit(allocator);
+}
+
 pub fn update(game: *Game.Game) !void {
+
+    //TODO: @fix @continue
+    if (PlayerController.state == .deploying_puppets) {
+        return;
+    }
     switch (phase) {
         .setup => {
             std.debug.print("setup\n", .{});
@@ -58,6 +69,7 @@ pub fn update(game: *Game.Game) !void {
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
 
             enemyQueueIndex = 0;
+            //@memory this is pretty much free
             enemyQueue.clearRetainingCapacity();
 
             switchTurn(.player);
@@ -68,6 +80,7 @@ pub fn update(game: *Game.Game) !void {
 
 fn updatePlayerTurn(game: *Game.Game) !void {
     if (EntityManager.allPlayerUnitsTurnTaken()) {
+        std.debug.print("switching_turn to enemy\n", .{});
         switchTurn(.enemy);
         return;
     }

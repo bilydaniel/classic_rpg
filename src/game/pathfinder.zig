@@ -54,9 +54,14 @@ pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
 }
 
-pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid, entities: *const Types.PositionHash) !?Path {
+//TODO: have two pathfinders, one with and one withou entities, in combat with entiites
+//outside of combat without, recalculate path when you hit another entity, could ask that entity what is its path
+//and recalculate accordingly
+pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Level, entities: *const Types.PositionHash) !?Path {
+    //TODO: @continue figure out world path finding
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
+    //TODO: @memory use arena allocator, maybe just dont deinit?
     var open_list: std.ArrayList(Node) = .empty;
     defer open_list.deinit(allocator);
 
@@ -82,7 +87,8 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, grid: Types.Grid
 
         for (neighbours) |neighbour| {
             const neigh = neighbour orelse continue;
-            if (!Movement.canMove(neigh, grid, entities)) {
+            const neighLoc = Types.Location.init(level.worldPos, neigh);
+            if (!Movement.canMove(neighLoc, level.grid, entities)) {
                 continue;
             }
 

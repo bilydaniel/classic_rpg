@@ -1,11 +1,9 @@
 const std = @import("std");
 const Game = @import("game.zig");
 const Config = @import("../common/config.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
-pub var screen: c.RenderTexture2D = .{};
+pub var screen: rl.RenderTexture2D = undefined;
 pub var scale: f32 = 0.0;
 pub var windowWidth: i32 = 0;
 pub var windowHeight: i32 = 0;
@@ -16,10 +14,11 @@ pub var scaledHeight: i32 = 0;
 pub var scaledWidthHalf: f32 = 0;
 pub var scaledHeightHalf: f32 = 0;
 
-pub fn init() void {
-    c.SetTargetFPS(60);
-    screen = c.LoadRenderTexture(Config.game_width, Config.game_height);
-    c.SetTextureFilter(screen.texture, c.TEXTURE_FILTER_POINT);
+pub fn init() !void {
+    rl.setTargetFPS(60);
+    screen = try rl.loadRenderTexture(Config.game_width, Config.game_height);
+
+    rl.setTextureFilter(screen.texture, .point);
 
     scale = @min(
         @as(f32, @floatFromInt(Config.window_width)) / @as(f32, Config.game_width),
@@ -44,8 +43,8 @@ pub fn init() void {
 }
 
 pub fn updateWindow() void {
-    const new_width = c.GetScreenWidth();
-    const new_height = c.GetScreenHeight();
+    const new_width = rl.getScreenWidth();
+    const new_height = rl.getScreenHeight();
 
     if (new_width == windowWidth or new_height == windowHeight) {
         return;

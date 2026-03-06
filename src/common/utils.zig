@@ -93,9 +93,9 @@ pub fn posToIndex(pos: Types.Vector2Int) ?usize {
     return result;
 }
 
-pub fn indexToPos(index: i32) Types.Vector2Int {
-    const x = (index % Config.level_width);
-    const y = (@divFloor(index, Config.level_width));
+pub fn indexToPos(index: usize) Types.Vector2Int {
+    const x: i32 = @intCast(index % Config.level_width);
+    const y: i32 = @intCast(@divFloor(index, Config.level_width));
     return Types.Vector2Int.init(x, y);
 }
 

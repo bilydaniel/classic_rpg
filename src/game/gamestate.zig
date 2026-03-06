@@ -38,7 +38,7 @@ pub var cursor: ?Types.Vector2Int = null;
 pub var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
 pub var deployHighlighted: bool = false;
 
-pub var selectedEntity: ?*Entity.Entity = null; //TODO: maybe switch to id?
+pub var selectedEntityID: ?u32 = null;
 pub var selectedEntityMode: EntityModeEnum = .none;
 pub var selectedEntityHighlight: ?Highlight = null;
 
@@ -70,17 +70,27 @@ pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 }
 
+pub fn deinit() void {
+    highlightedTiles.deinit(allocator);
+    movableTiles.deinit(allocator);
+    attackableTiles.deinit(allocator);
+}
+
 pub fn update() void {
     //TODO: maybe update the cursor through this function????
 
-    if (selectedEntity != null and selectedEntityHighlight != null) {
-        selectedEntityHighlight.?.pos = selectedEntity.?.pos;
+    if (selectedEntityID != null and selectedEntityHighlight != null) {
+        const selectedEntity = EntityManager.getEntityID(selectedEntityID.?);
+        if (selectedEntity) |se| {
+            selectedEntityHighlight.?.pos = se.pos;
+        }
     }
 }
 
 pub fn reset() void {
     cursor = null;
 
+    // @memory, is this better? i keep the arraylist, or is arena better and reset the whole thing?
     highlightedTiles.clearRetainingCapacity();
     movableTiles.clearRetainingCapacity();
     deployableCells = null;
@@ -88,7 +98,7 @@ pub fn reset() void {
     movementHighlighted = false;
 
     highlightedEntity = null;
-    selectedEntity = null;
+    selectedEntityID = null;
     selectedEntityHighlight = null;
     selectedEntityMode = .none;
     selectedAction = null;
@@ -139,6 +149,7 @@ pub fn highlightMovement(entity: *Entity.Entity) !void {
 
 //TODO: @refactor, take the type in too
 pub fn highlightTile(pos: Types.Vector2Int) !void {
+    //@memory arena?
     try highlightedTiles.append(allocator, Highlight{
         .pos = pos,
         .type = .pup_deploy,
@@ -161,6 +172,7 @@ pub fn highlightAttack(entity: *Entity.Entity) !void {
 }
 
 pub fn highlightTiles(tiles: std.ArrayList(Types.Vector2Int), highType: HighlightTypeEnum) !void {
+    //@memory
     for (tiles.items) |tile| {
         try highlightedTiles.append(allocator, Highlight{
             .pos = Types.Vector2Int.init(tile.x, tile.y),
@@ -182,6 +194,7 @@ pub fn resetAttackHighlight() void {
 }
 
 pub fn removeHighlightOfType(highType: HighlightTypeEnum) void {
+    // @memory gpa or arena?
     var i: usize = 0;
     while (i < highlightedTiles.items.len) {
         const tile = highlightedTiles.items[i];
@@ -193,11 +206,7 @@ pub fn removeHighlightOfType(highType: HighlightTypeEnum) void {
     }
 }
 
-pub fn isinMovable(pos: Types.Vector2Int, grid: []Level.Tile, entitiesHash: *const Types.PositionHash) bool {
-    if (!Movement.canMove(pos, grid, entitiesHash)) {
-        return false;
-    }
-
+pub fn isinMovable(pos: Types.Vector2Int) bool {
     for (movableTiles.items) |item| {
         if (Types.vector2IntCompare(item, pos)) {
             return true;

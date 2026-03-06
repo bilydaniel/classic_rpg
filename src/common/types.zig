@@ -7,7 +7,7 @@ const c = @cImport({
 });
 
 pub const Grid = []Level.Tile;
-pub const PositionHash = std.AutoHashMap(Vector2Int, usize);
+pub const PositionHash = std.AutoHashMap(Location, usize);
 pub const IdHash = std.AutoHashMap(u32, usize);
 
 const ErrorSet = error{
@@ -115,5 +115,20 @@ pub fn vector3IntAdd(a: Vector3Int, b: Vector3Int) Vector3Int {
         .x = a.x + b.x,
         .y = a.y + b.y,
         .z = a.z + b.z,
+    };
+}
+
+pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
+    return struct {
+        items: [capacity]T = undefined,
+        len: usize = 0,
+
+        const This = @This();
+
+        pub fn append(this: *This, item: T) !void {
+            if (this.len >= capacity) return error.NoSpaceLeft;
+            this.items[this.len] = item;
+            this.len += 1;
+        }
     };
 }

@@ -121,12 +121,21 @@ pub const Level = struct {
         };
     }
 
+    pub fn deinit(this: *Level, allocator: std.mem.Allocator) void {
+        allocator.free(this.grid);
+    }
+
     pub fn draw(this: *Level) void {
+        const debugPos = Types.Vector2Int.init(0, 0);
+        const testPos = Types.vector2IntToPixels(debugPos);
+        rl.drawRectangleLines(testPos.x, testPos.y, Config.tile_width, Config.tile_height, rl.Color.red);
+
         for (this.grid, 0..) |tile, index| {
             const x = @as(c_int, @intCast((index % Config.level_width) * Config.tile_width));
             const y = @as(c_int, @intCast((@divFloor(index, Config.level_width)) * Config.tile_height));
 
-            if (tile.seen) {
+            // tile.seen
+            if (true) {
                 const pos = rl.Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
                 //TODO: pridat scaling podle Wwindow.scale ???
                 //TODO: figure out the color scheme, would like something purple-ish in the style
@@ -142,7 +151,8 @@ pub const Level = struct {
 
         // First, fill everything with walls
         for (0..level.grid.len) |i| {
-            level.grid[i] = Tile.init(.wall);
+            //level.grid[i] = Tile.init(.wall);
+            level.grid[i] = Tile.init(.floor);
         }
 
         // Create some rooms
@@ -255,6 +265,19 @@ pub const Level = struct {
 
         const idx = 2 * width + 2;
         level.grid[idx] = Tile.init(.staircase_down);
+
+        //
+        // clear out outer walls, test transitions
+        //
+
+        for (0.., level.grid) |i, value| {
+            _ = value;
+            const pos = Utils.indexToPos(i);
+            //std.debug.print("pos: {}\n", .{pos});
+            if (pos.x == 1) {
+                //level.grid[i] = Tile.init(.floor);
+            }
+        }
     }
 
     pub fn generateInterestingLevel2(level: *Level) void {
@@ -409,6 +432,7 @@ pub const Level = struct {
             if (stair.x < width and stair.y < height) {
                 const idx = stair.y * width + stair.x;
                 level.grid[idx] = Tile.init(.staircase_down);
+                level.grid[idx + 1] = Tile.init(.staircase_up);
             }
         }
     }

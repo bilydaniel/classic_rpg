@@ -1,17 +1,17 @@
 const std = @import("std");
 const Types = @import("../common/types.zig");
 const Config = @import("../common/config.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 var allocator: std.mem.Allocator = undefined;
 var effects: std.ArrayList(Effect) = undefined;
 
-var slashShader: *Shader = undefined;
-var impactShader: *Shader = undefined;
-var explosionShader: *Shader = undefined;
-var texture: c.Texture2D = undefined;
+var slashShader: Shader = undefined;
+var impactShader: Shader = undefined;
+var explosionShader: Shader = undefined;
+pub var crtShader: Shader = undefined;
+var whiteImage: rl.Image = undefined;
+var texture: rl.Texture2D = undefined;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
@@ -19,9 +19,20 @@ pub fn init(alloc: std.mem.Allocator) !void {
     slashShader = try Shader.init("src/shaders/slash.fs");
     impactShader = try Shader.init("src/shaders/impact.fs");
     explosionShader = try Shader.init("src/shaders/explosion.fs");
+    crtShader = try Shader.init("src/shaders/crt.fs");
 
-    const whiteImage = c.GenImageColor(1, 1, c.WHITE);
-    texture = c.LoadTextureFromImage(whiteImage);
+    whiteImage = rl.genImageColor(1, 1, rl.Color.white);
+    texture = try rl.loadTextureFromImage(whiteImage);
+}
+
+pub fn deinit() !void {
+    effects.deinit(allocator);
+    slashShader.deinit();
+    impactShader.deinit();
+    explosionShader.deinit();
+
+    whiteImage.unload();
+    texture.unload();
 }
 
 pub fn update(delta: f32) void {
@@ -36,16 +47,16 @@ pub fn update(delta: f32) void {
     }
 }
 fn drawImpact(effect: *Effect, progress: f32) void {
-    c.BeginShaderMode(impactShader.source);
+    rl.beginShaderMode(impactShader.source);
 
     // Set shader uniforms
-    c.SetShaderValue(impactShader.source, impactShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
+    rl.setShaderValue(impactShader.source, impactShader.timeLoc, &progress, .float);
 
     const resolution = [2]f32{
-        @as(f32, @floatFromInt(c.GetScreenWidth())),
-        @as(f32, @floatFromInt(c.GetScreenHeight())),
+        @as(f32, @floatFromInt(rl.getScreenWidth())),
+        @as(f32, @floatFromInt(rl.getScreenHeight())),
     };
-    c.SetShaderValue(impactShader.source, impactShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
+    rl.setShaderValue(impactShader.source, impactShader.resolutionLoc, &resolution, .vec2);
 
     // Compute size and position
     const size = 40.0 * (1.0 + progress);
@@ -54,37 +65,37 @@ fn drawImpact(effect: *Effect, progress: f32) void {
 
     // Draw texture instead of rectangle
     const tex = texture; // Assuming you have loaded this earlier
-    const srcRect = c.Rectangle{
+    const srcRect = rl.Rectangle{
         .x = 0,
         .y = 0,
         .width = @as(f32, @floatFromInt(tex.width)),
         .height = @as(f32, @floatFromInt(tex.height)),
     };
-    const destRect = c.Rectangle{
+    const destRect = rl.Rectangle{
         .x = destX,
         .y = destY,
         .width = size,
         .height = size,
     };
-    const origin = c.Vector2{ .x = size / 2.0, .y = size / 2.0 };
+    const origin = rl.Vector2{ .x = size / 2.0, .y = size / 2.0 };
 
     // Rotation 0, color white (so shader fully controls the look)
-    c.DrawTexturePro(tex, srcRect, destRect, origin, 0.0, c.WHITE);
+    rl.drawTexturePro(tex, srcRect, destRect, origin, 0.0, rl.Color.white);
 
-    c.EndShaderMode();
+    rl.endShaderMode();
 }
 
 fn drawExplosion(effect: *Effect, progress: f32) void {
-    c.BeginShaderMode(explosionShader.source);
+    rl.beginShaderMode(explosionShader.source);
 
     // Set shader uniforms
-    c.SetShaderValue(explosionShader.source, explosionShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
+    rl.setShaderValue(explosionShader.source, explosionShader.timeLoc, &progress, .float);
 
     const resolution = [2]f32{
-        @as(f32, @floatFromInt(c.GetScreenWidth())),
-        @as(f32, @floatFromInt(c.GetScreenHeight())),
+        @as(f32, @floatFromInt(rl.getScreenWidth())),
+        @as(f32, @floatFromInt(rl.getScreenHeight())),
     };
-    c.SetShaderValue(explosionShader.source, explosionShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
+    rl.setShaderValue(explosionShader.source, explosionShader.resolutionLoc, &resolution, .vec2);
 
     // Compute size and position
     const size = 30.0 * (1.0 + progress);
@@ -93,33 +104,33 @@ fn drawExplosion(effect: *Effect, progress: f32) void {
 
     // Draw texture instead of rectangle
     const tex = texture; // Assuming you have loaded this earlier
-    const srcRect = c.Rectangle{
+    const srcRect = rl.Rectangle{
         .x = 0,
         .y = 0,
         .width = @as(f32, @floatFromInt(tex.width)),
         .height = @as(f32, @floatFromInt(tex.height)),
     };
-    const destRect = c.Rectangle{
+    const destRect = rl.Rectangle{
         .x = destX,
         .y = destY,
         .width = size,
         .height = size,
     };
-    const origin = c.Vector2{ .x = size / 2.0, .y = size / 2.0 };
+    const origin = rl.Vector2{ .x = size / 2.0, .y = size / 2.0 };
 
     // Rotation 0, color white (so shader fully controls the look)
-    c.DrawTexturePro(tex, srcRect, destRect, origin, 0.0, c.WHITE);
+    rl.drawTexturePro(tex, srcRect, destRect, origin, 0.0, rl.Color.white);
 
-    c.EndShaderMode();
+    rl.endShaderMode();
 }
 fn drawSlash(effect: *Effect, progress: f32) void {
-    c.BeginShaderMode(slashShader.source);
+    rl.beginShaderMode(slashShader.source);
 
-    c.SetShaderValue(slashShader.source, slashShader.timeLoc, &progress, c.SHADER_UNIFORM_FLOAT);
+    rl.setShaderValue(slashShader.source, slashShader.timeLoc, &progress, .float);
 
-    const resolution = [2]f32{ @as(f32, @floatFromInt(c.GetScreenWidth())), @as(f32, @floatFromInt(c.GetScreenHeight())) };
+    const resolution = [2]f32{ @as(f32, @floatFromInt(rl.getScreenWidth())), @as(f32, @floatFromInt(rl.getScreenHeight())) };
 
-    c.SetShaderValue(slashShader.source, slashShader.resolutionLoc, &resolution, c.SHADER_UNIFORM_VEC2);
+    rl.setShaderValue(slashShader.source, slashShader.resolutionLoc, &resolution, .vec2);
 
     // Draw a quad between from and to positions
     const width: f32 = 20.0;
@@ -133,27 +144,27 @@ fn drawSlash(effect: *Effect, progress: f32) void {
     const length = @sqrt(dx * dx + dy * dy);
     const angle = std.math.atan2(dy, dx);
 
-    const rect = c.Rectangle{
+    const rect = rl.Rectangle{
         .x = effect.fromPos.x,
         .y = effect.fromPos.y,
         .width = length,
         .height = width,
     };
-    const origin = c.Vector2{ .x = 0, .y = width / 2 };
+    const origin = rl.Vector2{ .x = 0, .y = width / 2 };
 
-    const src = c.Rectangle{ .x = 0, .y = 0, .width = 1, .height = 1 };
+    const src = rl.Rectangle{ .x = 0, .y = 0, .width = 1, .height = 1 };
 
-    c.DrawTexturePro(texture, src, rect, origin, angle * 180.0 / std.math.pi, c.WHITE);
+    rl.drawTexturePro(texture, src, rect, origin, angle * 180.0 / std.math.pi, rl.Color.white);
 
-    c.EndShaderMode();
+    rl.endShaderMode();
 }
 
 pub fn spawnSlash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
-    const from_pixel = c.Vector2{
+    const from_pixel = rl.Vector2{
         .x = @as(f32, @floatFromInt(from.x * Config.tile_width + Config.tile_width / 2)),
         .y = @as(f32, @floatFromInt(from.y * Config.tile_height + Config.tile_height / 2)),
     };
-    const to_pixel = c.Vector2{
+    const to_pixel = rl.Vector2{
         .x = @as(f32, @floatFromInt(to.x * Config.tile_width + Config.tile_width / 2)),
         .y = @as(f32, @floatFromInt(to.y * Config.tile_height + Config.tile_height / 2)),
     };
@@ -163,7 +174,7 @@ pub fn spawnSlash(from: Types.Vector2Int, to: Types.Vector2Int) !void {
 }
 
 pub fn spawnExplosion(pos: Types.Vector2Int) !void {
-    const pos_pixel = c.Vector2{
+    const pos_pixel = rl.Vector2{
         .x = @as(f32, @floatFromInt(pos.x * Config.tile_width + Config.tile_width / 2)),
         .y = @as(f32, @floatFromInt(pos.y * Config.tile_height + Config.tile_height / 2)),
     };
@@ -173,7 +184,7 @@ pub fn spawnExplosion(pos: Types.Vector2Int) !void {
 }
 
 pub fn spawnImpact(pos: Types.Vector2Int) !void {
-    const pos_pixel = c.Vector2{
+    const pos_pixel = rl.Vector2{
         .x = @as(f32, @floatFromInt(pos.x * Config.tile_width + Config.tile_width / 2)),
         .y = @as(f32, @floatFromInt(pos.y * Config.tile_height + Config.tile_height / 2)),
     };
@@ -203,14 +214,15 @@ pub const EffectType = enum {
 };
 
 pub const Effect = struct {
+    //TODO: refactor?
     effectType: EffectType,
     time: f32,
     duration: f32,
-    fromPos: c.Vector2,
-    toPos: ?c.Vector2,
+    fromPos: rl.Vector2,
+    toPos: ?rl.Vector2,
     active: bool,
 
-    pub fn init(fromPosition: c.Vector2, toPosition: ?c.Vector2, effectType: EffectType, duration: f32) Effect {
+    pub fn init(fromPosition: rl.Vector2, toPosition: ?rl.Vector2, effectType: EffectType, duration: f32) Effect {
         return Effect{
             .fromPos = fromPosition,
             .toPos = toPosition,
@@ -232,21 +244,21 @@ pub const Effect = struct {
 };
 
 pub const Shader = struct {
-    source: c.Shader,
+    source: rl.Shader,
     timeLoc: i32,
     resolutionLoc: i32,
 
-    pub fn init(path: []const u8) !*Shader {
-        const shader = try allocator.create(Shader);
-        const source = c.LoadShader(null, path.ptr);
+    pub fn init(path: [:0]const u8) !Shader {
+        const source = try rl.loadShader(null, path);
 
-        std.debug.print("shader: {}\n", .{source});
-
-        shader.* = .{
+        return Shader{
             .source = source,
-            .timeLoc = c.GetShaderLocation(source, "time"),
-            .resolutionLoc = c.GetShaderLocation(source, "resolution"),
+            .timeLoc = rl.getShaderLocation(source, "time"),
+            .resolutionLoc = rl.getShaderLocation(source, "resolution"),
         };
-        return shader;
+    }
+
+    pub fn deinit(this: *Shader) void {
+        this.source.unload();
     }
 };

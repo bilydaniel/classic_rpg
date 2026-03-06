@@ -13,8 +13,6 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-//TODO: gonna do one level at a time, no possibility for going back
-
 pub var currentLevel: Types.Vector3Int = undefined;
 pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
 
@@ -31,11 +29,26 @@ pub fn init(allocator: std.mem.Allocator) !void {
     var level2 = try Level.Level.init(allocator, 1, worldPos);
     level2.generateInterestingLevel2();
 
+    worldPos.z = 0;
+    worldPos.x = -1;
+    var level3 = try Level.Level.init(allocator, 2, worldPos);
+    level3.generateInterestingLevel();
+    std.debug.print("level_pos: {}\n", .{level3.worldPos});
+
     try levels.put(level1.worldPos, level1);
     try levels.put(level2.worldPos, level2);
+    try levels.put(level3.worldPos, level3);
 
     currentLevel = level1.worldPos;
     //currentLevel = randomLevel;
+}
+
+pub fn deinit(allocator: std.mem.Allocator) void {
+    var it = levels.valueIterator();
+    while (it.next()) |level| {
+        level.deinit(allocator);
+    }
+    levels.deinit();
 }
 
 pub fn getCurrentLevel() *Level.Level {
@@ -51,6 +64,10 @@ pub fn draw() void {
 }
 
 pub fn update() void {}
+
+pub fn changeCurrentLevel(to: Types.Vector3Int) void {
+    currentLevel = to;
+}
 
 pub fn changeCurrentLevelDelta(delta: Types.Vector3Int) void {
     //TODO: probably gonna need to be a bit more complex, loading etc.

@@ -14,14 +14,16 @@ pub fn main() !void {
 
     // std.SegmentedList(comptime T: type, comptime prealloc_item_count: usize);
     // https://gemini.google.com/app/492731873f4e47c6
+    // TODO: @memory figure out the lifetimes of evertything, do proper memory management
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    //TODO: @check leaks
-    //defer _ = gpa.deinit();
+    //TODO: @memory @check leaks
+    defer _ = gpa.deinit();
 
-    Window.init();
+    try Window.init();
     const game = try Game.Game.init(allocator);
+    defer game.deinit();
 
     const running = true;
     while (!rl.windowShouldClose() and running) {

@@ -162,7 +162,9 @@ pub fn calculateFOV(center: Types.Vector2Int, radius: usize) void {
             .x = center.x + @as(i32, @intFromFloat(@cos(angle) * @as(f32, @floatFromInt(radius)))),
             .y = center.y + @as(i32, @intFromFloat(@sin(angle) * @as(f32, @floatFromInt(radius)))),
         };
-        castRay(grid, center, target);
+        if (target.x > 0 and target.x < Config.level_width and target.y > 0 and target.y < Config.level_height) {
+            castRay(grid, center, target);
+        }
     }
 }
 
@@ -215,6 +217,7 @@ pub fn neighboursDistance(pos: Types.Vector2Int, distance: u32, result: *std.Arr
                 continue;
             }
             const newPos = Types.vector2IntAdd(start, Types.Vector2Int{ .x = x, .y = y });
+            //TODO: @memory, could use an arena allocator
             try result.append(allocator, newPos);
         }
         x = 0;
@@ -473,19 +476,19 @@ pub fn getPupById(entities: std.ArrayList(*Entity.Entity), id: u32) ?*Entity.Ent
     return null;
 }
 
-pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
-    if (TurnManager.turn != .player) {
-        return;
-    }
-    //TODO: correct?
-    // if (game.player.inCombat) {
-    //     try updateEntityMovementIC(puppet, game);
-    // } else {
-    //     try updateEntityMovementOOC(puppet, game);
-    // }
-
-    try updateEntityMovement(puppet, game);
-}
+// pub fn updatePuppet(puppet: *Entity.Entity, game: *Game.Game) !void {
+//     if (TurnManager.turn != .player) {
+//         return;
+//     }
+//     //TODO: correct?
+//     // if (game.player.inCombat) {
+//     //     try updateEntityMovementIC(puppet, game);
+//     // } else {
+//     //     try updateEntityMovementOOC(puppet, game);
+//     // }
+//
+//     try updateEntityMovement(puppet, game);
+// }
 
 pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     //TODO: figure out where to put this,
@@ -508,74 +511,74 @@ pub fn updateEnemy(enemy: *Entity.Entity, game: *Game.Game) !void {
     }
 }
 
-pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
-    //const grid = World.getLevelAt(entity.worldPos) orelse return;
-    //const entities = //WHERE I NEED TO GET THE ENTITIES;
-    if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
-        if (newPath) |new_path| {
-            entity.setNewPath(new_path);
-            entity.stuck = 0;
-        } else {
-            entity.stuck += 1;
-            return;
-        }
-    }
-
-    if (entity.hasMoved or entity.path == null) {
-        return;
-    }
-
-    if (entity.inCombat) {
-        entity.movementCooldown += game.delta;
-        if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
-            return;
-        }
-        entity.movementCooldown = 0;
-    }
-
-    const path = &entity.path.?;
-    const nextIndex = path.currIndex + 1;
-
-    //TODO: @remove
-    if (entity.data == .player) {
-        std.debug.print("p: {?}\n", .{path.nodes.items.len});
-        std.debug.print("i: {}\n", .{nextIndex});
-        std.debug.print("g: {?}\n", .{entity.goal});
-    }
-    if (nextIndex >= path.nodes.items.len) {
-        if (entity.data == .player) {
-            std.debug.print("reseting...\n", .{});
-        }
-        entity.removePathGoal();
-        entity.finishMovement();
-        return;
-    }
-
-    const new_pos = path.nodes.items[nextIndex];
-    const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
-
-    // position has entity, recalculate
-    if (new_pos_entity) |_| {
-        entity.removePath();
-        entity.stuck += 1;
-        return;
-    }
-
-    entity.move(new_pos);
-    entity.stuck = 0;
-    path.currIndex = nextIndex;
-
-    if (entity.inCombat) {
-        entity.movedDistance += 1;
-        if (entity.movedDistance >= entity.movementDistance) {
-            entity.finishMovement();
-            entity.removePath();
-        }
-    } else {
-        entity.hasMoved = true;
-    }
-}
+// pub fn updateEntityMovement(entity: *Entity.Entity, game: *Game.Game) !void {
+//     //const grid = World.getLevelAt(entity.worldPos) orelse return;
+//     //const entities = //WHERE I NEED TO GET THE ENTITIES;
+//     if (entity.path == null and entity.goal != null) {
+//         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?);
+//         if (newPath) |new_path| {
+//             entity.setNewPath(new_path);
+//             entity.stuck = 0;
+//         } else {
+//             entity.stuck += 1;
+//             return;
+//         }
+//     }
+//
+//     if (entity.hasMoved or entity.path == null) {
+//         return;
+//     }
+//
+//     if (entity.inCombat) {
+//         entity.movementCooldown += game.delta;
+//         if (entity.movementCooldown < Config.movement_animation_duration_in_combat) {
+//             return;
+//         }
+//         entity.movementCooldown = 0;
+//     }
+//
+//     const path = &entity.path.?;
+//     const nextIndex = path.currIndex + 1;
+//
+//     //TODO: @remove
+//     if (entity.data == .player) {
+//         std.debug.print("p: {?}\n", .{path.nodes.items.len});
+//         std.debug.print("i: {}\n", .{nextIndex});
+//         std.debug.print("g: {?}\n", .{entity.goal});
+//     }
+//     if (nextIndex >= path.nodes.items.len) {
+//         if (entity.data == .player) {
+//             std.debug.print("reseting...\n", .{});
+//         }
+//         entity.removePathGoal();
+//         entity.finishMovement();
+//         return;
+//     }
+//
+//     const new_pos = path.nodes.items[nextIndex];
+//     const new_pos_entity = EntityManager.getEntityByPos(new_pos, World.currentLevel);
+//
+//     // position has entity, recalculate
+//     if (new_pos_entity) |_| {
+//         entity.removePath();
+//         entity.stuck += 1;
+//         return;
+//     }
+//
+//     entity.move(new_pos);
+//     entity.stuck = 0;
+//     path.currIndex = nextIndex;
+//
+//     if (entity.inCombat) {
+//         entity.movedDistance += 1;
+//         if (entity.movedDistance >= entity.movementDistance) {
+//             entity.finishMovement();
+//             entity.removePath();
+//         }
+//     } else {
+//         entity.hasMoved = true;
+//     }
+// }
 
 pub fn enemyCombatBehaviour(enemy: *Entity.Entity, game: *Game.Game) void {
     const left = Types.Vector2Int.init(-1, 0);

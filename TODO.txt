@@ -1,3 +1,6 @@
+memory => ui manager => level generation => pathfinding (need to know how the levels are generated before doing the pathfinding thorugh the world)
+
+do i want to learn shaders?
 
 TODO: figure out memory management first, finalize how iam gonna do memory,
 main reason is the zig 0.15 change, cant continue without proper memory management, 
@@ -5,7 +8,6 @@ would have to rewrite alot of shit later
 
 
 
-TODO: assets
 TODO: make the uimanager immeadeate mode, fix the ui, the puppet select is closing
 TODO: arena allocators?? / preallocated ram
 
@@ -13,8 +15,6 @@ what should be the update order? do i have problems because of update order? not
 
 gonna need to refactor the whole game / context mess, research jblow first
     hardcode ui?
-    use file scope
-    use global scope
     add time meassurements (ingame, wallclock), always use ingame for mechanics stuff(pause exploit)
     make things proper immidietly, dont put it off like i always do(how jblow made menu)
 
@@ -24,8 +24,6 @@ gonna need to refactor the whole game / context mess, research jblow first
 have a look at how jblow codes, see what i can learn from it, make notes:
     most bugs are because the state isnt what you think it is, thats why its a good idea to not split into smaller functions(you cant call them)
 
-start using the entitymanager
-do an overall refactor 
 start using the profiller that i made in computer enhance, start to make decisions based on actual numbers
 
 0. UI final fantasy like ui, only use keyboard, dont do mouse
@@ -46,8 +44,6 @@ random generation world + entities
 how to work with enemies, types, how to instantiate, spawn etc
 
 
-fix entities position(level + pos)
 
-better way of connecting levels, kinda wierd right now
 
 
