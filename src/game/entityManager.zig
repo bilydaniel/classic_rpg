@@ -71,7 +71,7 @@ pub fn fillEntities() !void {
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
-    try player.data.player.puppets.append(entity_allocator, puppet.id);
+    try player.data.player.puppets.append(puppet.id);
 
     try addActiveEntity(player);
     try addInactiveEntity(puppet);

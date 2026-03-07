@@ -70,13 +70,14 @@ pub const Game = struct {
 
     pub fn update(this: *Game) !void {
         const delta = rl.getFrameTime();
+        //try UiManager.update(this);
+        try UiManager.updateAndDraw(this);
         this.player = EntityManager.getPlayer();
         this.delta = delta;
         //TODO: decide on a game loop, look into the book
         Window.updateWindow();
 
         try PlayerController.update(this);
-        try UiManager.update(this);
         //try EntityManager.update(this);
         try TurnManager.update(this);
 
@@ -100,8 +101,6 @@ pub const Game = struct {
         ShaderManager.draw();
         try Gamestate.draw();
         rl.endMode2D();
-
-        try UiManager.draw();
 
         rl.endTextureMode();
 
@@ -129,8 +128,6 @@ pub const Game = struct {
             rl.Color.white,
         );
         rl.endShaderMode();
-
-        //try UiManager.draw();
 
         rl.endDrawing();
     }

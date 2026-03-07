@@ -10,226 +10,175 @@ const Config = @import("../common/config.zig");
 const Utils = @import("../common/utils.zig");
 const rl = @import("raylib");
 
-//TODO: how do I do some special shapes / effects for design?
-// maybe attach them to an element or have them separate?
-//
-// TODO: switch to immeadeate mode ui watch caseys video
-pub const Updatefunction = *const fn (*Element, *Game.Game) anyerror!void;
-
-pub var uiCommand: UiCommand = undefined;
-
+//TODO: checkout the draw buffer:
+//https://gemini.google.com/app/4caa258211f314ad
 var allocator: std.mem.Allocator = undefined;
-var elements: std.ArrayList(Element) = undefined;
-var menus: std.AutoHashMap(MenuType, i32) = undefined; //element id
-var activeMenu: ?i32 = null;
-var elementGroupID: i32 = 0;
-var nextElementID: i32 = 0;
+
+var activeID: i32 = 0;
+var hotID: i32 = 0;
+
+var menu_pos: rl.Vector2 = .{ .x = 0, .y = 0 };
+var layout_y: f32 = 0;
+var item_index: i32 = 0;
+var hot_index: i32 = 0;
+var itemCount: i32 = 0;
+
+var confirm: bool = false;
+var cancel: bool = false;
+var move: ?Types.Vector2Int = null;
+var combatToggle: bool = false;
+var skip: bool = false;
+var quickSelect: ?u8 = null;
+
+//TODO: probalby remove
+var menuSelect: ?MenuItemData = null;
+
+var primaryColor: rl.Color = rl.Color.green;
+var secondary: rl.Color = rl.Color.beige;
+
+var fontSize: i32 = 20;
+
+pub var uiTexture: rl.RenderTexture2D = undefined;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
-    elements = std.ArrayList(Element).empty;
-    menus = std.AutoHashMap(MenuType, i32).init(allocator);
-
-    try makeUIElements();
+    uiTexture = try rl.loadRenderTexture(Config.game_width, Config.game_height);
 }
 
-pub fn update(game: *Game.Game) !void {
-    uiCommand = UiCommand{};
+pub fn deinit() void {
+    rl.unloadTexture(uiTexture);
+}
 
+//TODO: can i separate update and draw?
+pub fn updateAndDraw(game: *Game.Game) !void {
+    _ = game;
     if (TurnManager.turn != .player) {
         return;
     }
-    if (Gamestate.showMenu == .none) {
-        if (activeMenu != null) {
-            const menuElement = getElementByID(activeMenu.?);
-            if (menuElement) |menu| {
-                hideElementGroup(menu.groupID);
-                activeMenu = null;
-            }
-        }
-    } else {
-        if (activeMenu == null) {
-            const menuID = menus.get(Gamestate.showMenu);
-            if (menuID) |menuid| {
-                const menuElement = getElementByID(menuid);
-                if (menuElement) |_menu| {
-                    showElementGroup(_menu.groupID);
-                    activeMenu = menuid;
-                }
-            }
-        }
-    }
 
-    for (elements.items) |*element| {
-        try element.update(game);
-    }
+    drawNonInteractive();
+
+    itemCount = 0;
 
     //confirm
-    var confirm = InputManager.takeConfirmInput();
+    confirm = InputManager.takeConfirmInput();
 
     //cancel
-    const cancel = InputManager.takeCancelInput();
+    cancel = InputManager.takeCancelInput();
 
     //move
-    const move = InputManager.takePositionInput();
+    move = InputManager.takePositionInput();
 
     //menu select
-    if (move) |_move| {
-        updateActiveMenu(_move);
-    }
+    // if (move) |_move| {
+    //     updateActiveMenu(_move);
+    // }
 
-    var menuSelect: ?MenuItemData = null;
-    if (confirm) {
-        menuSelect = getSelectedItem();
-        if (menuSelect != null) {
-            confirm = false;
-        }
-    }
+    // var menuSelect: ?MenuItemData = null;
+    // if (confirm) {
+    //     menuSelect = getSelectedItem();
+    //     if (menuSelect != null) {
+    //         confirm = false;
+    //     }
+    // }
 
     //quick select
-    const quickSelect = InputManager.takeQuickSelectInput();
-
-    //combat toggle
-    const combatToggle = InputManager.takeCombatToggle();
-
-    const skip = InputManager.takeSkipInput();
-
-    const uicommand = UiCommand{
-        .confirm = confirm,
-        .cancel = cancel,
-        .move = move,
-        .menuSelect = menuSelect,
-        .quickSelect = quickSelect,
-        .combatToggle = combatToggle,
-        .skip = skip,
-    };
-    uiCommand = uicommand;
+    // const quickSelect = InputManager.takeQuickSelectInput();
+    //
+    // //combat toggle
+    // const combatToggle = InputManager.takeCombatToggle();
+    //
+    // const skip = InputManager.takeSkipInput();
 }
 
-pub fn draw() !void {
-    for (elements.items) |*element| {
-        element.draw();
-    }
+// pub fn makeUIElements() !void {
+//     const playerPlatePos = RelativePos.init(.top_left, 10, 30);
+//     const playerPlateSize = rl.Vector2{ .x = 200, .y = 150 };
+//     _ = try makeCharacterPlate(playerPlatePos, playerPlateSize);
+//
+//     const deployMenuPos = RelativePos.init(.bottom_center, 0, 0);
+//     const deployMenuSize = rl.Vector2{ .x = 200, .y = 150 };
+//     const deployMenuID = try makeChoiceMenu(deployMenuPos, deployMenuSize, "Pick a Puppet:", MenuType.puppet_select, updatePuppetMenu);
+//     hideElementGroup(deployMenuID);
+//
+//     const actionMenuPos = RelativePos.init(.bottom_center, 0, 0);
+//     const actionMenuSize = rl.Vector2{ .x = 200, .y = 150 };
+//     const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
+//     hideElementGroup(actionMenuID);
+//
+//     const turnNumberPos = RelativePos.init(.top_right, 0, 0);
+//     const turnNumberSize = rl.Vector2{ .x = 100, .y = 100 };
+//
+//     const turnElementID = try makeText(turnNumberPos, turnNumberSize, "Turn:");
+//     const turnElement = getElementByID(turnElementID);
+//     if (turnElement) |element| {
+//         element.updateFn = updateTurnNumberText;
+//     }
+//
+//     const currentTurnPos = RelativePos.init(.top_right, 0, 100);
+//     const currentTurnSize = rl.Vector2{ .x = 100, .y = 100 };
+//
+//     const currentTurnID = try makeText(currentTurnPos, currentTurnSize, "");
+//     const currentTurnElement = getElementByID(currentTurnID);
+//     if (currentTurnElement) |element| {
+//         element.updateFn = updateCurrentTurnText;
+//     }
+//
+//     const combatIndicatorPos = RelativePos.init(.top_right, 0, 150);
+//     const combatIndicatorSize = rl.Vector2{ .x = 100, .y = 100 };
+//
+//     const combatIndicatorID = try makeText(combatIndicatorPos, combatIndicatorSize, "");
+//     const combatIndicatorElement = getElementByID(combatIndicatorID);
+//     if (combatIndicatorElement) |element| {
+//         element.updateFn = updateCombatIndicatorText;
+//     }
+// }
 
-    //var buffer: [64:0]u8 = undefined;
-    //const text = try std.fmt.bufPrintZ(&buffer, "Turn: {}", .{Gamestate.turnNumber});
+// pub fn updateActiveMenu(move: Types.Vector2Int) void {
+//     if (activeMenu) |active_menu| {
+//         const activeElement = getElementByID(active_menu) orelse return;
+//         var menuData = &activeElement.data.menu;
+//         const itemCount = @as(u32, @intCast(menuData.menuItems.items.len));
+//         var index = menuData.index;
+//         if (itemCount == 0) {
+//             return;
+//         }
+//
+//         if (move.y == -1) {
+//             if (index <= 0) {
+//                 index = itemCount - 1;
+//             } else {
+//                 index -= 1;
+//             }
+//         } else if (move.y == 1) {
+//             if (index >= itemCount - 1) {
+//                 index = 0;
+//             } else {
+//                 index += 1;
+//             }
+//         }
+//         menuData.index = index;
+//     }
+// }
 
-    //c.DrawText(text.ptr, Config.window_width - 200, 10, 15, c.RED);
-}
+// pub fn getSelectedItem() ?MenuItemData {
+//     if (activeMenu) |active_menu| {
+//         const activeElement = getElementByID(active_menu) orelse return null;
+//
+//         const menu = activeElement.data.menu;
+//         if (menu.menuItems.items.len > 0) {
+//             return menu.menuItems.items[menu.index].data;
+//         }
+//     }
+//     return null;
+// }
 
-pub fn makeUIElements() !void {
-    const playerPlatePos = RelativePos.init(.top_left, 10, 30);
-    const playerPlateSize = rl.Vector2{ .x = 200, .y = 150 };
-    _ = try makeCharacterPlate(playerPlatePos, playerPlateSize);
-
-    const deployMenuPos = RelativePos.init(.bottom_center, 0, 0);
-    const deployMenuSize = rl.Vector2{ .x = 200, .y = 150 };
-    const deployMenuID = try makeChoiceMenu(deployMenuPos, deployMenuSize, "Pick a Puppet:", MenuType.puppet_select, updatePuppetMenu);
-    hideElementGroup(deployMenuID);
-
-    const actionMenuPos = RelativePos.init(.bottom_center, 0, 0);
-    const actionMenuSize = rl.Vector2{ .x = 200, .y = 150 };
-    const actionMenuID = try makeChoiceMenu(actionMenuPos, actionMenuSize, "Pick an Action:", MenuType.action_select, updateActionMenu);
-    hideElementGroup(actionMenuID);
-
-    const turnNumberPos = RelativePos.init(.top_right, 0, 0);
-    const turnNumberSize = rl.Vector2{ .x = 100, .y = 100 };
-
-    const turnElementID = try makeText(turnNumberPos, turnNumberSize, "Turn:");
-    const turnElement = getElementByID(turnElementID);
-    if (turnElement) |element| {
-        element.updateFn = updateTurnNumberText;
-    }
-
-    const currentTurnPos = RelativePos.init(.top_right, 0, 100);
-    const currentTurnSize = rl.Vector2{ .x = 100, .y = 100 };
-
-    const currentTurnID = try makeText(currentTurnPos, currentTurnSize, "");
-    const currentTurnElement = getElementByID(currentTurnID);
-    if (currentTurnElement) |element| {
-        element.updateFn = updateCurrentTurnText;
-    }
-
-    const combatIndicatorPos = RelativePos.init(.top_right, 0, 150);
-    const combatIndicatorSize = rl.Vector2{ .x = 100, .y = 100 };
-
-    const combatIndicatorID = try makeText(combatIndicatorPos, combatIndicatorSize, "");
-    const combatIndicatorElement = getElementByID(combatIndicatorID);
-    if (combatIndicatorElement) |element| {
-        element.updateFn = updateCombatIndicatorText;
-    }
-}
-
-pub fn hideElementGroup(id: i32) void {
-    for (elements.items) |*element| {
-        if (element.groupID == id) {
-            element.visible = false;
-        }
-    }
-}
-
-pub fn showElementGroup(id: i32) void {
-    for (elements.items) |*element| {
-        if (element.groupID == id) {
-            element.visible = true;
-        }
-    }
-}
-
-pub fn updateActiveMenu(move: Types.Vector2Int) void {
-    if (activeMenu) |active_menu| {
-        const activeElement = getElementByID(active_menu) orelse return;
-        var menuData = &activeElement.data.menu;
-        const itemCount = @as(u32, @intCast(menuData.menuItems.items.len));
-        var index = menuData.index;
-        if (itemCount == 0) {
-            return;
-        }
-
-        if (move.y == -1) {
-            if (index <= 0) {
-                index = itemCount - 1;
-            } else {
-                index -= 1;
-            }
-        } else if (move.y == 1) {
-            if (index >= itemCount - 1) {
-                index = 0;
-            } else {
-                index += 1;
-            }
-        }
-        menuData.index = index;
-    }
-}
-
-pub fn getSelectedItem() ?MenuItemData {
-    if (activeMenu) |active_menu| {
-        const activeElement = getElementByID(active_menu) orelse return null;
-
-        const menu = activeElement.data.menu;
-        if (menu.menuItems.items.len > 0) {
-            return menu.menuItems.items[menu.index].data;
-        }
-    }
-    return null;
-}
-
-pub fn resetActiveMenuIndex() void {
-    if (activeMenu) |active_menu| {
-        const activeElement = getElementByID(active_menu) orelse return;
-        activeElement.data.menu.index = 0;
-    }
-}
-
-fn getElementByID(id: i32) ?*Element {
-    for (elements.items) |*element| {
-        if (element.id == id) {
-            return element;
-        }
-    }
-    return null;
-}
+// pub fn resetActiveMenuIndex() void {
+//     if (activeMenu) |active_menu| {
+//         const activeElement = getElementByID(active_menu) orelse return;
+//         activeElement.data.menu.index = 0;
+//     }
+// }
 
 pub const AnchorEnum = enum {
     top_left,
@@ -305,128 +254,42 @@ fn getAnchorPosition(anchor: AnchorEnum) rl.Vector2 {
     };
 }
 
-pub const Element = struct {
-    id: i32,
-    visible: bool,
-    relPos: RelativePos,
-    size: rl.Vector2,
-    data: ElementData,
-    updateFn: ?Updatefunction = null,
-    groupID: i32 = undefined,
-
-    pub fn init(resPos: RelativePos, size: rl.Vector2, data: ElementData) Element {
-        const element = Element{
-            .id = nextElementID,
-            .visible = true,
-            .relPos = resPos,
-            .size = size,
-            .data = data,
-            .groupID = elementGroupID,
-        };
-        nextElementID += 1;
-
-        return element;
-    }
-
-    pub fn initBar(resPos: RelativePos, size: rl.Vector2, data: ElementData) !*Element {
-        const element = Element{
-            .visible = true,
-            .relPos = resPos,
-            .size = size,
-            .data = data,
-        };
-
-        return element;
-    }
-
-    pub fn initBackground(resPos: RelativePos, size: rl.Vector2, color: rl.Color) Element {
-        var element = Element.init(resPos, size, undefined);
-        element.data = ElementData{ .background = ElementBackgroundData{ .color = color } };
-        return element;
-    }
-
-    pub fn initText(resPos: RelativePos, size: rl.Vector2, text: []const u8) Element {
-        var element = Element.init(resPos, size, undefined);
-        element.data = ElementData{ .text = ElementTextData.init(text, rl.Color.white) };
-        return element;
-    }
-
-    pub fn initMenu(resPos: RelativePos, size: rl.Vector2, updateFunction: Updatefunction) Element {
-        var element = Element.init(resPos, size, undefined);
-
-        element.updateFn = updateFunction;
-
-        element.data = ElementData{ .menu = ElementMenuData{
-            .menuItems = std.ArrayList(ElementMenuItem).empty,
-            .index = 0,
-            .type = .puppet_select,
-        } };
-
-        return element;
-    }
-
-    pub fn update(this: *Element, game: *Game.Game) !void {
-        if (this.updateFn) |_fn| {
-            try _fn(this, game);
-        }
-    }
-
-    pub fn draw(this: *Element) void {
-        if (!this.visible) {
-            return;
-        }
-
-        switch (this.data) {
-            .background => {
-                const size = getScaledSize(this.size);
-                const position = relativeToScreenPos(this.relPos, size);
-
-                rl.drawRectangle(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(size.x), @intFromFloat(size.y), rl.Color.orange);
-            },
-            .menu => {
-                //TODO: @finish
-
-                const size = getScaledSize(this.size);
-                const position = relativeToScreenPos(this.relPos, size);
-
-                var x = position.x;
-                var y = position.y;
-                for (this.data.menu.menuItems.items, 0..) |*item, i| {
-                    var text_color = this.data.menu.textColor;
-                    if (this.data.menu.index == i) {
-                        text_color = this.data.menu.pickedTextColor;
-                        //std.mem.copyForwards(const u8, item.text[2..], item.text);
-                        //TODO: @continue @finish add some arrows to the item being picked
-                    }
-
-                    rl.drawText(
-                        item.text,
-                        @intFromFloat(x),
-                        @intFromFloat(y),
-                        this.data.menu.fontSize,
-                        text_color,
-                    );
-                    x += 0;
-                    y += 20;
-                }
-            },
-            .bar => {},
-            .text => {
-                const size = getScaledSize(this.size);
-                const position = relativeToScreenPos(this.relPos, size);
-                const fontSize = @as(c_int, @intFromFloat(@as(f32, @floatFromInt(this.data.text.fontSize)) * Window.scale));
-
-                rl.drawText(
-                    &this.data.text.text,
-                    @intFromFloat(position.x),
-                    @intFromFloat(position.y),
-                    fontSize,
-                    this.data.text.textColor,
-                );
-            },
-        }
-    }
-};
+// pub fn draw(this: *Element) void {
+//     if (!this.visible) {
+//         return;
+//     }
+//
+//     switch (this.data) {
+//         .menu => {
+//             //TODO: @finish
+//
+//             const size = getScaledSize(this.size);
+//             const position = relativeToScreenPos(this.relPos, size);
+//
+//             var x = position.x;
+//             var y = position.y;
+//             for (this.data.menu.menuItems.items, 0..) |*item, i| {
+//                 var text_color = this.data.menu.textColor;
+//                 if (this.data.menu.index == i) {
+//                     text_color = this.data.menu.pickedTextColor;
+//                     //std.mem.copyForwards(const u8, item.text[2..], item.text);
+//                     //TODO: @continue @finish add some arrows to the item being picked
+//                 }
+//
+//                 rl.drawText(
+//                     item.text,
+//                     @intFromFloat(x),
+//                     @intFromFloat(y),
+//                     this.data.menu.fontSize,
+//                     text_color,
+//                 );
+//                 x += 0;
+//                 y += 20;
+//             }
+//         },
+//         .bar => {},
+//     }
+// }
 
 pub const ElementData = union(ElementType) {
     menu: ElementMenuData,
@@ -444,8 +307,6 @@ pub const ElementMenuData = struct {
     pickedTextColor: rl.Color = rl.Color.red,
 };
 
-//TODO: no idea if I should do it this way, maybe just use the commandType???
-// its 1:1 anyway
 pub const MenuType = enum {
     none,
     puppet_select,
@@ -523,186 +384,234 @@ pub const ActionType = enum {
     attack,
 };
 
-pub const Command = struct {
-    type: CommandType,
-    data: CommandData,
-};
-
-pub const CommandType = enum {
-    none,
-    select_puppet,
-    select_action,
-};
-
-pub const CommandData = union(CommandType) {
-    none: void,
-    select_puppet: usize,
-    select_action: ActionType,
-};
-
 const MenuError = error{};
 
-pub const UiCommand = struct {
-    confirm: bool = false,
-    cancel: bool = false,
-    move: ?Types.Vector2Int = null,
-    menuSelect: ?MenuItemData = null,
-    quickSelect: ?u8 = null,
-    combatToggle: bool = false,
-    skip: bool = false,
-};
-
 pub fn getConfirm() bool {
-    const confirm = uiCommand.confirm;
-    uiCommand.confirm = false;
-    return confirm;
+    const c = confirm;
+    confirm = false;
+    return c;
 }
 
-pub fn getCancel() bool {
-    const cancel = uiCommand.cancel;
-    uiCommand.cancel = false;
-    return cancel;
-}
+// pub fn getCancel() bool {
+//     const cancel = uiCommand.cancel;
+//     uiCommand.cancel = false;
+//     return cancel;
+// }
 
 pub fn getMove() ?Types.Vector2Int {
-    const move = uiCommand.move;
-    uiCommand.move = null;
-    return move;
+    const m = move;
+    move = null;
+    return m;
 }
 
 pub fn getSkip() bool {
-    const skip = uiCommand.skip;
-    uiCommand.skip = false;
-    return skip;
+    const s = skip;
+    skip = false;
+    return s;
 }
 
 pub fn getMenuSelect() ?MenuItemData {
-    const item = uiCommand.menuSelect;
-    uiCommand.menuSelect = null;
+    const item = menuSelect;
+    menuSelect = null;
     return item;
 }
 
 pub fn getQuickSelect() ?u8 {
-    const item = uiCommand.quickSelect;
-    uiCommand.quickSelect = null;
+    const item = quickSelect;
+    quickSelect = null;
     return item;
 }
 
 pub fn getCombatToggle() bool {
-    const combat = uiCommand.combatToggle;
-    uiCommand.combatToggle = false;
+    const combat = combatToggle;
+    combatToggle = false;
     return combat;
 }
 
-pub fn makeCharacterPlate(relPos: RelativePos, size: rl.Vector2) !i32 {
+// pub fn makeCharacterPlate(relPos: RelativePos, size: rl.Vector2) !i32 {
+//     var relativePosition = relPos;
+//     const background = Element.initBackground(
+//         relativePosition,
+//         size,
+//         rl.Color.beige,
+//     );
+//
+//     relativePosition.pos.x += 3;
+//     relativePosition.pos.y += 5;
+//     const text = Element.initText(relativePosition, size, "Player");
+//
+//     try elements.append(allocator, background);
+//     try elements.append(allocator, text);
+//     elementGroupID += 1;
+//     return background.groupID;
+// }
+
+// pub fn makeChoiceMenu(relPos: RelativePos, size: rl.Vector2, title: []const u8, menuType: MenuType, updateFunction: Updatefunction) !i32 {
+//     var relativePosition = relPos;
+//
+//     const background = Element.initBackground(relativePosition, size, rl.Color.blue);
+//
+//     relativePosition.pos.x += 3;
+//     relativePosition.pos.y += 5;
+//
+//     const titleElement = Element.initText(relativePosition, size, title);
+//
+//     relativePosition.pos.x += 3;
+//     relativePosition.pos.y += 30;
+//
+//     const menu = Element.initMenu(relativePosition, size, updateFunction);
+//     try menus.put(menuType, menu.id);
+//
+//     try elements.append(allocator, background);
+//     try elements.append(allocator, titleElement);
+//     try elements.append(allocator, menu);
+//     elementGroupID += 1;
+//     return background.groupID;
+// }
+
+// pub fn makeText(relPos: RelativePos, size: rl.Vector2, text: []const u8) !i32 {
+//     //TODO: maybe add some backgrround?
+//     const relativePosition = relPos;
+//     const textElement = Element.initText(relativePosition, size, text);
+//     try elements.append(allocator, textElement);
+//     elementGroupID += 1;
+//     return textElement.id;
+// }
+
+// pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
+//     //TODO: update every frame for now, probably can make it better
+//     this.data.menu.menuItems.clearRetainingCapacity();
+//
+//     //TODO: this is ridicolous, maybe make a getter or something?
+//     for (game.player.data.player.puppets.items) |pupID| {
+//         const puppet = EntityManager.getEntityID(pupID);
+//         if (puppet) |pup| {
+//             if (!pup.active) {
+//                 const item = ElementMenuItem.initPupItem(pup.name, pup.id);
+//                 try this.data.menu.menuItems.append(allocator, item);
+//             }
+//         }
+//     }
+// }
+
+// pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
+//     _ = game;
+//     this.data.menu.menuItems.clearRetainingCapacity();
+//
+//     if (Gamestate.selectedEntityID) |id| {
+//         const selectedEntity = EntityManager.getEntityID(id);
+//         if (selectedEntity) |se| {
+//             if (!se.hasMoved) {
+//                 const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
+//                 try this.data.menu.menuItems.append(allocator, itemMove);
+//             }
+//
+//             if (!se.hasAttacked) {
+//                 const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
+//                 try this.data.menu.menuItems.append(allocator, itemAttack);
+//             }
+//         }
+//     }
+// }
+
+// pub fn updateTurnNumberText(this: *Element, game: *Game.Game) anyerror!void {
+//     _ = game;
+//
+//     _ = try std.fmt.bufPrintZ(&this.data.text.text, "Turn: {}", .{TurnManager.turnNumber});
+// }
+
+// pub fn updateCurrentTurnText(this: *Element, game: *Game.Game) anyerror!void {
+//     _ = game;
+//
+//     if (TurnManager.turn == .player) {
+//         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Player"});
+//     } else if (TurnManager.turn == .enemy) {
+//         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Enemy"});
+//     }
+// }
+
+// pub fn updateCombatIndicatorText(this: *Element, game: *Game.Game) anyerror!void {
+//     _ = game;
+//     const player = EntityManager.getPlayer();
+//
+//     if (player.inCombat) {
+//         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Combat..."});
+//     } else {
+//         _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Exploring..."});
+//     }
+// }
+
+fn drawNonInteractive() void {
+    drawPlayerPlate();
+    drawTurnPhase();
+    drawTurnNumber();
+    drawCombatIndicator();
+}
+
+fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2) void {
     var relativePosition = relPos;
-    const background = Element.initBackground(
-        relativePosition,
-        size,
-        rl.Color.beige,
-    );
+    drawBackground(relativePosition, size);
 
     relativePosition.pos.x += 3;
     relativePosition.pos.y += 5;
-    const text = Element.initText(relativePosition, size, "Player");
+    //drawText();
 
-    try elements.append(allocator, background);
-    try elements.append(allocator, text);
-    elementGroupID += 1;
-    return background.groupID;
+    //drawBar();
 }
 
-pub fn makeChoiceMenu(relPos: RelativePos, size: rl.Vector2, title: []const u8, menuType: MenuType, updateFunction: Updatefunction) !i32 {
-    var relativePosition = relPos;
+fn drawCombatIndicator() void {
+    const pos = RelativePos.init(.top_right, 0, 150);
+    const size = rl.Vector2{ .x = 100, .y = 100 };
 
-    const background = Element.initBackground(relativePosition, size, rl.Color.blue);
-
-    relativePosition.pos.x += 3;
-    relativePosition.pos.y += 5;
-
-    const titleElement = Element.initText(relativePosition, size, title);
-
-    relativePosition.pos.x += 3;
-    relativePosition.pos.y += 30;
-
-    const menu = Element.initMenu(relativePosition, size, updateFunction);
-    try menus.put(menuType, menu.id);
-
-    try elements.append(allocator, background);
-    try elements.append(allocator, titleElement);
-    try elements.append(allocator, menu);
-    elementGroupID += 1;
-    return background.groupID;
-}
-
-pub fn makeText(relPos: RelativePos, size: rl.Vector2, text: []const u8) !i32 {
-    //TODO: maybe add some backgrround?
-    const relativePosition = relPos;
-    const textElement = Element.initText(relativePosition, size, text);
-    try elements.append(allocator, textElement);
-    elementGroupID += 1;
-    return textElement.id;
-}
-
-pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
-    //TODO: update every frame for now, probably can make it better
-    this.data.menu.menuItems.clearRetainingCapacity();
-
-    //TODO: this is ridicolous, maybe make a getter or something?
-    for (game.player.data.player.puppets.items) |pupID| {
-        const puppet = EntityManager.getEntityID(pupID);
-        if (puppet) |pup| {
-            if (!pup.active) {
-                const item = ElementMenuItem.initPupItem(pup.name, pup.id);
-                try this.data.menu.menuItems.append(allocator, item);
-            }
-        }
+    const player = EntityManager.getPlayer();
+    if (player.inCombat) {
+        drawText(pos, size, "Combat...");
+    } else {
+        drawText(pos, size, "Exploring...");
     }
 }
 
-pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
-    _ = game;
-    this.data.menu.menuItems.clearRetainingCapacity();
-
-    if (Gamestate.selectedEntityID) |id| {
-        const selectedEntity = EntityManager.getEntityID(id);
-        if (selectedEntity) |se| {
-            if (!se.hasMoved) {
-                const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
-                try this.data.menu.menuItems.append(allocator, itemMove);
-            }
-
-            if (!se.hasAttacked) {
-                const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
-                try this.data.menu.menuItems.append(allocator, itemAttack);
-            }
-        }
-    }
-}
-
-pub fn updateTurnNumberText(this: *Element, game: *Game.Game) anyerror!void {
-    _ = game;
-
-    _ = try std.fmt.bufPrintZ(&this.data.text.text, "Turn: {}", .{TurnManager.turnNumber});
-}
-
-pub fn updateCurrentTurnText(this: *Element, game: *Game.Game) anyerror!void {
-    _ = game;
+fn drawTurnPhase() void {
+    const pos = RelativePos.init(.top_right, 0, 100);
+    const size = rl.Vector2{ .x = 100, .y = 100 };
 
     if (TurnManager.turn == .player) {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Player"});
+        drawText(pos, size, "Current Turn: Player");
     } else if (TurnManager.turn == .enemy) {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Enemy"});
+        drawText(pos, size, "Current Turn: Enemies");
     }
 }
+fn drawTurnNumber() void {
+    const pos = RelativePos.init(.top_right, 0, 0);
+    const size = rl.Vector2{ .x = 100, .y = 100 };
 
-pub fn updateCombatIndicatorText(this: *Element, game: *Game.Game) anyerror!void {
-    _ = game;
-    const player = EntityManager.getPlayer();
+    drawText(pos, size, "Turn: ");
+}
+fn drawBar() void {}
 
-    if (player.inCombat) {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Combat..."});
-    } else {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Exploring..."});
-    }
+fn drawPlayerPlate() void {
+    const playerPlatePos = RelativePos.init(.top_left, 10, 30);
+    const playerPlateSize = rl.Vector2{ .x = 200, .y = 150 };
+    drawCharacterPlate(playerPlatePos, playerPlateSize);
+}
+
+fn drawBackground(relPos: RelativePos, size: rl.Vector2) void {
+    const s = getScaledSize(size);
+    const position = relativeToScreenPos(relPos, s);
+
+    rl.drawRectangle(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(size.x), @intFromFloat(size.y), rl.Color.orange);
+}
+
+fn drawText(relPos: RelativePos, size: rl.Vector2, text: [:0]const u8) void {
+    const s = getScaledSize(size);
+    const position = relativeToScreenPos(relPos, s);
+    const font_size = @as(c_int, @intFromFloat(@as(f32, @floatFromInt(fontSize)) * Window.scale));
+
+    rl.drawText(
+        text,
+        @intFromFloat(position.x),
+        @intFromFloat(position.y),
+        font_size,
+        primaryColor,
+    );
 }
