@@ -22,6 +22,7 @@ var layout_y: f32 = 0;
 var item_index: i32 = 0;
 var hot_index: i32 = 0;
 var itemCount: i32 = 0;
+var lastItemCount: i32 = 0;
 
 var confirm: bool = false;
 var cancel: bool = false;
@@ -614,4 +615,23 @@ fn drawText(relPos: RelativePos, size: rl.Vector2, text: [:0]const u8) void {
         font_size,
         primaryColor,
     );
+}
+
+pub fn drawToBuffer() void {
+    rl.beginTextureMode(uiTexture);
+    rl.clearBackground(rl.Color.blank);
+    itemCount = 0;
+}
+
+pub fn stopDrawingToBuffer() void {
+    rl.endTextureMode();
+    lastItemCount = itemCount;
+}
+
+pub fn drawBufferToWindow() void {
+    const source = rl.Rectangle{ .x = 0, .y = 0, .width = @floatFromInt(uiTexture.texture.width), .height = @floatFromInt(-uiTexture.texture.height) };
+
+    const dest = rl.Rectangle{ .x = @floatFromInt(Window.offsetx), .y = @floatFromInt(Window.offsety), .width = @floatFromInt(Window.scaledWidth), .height = @floatFromInt(Window.scaledHeight) };
+
+    rl.drawTexturePro(uiTexture.texture, source, dest, .{ .x = 0, .y = 0 }, 0, rl.Color.white);
 }

@@ -70,8 +70,14 @@ pub const Game = struct {
 
     pub fn update(this: *Game) !void {
         const delta = rl.getFrameTime();
-        //try UiManager.update(this);
+
+        //
+        // draw to the buffer
+        //
+        UiManager.drawToBuffer();
         try UiManager.updateAndDraw(this);
+        UiManager.stopDrawingToBuffer();
+
         this.player = EntityManager.getPlayer();
         this.delta = delta;
         //TODO: decide on a game loop, look into the book
@@ -128,6 +134,7 @@ pub const Game = struct {
             rl.Color.white,
         );
         rl.endShaderMode();
+        UiManager.drawBufferToWindow();
 
         rl.endDrawing();
     }

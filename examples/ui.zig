@@ -341,12 +341,4 @@ pub fn draw(this: *Game) !void {
     rl.endDrawing();
 }
 
-pub fn doMenuItem(text: [:0]const u8, src: std.builtin.SourceLocation) bool {
-    // Use the line number and column as a combined ID
-    const id = @as(u32, @intCast(src.line)) ^ (@as(u32, @intCast(src.column)) << 16);
-    
-    // ... interaction logic ...
-}
 
-// Usage:
-if (doMenuItem("MOVE", @src())) { ... }
