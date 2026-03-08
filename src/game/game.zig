@@ -76,6 +76,7 @@ pub const Game = struct {
         //
         UiManager.drawToBuffer();
         try UiManager.updateAndDraw(this);
+        UiManager.stopDrawingToBuffer();
 
         this.player = EntityManager.getPlayer();
         this.delta = delta;
@@ -93,7 +94,6 @@ pub const Game = struct {
 
         try EntityManager.despawn();
         try EntityManager.spawn();
-        UiManager.stopDrawingToBuffer();
     }
 
     pub fn draw(this: *Game) !void {
@@ -128,7 +128,7 @@ pub const Game = struct {
         };
         rl.setShaderValue(ShaderManager.crtShader.source, ShaderManager.crtShader.resolutionLoc, &res, .vec2);
 
-        rl.beginShaderMode(ShaderManager.crtShader.source);
+        //rl.beginShaderMode(ShaderManager.crtShader.source);
         rl.drawTexturePro(
             Window.screen.texture,
             .{ .x = 0, .y = 0, .width = Config.game_width, .height = -Config.game_height },
@@ -138,7 +138,7 @@ pub const Game = struct {
             rl.Color.white,
         );
 
-        rl.endShaderMode();
+        //rl.endShaderMode();
         rl.endDrawing();
     }
 };
