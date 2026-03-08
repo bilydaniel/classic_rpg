@@ -212,16 +212,16 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     if (Gamestate.selectedPupId == null) {
         Gamestate.showMenu = .puppet_select;
 
-        // if (UiManager.getMenuSelect()) |menu_item| {
-        //     switch (menu_item) {
-        //         .puppet_id => |pid| {
-        //             Gamestate.selectedPupId = pid;
-        //         },
-        //         .action => {
-        //             std.debug.print("menu_item is .action instead of .puppet_id", .{});
-        //         },
-        //     }
-        // }
+        if (UiManager.getMenuSelect()) |menu_item| {
+            switch (menu_item) {
+                .puppet_id => |pid| {
+                    Gamestate.selectedPupId = pid;
+                },
+                .action => {
+                    std.debug.print("menu_item is .action instead of .puppet_id", .{});
+                },
+            }
+        }
     }
 
     //

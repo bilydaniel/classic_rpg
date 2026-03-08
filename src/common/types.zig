@@ -120,7 +120,7 @@ pub fn vector3IntAdd(a: Vector3Int, b: Vector3Int) Vector3Int {
 
 pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
     return struct {
-        items: [capacity]T = undefined,
+        items: [capacity]T = undefined, //std.mem.zeroes([capacity]T),
         len: usize = 0,
 
         const This = @This();
@@ -129,6 +129,10 @@ pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
             if (this.len >= capacity) return error.NoSpaceLeft;
             this.items[this.len] = item;
             this.len += 1;
+        }
+
+        pub fn zero(this: *This) void {
+            this.items = std.mem.zeroes([capacity]T);
         }
     };
 }

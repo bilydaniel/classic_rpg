@@ -21,7 +21,7 @@ pub const EntityType = enum {
     item,
 };
 
-pub var entity_id: u32 = 0;
+pub var entity_id: u32 = 1;
 
 pub const EntityData = union(EntityType) {
     player: PlayerData,
@@ -139,7 +139,8 @@ pub const Entity = struct {
     }
 
     pub fn returnPuppets(this: *Entity) void {
-        for (this.data.player.puppets.items) |pupID| {
+        var puppets = this.data.player.puppets;
+        for (puppets.items[0..puppets.len]) |pupID| {
             const puppet = EntityManager.getEntityID(pupID);
             if (puppet) |pup| {
                 pup.visible = false;
@@ -354,21 +355,25 @@ pub const PlayerData = struct {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
+        //const puppets = Types.StaticArray(u32, 8){ .len = 0, .items = [_]u32{0} ** 8 };
+        var puppets = Types.StaticArray(u32, 8){};
+        puppets.zero();
 
         return PlayerData{
             .inCombatWith = inCombatWith,
-            .puppets = undefined,
+            .puppets = puppets,
             .puppets_len = 0,
             .allocator = allocator,
         };
     }
 
     pub fn allPupsDeployed(this: *PlayerData) bool {
-        if (this.puppets.items.len == 0) {
+        var puppets = this.puppets;
+        if (puppets.len == 0) {
             return true;
         }
 
-        for (this.puppets.items) |pupID| {
+        for (puppets.items[0..puppets.len]) |pupID| {
             const puppet = EntityManager.getEntityID(pupID);
             std.debug.assert(puppet != null);
             if (puppet) |pup| {

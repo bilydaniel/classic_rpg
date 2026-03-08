@@ -76,7 +76,6 @@ pub const Game = struct {
         //
         UiManager.drawToBuffer();
         try UiManager.updateAndDraw(this);
-        UiManager.stopDrawingToBuffer();
 
         this.player = EntityManager.getPlayer();
         this.delta = delta;
@@ -94,6 +93,7 @@ pub const Game = struct {
 
         try EntityManager.despawn();
         try EntityManager.spawn();
+        UiManager.stopDrawingToBuffer();
     }
 
     pub fn draw(this: *Game) !void {
@@ -106,11 +106,15 @@ pub const Game = struct {
         EntityManager.draw();
         ShaderManager.draw();
         try Gamestate.draw();
+
         rl.endMode2D();
 
+        UiManager.drawBufferToWindow();
         rl.endTextureMode();
 
-        // Second pass: draw render texture to screen with CRT shader
+        //
+        //SHADER PASS
+        //
         rl.beginDrawing();
         rl.clearBackground(rl.Color.black);
         rl.drawFPS(0, 0);
@@ -133,9 +137,8 @@ pub const Game = struct {
             0.0,
             rl.Color.white,
         );
-        rl.endShaderMode();
-        UiManager.drawBufferToWindow();
 
+        rl.endShaderMode();
         rl.endDrawing();
     }
 };

@@ -59,23 +59,41 @@ pub fn despawn() !void {
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
-    //TODO: @memory, remove arraylist, use array
+    //
+    //PLAYER
+    //
     const playerData = try Entity.PlayerData.init(entity_allocator);
-
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
     player.setTextureID(AssetManager.TileNames.player);
     playerID = player.id;
 
+    //
+    //PUPPET_1
+    //
     const pup_pos = Types.Vector2Int{ .x = 1, .y = 1 };
     var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
     try player.data.player.puppets.append(puppet.id);
+    std.debug.print("puppets: {}\n", .{player.data.player.puppets});
+
+    //
+    //PUPPET_2
+    //
+    const pup_pos_2 = Types.Vector2Int{ .x = 2, .y = 1 };
+    var puppet2 = try Entity.Entity.init(entity_allocator, pup_pos_2, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
+    puppet2.visible = false;
+    puppet2.name = "igor";
+    puppet2.setTextureID(AssetManager.TileNames.puppet_1);
+    try player.data.player.puppets.append(puppet2.id);
 
     try addActiveEntity(player);
     try addInactiveEntity(puppet);
-
+    try addInactiveEntity(puppet2);
+    //
+    //ENEMIES
+    //
     const pos = Types.Vector2Int{ .x = 5, .y = 15 };
     const enemy_tile = AssetManager.TileNames.robot_1;
     const enemy_goal_world = Types.Vector3Int.init(0, 0, 0);

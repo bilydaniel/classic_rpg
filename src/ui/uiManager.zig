@@ -16,13 +16,14 @@ var allocator: std.mem.Allocator = undefined;
 
 var activeID: i32 = 0;
 var hotID: i32 = 0;
+var lastShowMenu: MenuType = .none;
 
 var menu_pos: rl.Vector2 = .{ .x = 0, .y = 0 };
 var layout_y: f32 = 0;
 var item_index: i32 = 0;
 var hot_index: i32 = 0;
 var itemCount: i32 = 0;
-var lastItemCount: i32 = 0;
+//var lastItemCount: i32 = 0;
 
 var confirm: bool = false;
 var cancel: bool = false;
@@ -52,12 +53,12 @@ pub fn deinit() void {
 
 //TODO: can i separate update and draw?
 pub fn updateAndDraw(game: *Game.Game) !void {
-    _ = game;
-    if (TurnManager.turn != .player) {
+    drawNonInteractive();
+
+    //TODO: maybe a different condition?
+    if (game.player.inCombat and TurnManager.turn != .player) {
         return;
     }
-
-    drawNonInteractive();
 
     itemCount = 0;
 
@@ -70,26 +71,22 @@ pub fn updateAndDraw(game: *Game.Game) !void {
     //move
     move = InputManager.takePositionInput();
 
-    //menu select
-    // if (move) |_move| {
-    //     updateActiveMenu(_move);
-    // }
-
-    // var menuSelect: ?MenuItemData = null;
-    // if (confirm) {
-    //     menuSelect = getSelectedItem();
-    //     if (menuSelect != null) {
-    //         confirm = false;
-    //     }
-    // }
-
     //quick select
-    // const quickSelect = InputManager.takeQuickSelectInput();
-    //
-    // //combat toggle
-    // const combatToggle = InputManager.takeCombatToggle();
-    //
-    // const skip = InputManager.takeSkipInput();
+    quickSelect = InputManager.takeQuickSelectInput();
+
+    //combat toggle
+    combatToggle = InputManager.takeCombatToggle();
+
+    skip = InputManager.takeSkipInput();
+
+    handleMenuNavigation();
+
+    switch (Gamestate.showMenu) {
+        .puppet_select => drawPuppetSelectMenu(game),
+        .action_select => drawActionSelectMenu(game),
+        .none => {},
+        else => {},
+    }
 }
 
 // pub fn makeUIElements() !void {
@@ -625,7 +622,7 @@ pub fn drawToBuffer() void {
 
 pub fn stopDrawingToBuffer() void {
     rl.endTextureMode();
-    lastItemCount = itemCount;
+    //lastItemCount = itemCount;
 }
 
 pub fn drawBufferToWindow() void {
@@ -634,4 +631,122 @@ pub fn drawBufferToWindow() void {
     const dest = rl.Rectangle{ .x = @floatFromInt(Window.offsetx), .y = @floatFromInt(Window.offsety), .width = @floatFromInt(Window.scaledWidth), .height = @floatFromInt(Window.scaledHeight) };
 
     rl.drawTexturePro(uiTexture.texture, source, dest, .{ .x = 0, .y = 0 }, 0, rl.Color.white);
+}
+
+pub fn drawBufferToGameTexture() void {
+    const source = rl.Rectangle{ .x = 0, .y = 0, .width = @floatFromInt(uiTexture.texture.width), .height = @floatFromInt(-uiTexture.texture.height) };
+    const dest = rl.Rectangle{ .x = 0, .y = 0, .width = Config.game_width, .height = Config.game_height };
+    rl.drawTexturePro(uiTexture.texture, source, dest, .{ .x = 0, .y = 0 }, 0, rl.Color.white);
+}
+
+fn handleMenuNavigation() void {
+    if (Gamestate.showMenu != lastShowMenu) {
+        hot_index = 0;
+        lastShowMenu = Gamestate.showMenu;
+    }
+
+    if (Gamestate.showMenu == .none) return;
+
+    if (move) |m| {
+        std.debug.print("move: {}\n", .{m});
+        if (m.y == -1) {
+            if (hot_index <= 0) {
+                hot_index = itemCount - 1;
+            } else {
+                hot_index -= 1;
+            }
+        } else if (m.y == 1) {
+            if (hot_index >= itemCount - 1) {
+                hot_index = 0;
+            } else {
+                hot_index += 1;
+            }
+        }
+    }
+}
+
+fn beginMenu() void {
+    item_index = 0;
+}
+
+fn endMenu() void {
+    itemCount = item_index;
+}
+
+fn menuItem(label: [:0]const u8, pos: RelativePos) bool {
+    const is_hot = hot_index == item_index;
+    const size = rl.Vector2{ .x = 200, .y = 25 };
+
+    if (is_hot) {
+        drawBackground(pos, size);
+    }
+
+    const saved_color = primaryColor;
+    primaryColor = if (is_hot) rl.Color.white else rl.Color.green;
+    drawText(pos, size, label);
+    primaryColor = saved_color;
+
+    const selected = is_hot and confirm;
+    if (selected) confirm = false;
+
+    item_index += 1;
+    return selected;
+}
+
+fn drawPuppetSelectMenu(game: *Game.Game) void {
+    const panelPos = RelativePos.init(.bottom_center, -100, -180);
+    drawBackground(panelPos, .{ .x = 200, .y = 150 });
+
+    const titlePos = RelativePos.init(.bottom_center, 0, -185);
+    drawText(titlePos, .{ .x = 200, .y = 25 }, "Deploy Puppet:");
+
+    beginMenu();
+
+    const puppets = &game.player.data.player.puppets;
+    for (puppets.items[0..puppets.len]) |pupID| {
+        const puppet = EntityManager.getEntityID(pupID) orelse continue;
+        if (!puppet.data.puppet.deployed) {
+            const y = -155 + @as(f32, @floatFromInt(item_index)) * 28;
+            const pos = RelativePos.init(.bottom_center, 0, y);
+            if (menuItem(puppet.name, pos)) {
+                menuSelect = .{ .puppet_id = pupID };
+            }
+        }
+    }
+
+    endMenu();
+}
+
+fn drawActionSelectMenu(game: *Game.Game) void {
+    _ = game;
+
+    const panelPos = RelativePos.init(.bottom_center, -100, -180);
+    drawBackground(panelPos, .{ .x = 200, .y = 100 });
+
+    const titlePos = RelativePos.init(.bottom_center, 0, -185);
+    drawText(titlePos, .{ .x = 200, .y = 25 }, "Choose Action:");
+
+    beginMenu();
+
+    if (Gamestate.selectedEntityID) |id| {
+        const entity = EntityManager.getEntityID(id) orelse {
+            endMenu();
+            return;
+        };
+
+        if (!entity.hasMoved) {
+            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(item_index)) * 28);
+            if (menuItem("MOVE", pos)) {
+                menuSelect = .{ .action = .move };
+            }
+        }
+        if (!entity.hasAttacked) {
+            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(item_index)) * 28);
+            if (menuItem("ATTACK", pos)) {
+                menuSelect = .{ .action = .attack };
+            }
+        }
+    }
+
+    endMenu();
 }
