@@ -74,9 +74,7 @@ pub const Game = struct {
         //
         // draw to the buffer
         //
-        UiManager.drawToBuffer();
-        try UiManager.updateAndDraw(this);
-        UiManager.stopDrawingToBuffer();
+        UiManager.readInput(this);
 
         this.player = EntityManager.getPlayer();
         this.delta = delta;
@@ -97,6 +95,10 @@ pub const Game = struct {
     }
 
     pub fn draw(this: *Game) !void {
+        UiManager.drawToBuffer();
+        UiManager.draw(this);
+        UiManager.stopDrawingToBuffer();
+
         // First pass: render game into Window.screen
         rl.beginTextureMode(Window.screen);
         rl.clearBackground(rl.Color.black);

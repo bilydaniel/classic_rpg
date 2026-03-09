@@ -28,8 +28,9 @@ var quickSelect: ?u8 = null;
 //TODO: probalby remove
 var menuSelect: ?MenuItemData = null;
 
-var primaryColor: rl.Color = rl.Color.green;
+var primaryColor: rl.Color = rl.Color.white;
 var secondary: rl.Color = rl.Color.beige;
+var hotItemColor: rl.Color = rl.Color.red;
 
 var fontSize: i32 = 20;
 
@@ -45,9 +46,10 @@ pub fn deinit() void {
 }
 
 //TODO: can i separate update and draw?
-pub fn updateAndDraw(game: *Game.Game) !void {
-    drawNonInteractive();
 
+// separated read input and draw for 0 frame lag between
+// player controlle and ui (data form menu + opening menu from player controller)
+pub fn readInput(game: *Game.Game) void {
     //TODO: maybe a different condition?
     if (game.player.inCombat and TurnManager.turn != .player) {
         return;
@@ -72,6 +74,10 @@ pub fn updateAndDraw(game: *Game.Game) !void {
     skip = InputManager.takeSkipInput();
 
     handleMenuNavigation();
+}
+
+pub fn draw(game: *Game.Game) void {
+    drawNonInteractive();
 
     switch (Gamestate.showMenu) {
         .puppet_select => drawPuppetSelectMenu(game),
@@ -271,7 +277,7 @@ fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2, name: [:0]const u8)
 
     relativePosition.pos.x += 3;
     relativePosition.pos.y += 5;
-    drawText(relativePosition, .{ .x = 0, .y = 0 }, name);
+    drawText(relativePosition, .{ .x = 0, .y = 0 }, name, primaryColor);
 
     drawBar();
 }
@@ -282,9 +288,9 @@ fn drawCombatIndicator() void {
 
     const player = EntityManager.getPlayer();
     if (player.inCombat) {
-        drawText(pos, size, "Combat...");
+        drawText(pos, size, "Combat...", primaryColor);
     } else {
-        drawText(pos, size, "Exploring...");
+        drawText(pos, size, "Exploring...", primaryColor);
     }
 }
 
@@ -293,16 +299,16 @@ fn drawTurnPhase() void {
     const size = rl.Vector2{ .x = 100, .y = 100 };
 
     if (TurnManager.turn == .player) {
-        drawText(pos, size, "Current Turn: Player");
+        drawText(pos, size, "Current Turn: Player", primaryColor);
     } else if (TurnManager.turn == .enemy) {
-        drawText(pos, size, "Current Turn: Enemies");
+        drawText(pos, size, "Current Turn: Enemies", primaryColor);
     }
 }
 fn drawTurnNumber() void {
     const pos = RelativePos.init(.top_right, 0, 0);
     const size = rl.Vector2{ .x = 100, .y = 100 };
 
-    drawText(pos, size, "Turn: ");
+    drawText(pos, size, "Turn: ", primaryColor);
 }
 fn drawBar() void {}
 
@@ -320,7 +326,7 @@ fn drawBackground(relPos: RelativePos, size: rl.Vector2) void {
     rl.drawRectangle(@intFromFloat(position.x), @intFromFloat(position.y), @intFromFloat(size.x), @intFromFloat(size.y), rl.Color.orange);
 }
 
-fn drawText(relPos: RelativePos, size: rl.Vector2, text: [:0]const u8) void {
+fn drawText(relPos: RelativePos, size: rl.Vector2, text: [:0]const u8, color: rl.Color) void {
     const s = getScaledSize(size);
     const position = relativeToScreenPos(relPos, s);
     const font_size = @as(c_int, @intFromFloat(@as(f32, @floatFromInt(fontSize)) * Window.scale));
@@ -330,7 +336,7 @@ fn drawText(relPos: RelativePos, size: rl.Vector2, text: [:0]const u8) void {
         @intFromFloat(position.x),
         @intFromFloat(position.y),
         font_size,
-        primaryColor,
+        color,
     );
 }
 
@@ -392,19 +398,24 @@ fn endMenu() void {
 }
 
 fn menuItem(label: [:0]const u8, pos: RelativePos) bool {
-    const is_hot = hotIndex == itemIndex;
-    const size = rl.Vector2{ .x = 200, .y = 25 };
+    const isHot = hotIndex == itemIndex;
+    const size = rl.Vector2{ .x = 200, .y = 150 };
 
-    if (is_hot) {
-        drawBackground(pos, size);
+    // if (is_hot) {
+    //     drawBackground(pos, size);
+    // }
+
+    var color = primaryColor;
+    if (isHot) {
+        color = hotItemColor;
+        var arrowPos = pos;
+        arrowPos.pos.x -= 15;
+        drawText(arrowPos, size, ">", color);
     }
 
-    const saved_color = primaryColor;
-    primaryColor = if (is_hot) rl.Color.white else rl.Color.green;
-    drawText(pos, size, label);
-    primaryColor = saved_color;
+    drawText(pos, size, label, color);
 
-    const selected = is_hot and confirm;
+    const selected = isHot and confirm;
     if (selected) confirm = false;
 
     itemIndex += 1;
@@ -415,8 +426,10 @@ fn drawPuppetSelectMenu(game: *Game.Game) void {
     const panelPos = RelativePos.init(.bottom_center, -100, -180);
     drawBackground(panelPos, .{ .x = 200, .y = 150 });
 
-    const titlePos = RelativePos.init(.bottom_center, 0, -185);
-    drawText(titlePos, .{ .x = 200, .y = 25 }, "Deploy Puppet:");
+    const titlePos = RelativePos.init(.bottom_center, -90, -175);
+    var itemPos = titlePos;
+    itemPos.pos.x += 5;
+    drawText(titlePos, .{ .x = 200, .y = 150 }, "Deploy Puppet:", primaryColor);
 
     beginMenu();
 
@@ -424,9 +437,8 @@ fn drawPuppetSelectMenu(game: *Game.Game) void {
     for (puppets.items[0..puppets.len]) |pupID| {
         const puppet = EntityManager.getEntityID(pupID) orelse continue;
         if (!puppet.data.puppet.deployed) {
-            const y = -155 + @as(f32, @floatFromInt(itemIndex)) * 28;
-            const pos = RelativePos.init(.bottom_center, 0, y);
-            if (menuItem(puppet.name, pos)) {
+            itemPos.pos.y += 25;
+            if (menuItem(puppet.name, itemPos)) {
                 menuSelect = .{ .puppet_id = pupID };
             }
         }
@@ -439,10 +451,12 @@ fn drawActionSelectMenu(game: *Game.Game) void {
     _ = game;
 
     const panelPos = RelativePos.init(.bottom_center, -100, -180);
-    drawBackground(panelPos, .{ .x = 200, .y = 100 });
+    drawBackground(panelPos, .{ .x = 200, .y = 150 });
 
-    const titlePos = RelativePos.init(.bottom_center, 0, -185);
-    drawText(titlePos, .{ .x = 200, .y = 25 }, "Choose Action:");
+    const titlePos = RelativePos.init(.bottom_center, -90, -175);
+    drawText(titlePos, .{ .x = 200, .y = 150 }, "Choose Action:", primaryColor);
+    var itemPos = titlePos;
+    itemPos.pos.x += 5;
 
     beginMenu();
 
@@ -453,14 +467,14 @@ fn drawActionSelectMenu(game: *Game.Game) void {
         };
 
         if (!entity.hasMoved) {
-            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(itemIndex)) * 28);
-            if (menuItem("MOVE", pos)) {
+            itemPos.pos.y += 25;
+            if (menuItem("MOVE", itemPos)) {
                 menuSelect = .{ .action = .move };
             }
         }
         if (!entity.hasAttacked) {
-            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(itemIndex)) * 28);
-            if (menuItem("ATTACK", pos)) {
+            itemPos.pos.y += 25;
+            if (menuItem("ATTACK", itemPos)) {
                 menuSelect = .{ .action = .attack };
             }
         }

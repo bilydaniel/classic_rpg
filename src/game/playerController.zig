@@ -61,6 +61,7 @@ pub fn update(game: *Game.Game) !void {
         },
         .deploying_puppets => {
             if (UiManager.getCombatToggle()) {
+                //TODO: @fix, bricks pretty much everithing
                 nextState = .walking;
             }
 
@@ -70,6 +71,7 @@ pub fn update(game: *Game.Game) !void {
         },
         .in_combat => {
             if (UiManager.getCombatToggle()) {
+                //TODO: @fix, bricks pretty much everithing
                 //TODO: check can end combat?
                 nextState = .walking;
             }

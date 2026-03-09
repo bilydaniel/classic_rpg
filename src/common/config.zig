@@ -1,5 +1,5 @@
-pub const game_width: i32 = 640 * 2;
-pub const game_height: i32 = 360 * 2;
+pub const game_width: i32 = 640 * 3;
+pub const game_height: i32 = 360 * 3;
 
 pub const game_width_half: f32 = game_width / 2;
 pub const game_height_half: f32 = game_height / 2;
