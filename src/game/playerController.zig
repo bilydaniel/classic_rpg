@@ -345,6 +345,7 @@ pub fn entityAction(game: *Game.Game) !void {
 
                     if (c.IsKeyPressed(c.KEY_SPACE)) {
                         //TODO: manage state after skip
+                        //TODO: @fix, skipping doesent work
                         skipMovement();
                     }
                 },
@@ -380,6 +381,7 @@ pub fn entityAction(game: *Game.Game) !void {
 
                     if (c.IsKeyPressed(c.KEY_SPACE)) {
                         //TODO: manage state after skip
+                        //TODO: @fix, skipping doesent work
                         skipAttack();
                     }
                 },

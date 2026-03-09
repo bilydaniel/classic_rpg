@@ -64,6 +64,7 @@ pub fn fillEntities() !void {
     //
     const playerData = try Entity.PlayerData.init(entity_allocator);
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
+    player.name = "Pepega";
     player.setTextureID(AssetManager.TileNames.player);
     playerID = player.id;
 

@@ -348,21 +348,18 @@ pub const PlayerData = struct {
     inCombatWith: std.ArrayList(u32),
     //TODO: how does this arraylist work in memory?, how is it laid out?
     puppets: Types.StaticArray(u32, 8),
-    puppets_len: u8,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
-        //const puppets = Types.StaticArray(u32, 8){ .len = 0, .items = [_]u32{0} ** 8 };
         var puppets = Types.StaticArray(u32, 8){};
         puppets.zero();
 
         return PlayerData{
             .inCombatWith = inCombatWith,
             .puppets = puppets,
-            .puppets_len = 0,
             .allocator = allocator,
         };
     }
@@ -406,6 +403,8 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 //TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
+    //TODO: fix the path finding, lags like a bitch
+
     const level = World.getLevelAt(entity.worldPos) orelse return;
     const entitiesPosHash = &EntityManager.positionHash;
 

@@ -12,14 +12,11 @@ const rl = @import("raylib");
 
 var allocator: std.mem.Allocator = undefined;
 
-var activeID: i32 = 0;
-var hotID: i32 = 0;
-var lastShowMenu: MenuType = .none;
-
-var item_index: i32 = 0;
-var hot_index: i32 = 0;
+var itemIndex: i32 = 0;
+var hotIndex: i32 = 0;
 var itemCount: i32 = 0;
-var lastItemCount: i32 = 0;
+
+var lastShowMenu: MenuType = .none;
 
 var confirm: bool = false;
 var cancel: bool = false;
@@ -55,7 +52,6 @@ pub fn updateAndDraw(game: *Game.Game) !void {
     if (game.player.inCombat and TurnManager.turn != .player) {
         return;
     }
-    lastItemCount = itemCount;
     itemCount = 0;
 
     //confirm
@@ -269,15 +265,15 @@ fn drawNonInteractive() void {
     drawCombatIndicator();
 }
 
-fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2) void {
+fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2, name: [:0]const u8) void {
     var relativePosition = relPos;
     drawBackground(relativePosition, size);
 
     relativePosition.pos.x += 3;
     relativePosition.pos.y += 5;
-    //drawText();
+    drawText(relativePosition, .{ .x = 0, .y = 0 }, name);
 
-    //drawBar();
+    drawBar();
 }
 
 fn drawCombatIndicator() void {
@@ -311,9 +307,10 @@ fn drawTurnNumber() void {
 fn drawBar() void {}
 
 fn drawPlayerPlate() void {
+    const player = EntityManager.getPlayer();
     const playerPlatePos = RelativePos.init(.top_left, 10, 30);
     const playerPlateSize = rl.Vector2{ .x = 200, .y = 150 };
-    drawCharacterPlate(playerPlatePos, playerPlateSize);
+    drawCharacterPlate(playerPlatePos, playerPlateSize, player.name);
 }
 
 fn drawBackground(relPos: RelativePos, size: rl.Vector2) void {
@@ -345,7 +342,7 @@ pub fn drawToBuffer() void {
 
 pub fn stopDrawingToBuffer() void {
     rl.endTextureMode();
-    lastItemCount = itemCount;
+    //lastItemCount = itemCount;
 }
 
 pub fn drawBufferToWindow() void {
@@ -358,39 +355,44 @@ pub fn drawBufferToWindow() void {
 
 fn handleMenuNavigation() void {
     if (Gamestate.showMenu != lastShowMenu) {
-        hot_index = 0;
+        hotIndex = 0;
         lastShowMenu = Gamestate.showMenu;
     }
 
     if (Gamestate.showMenu == .none) return;
 
+    const count = getMenuItemsCount();
+    if (count) |c| {
+        itemCount = c;
+    }
+
     if (move) |m| {
         if (m.y == -1) {
-            if (hot_index <= 0) {
-                hot_index = lastItemCount - 1;
+            if (hotIndex <= 0) {
+                hotIndex = itemCount - 1;
             } else {
-                hot_index -= 1;
+                hotIndex -= 1;
             }
         } else if (m.y == 1) {
-            if (hot_index >= lastItemCount - 1) {
-                hot_index = 0;
+            if (hotIndex >= itemCount - 1) {
+                hotIndex = 0;
             } else {
-                hot_index += 1;
+                hotIndex += 1;
             }
         }
     }
 }
 
 fn beginMenu() void {
-    item_index = 0;
+    itemIndex = 0;
 }
 
 fn endMenu() void {
-    itemCount = item_index;
+    //itemCount = item_index;
 }
 
 fn menuItem(label: [:0]const u8, pos: RelativePos) bool {
-    const is_hot = hot_index == item_index;
+    const is_hot = hotIndex == itemIndex;
     const size = rl.Vector2{ .x = 200, .y = 25 };
 
     if (is_hot) {
@@ -405,7 +407,7 @@ fn menuItem(label: [:0]const u8, pos: RelativePos) bool {
     const selected = is_hot and confirm;
     if (selected) confirm = false;
 
-    item_index += 1;
+    itemIndex += 1;
     return selected;
 }
 
@@ -422,7 +424,7 @@ fn drawPuppetSelectMenu(game: *Game.Game) void {
     for (puppets.items[0..puppets.len]) |pupID| {
         const puppet = EntityManager.getEntityID(pupID) orelse continue;
         if (!puppet.data.puppet.deployed) {
-            const y = -155 + @as(f32, @floatFromInt(item_index)) * 28;
+            const y = -155 + @as(f32, @floatFromInt(itemIndex)) * 28;
             const pos = RelativePos.init(.bottom_center, 0, y);
             if (menuItem(puppet.name, pos)) {
                 menuSelect = .{ .puppet_id = pupID };
@@ -451,17 +453,60 @@ fn drawActionSelectMenu(game: *Game.Game) void {
         };
 
         if (!entity.hasMoved) {
-            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(item_index)) * 28);
+            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(itemIndex)) * 28);
             if (menuItem("MOVE", pos)) {
                 menuSelect = .{ .action = .move };
             }
         }
         if (!entity.hasAttacked) {
-            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(item_index)) * 28);
+            const pos = RelativePos.init(.bottom_center, 0, -155 + @as(f32, @floatFromInt(itemIndex)) * 28);
             if (menuItem("ATTACK", pos)) {
                 menuSelect = .{ .action = .attack };
             }
         }
     }
     endMenu();
+}
+
+fn getMenuItemsCount() ?i32 {
+    //TODO: figure out what to do when not in a menu,
+    //only have menus for now, no idea how its gonna work
+    //for other widgets
+    var result: i32 = 0;
+
+    switch (Gamestate.showMenu) {
+        .puppet_select => {
+            const player = EntityManager.getPlayer();
+            const pups = player.data.player.puppets;
+            for (pups.items[0..pups.len]) |id| {
+                const pup = EntityManager.getEntityID(id);
+                if (pup) |p| {
+                    //TODO: active or deployed?
+                    if (!p.active) {
+                        result += 1;
+                    }
+                }
+            }
+        },
+        .action_select => {
+            // result = @typeInfo(ActionType).@"enum".fields.len;
+
+            const entityID = Gamestate.selectedEntityID;
+            if (entityID) |id| {
+                const entity = EntityManager.getEntityID(id);
+                if (entity) |e| {
+                    if (!e.hasMoved) {
+                        result += 1;
+                    }
+
+                    if (!e.hasAttacked) {
+                        result += 1;
+                    }
+                }
+            }
+        },
+        else => {},
+    }
+
+    return result;
 }
