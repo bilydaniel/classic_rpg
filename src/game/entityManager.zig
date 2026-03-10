@@ -82,16 +82,17 @@ pub fn fillEntities() !void {
     //
     //PUPPET_2
     //
-    const pup_pos_2 = Types.Vector2Int{ .x = 2, .y = 1 };
-    var puppet2 = try Entity.Entity.init(entity_allocator, pup_pos_2, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
-    puppet2.visible = false;
-    puppet2.name = "igor";
-    puppet2.setTextureID(AssetManager.TileNames.puppet_1);
-    try player.data.player.puppets.append(puppet2.id);
+    // const pup_pos_2 = Types.Vector2Int{ .x = 2, .y = 1 };
+    // var puppet2 = try Entity.Entity.init(entity_allocator, pup_pos_2, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
+    // puppet2.visible = false;
+    // puppet2.name = "igor";
+    // puppet2.setTextureID(AssetManager.TileNames.puppet_1);
+    // try player.data.player.puppets.append(puppet2.id);
 
     try addActiveEntity(player);
     try addInactiveEntity(puppet);
-    try addInactiveEntity(puppet2);
+    //try addInactiveEntity(puppet2);
+
     //
     //ENEMIES
     //

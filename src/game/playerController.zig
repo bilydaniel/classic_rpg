@@ -194,7 +194,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         }
     }
 
-    if (!Movement.canMove(newLocation, grid, &entityPosHash)) {
+    if (!Movement.canMove(newLocation, grid, entityPosHash)) {
         //TODO: print to the player he cant move
         return;
     }
@@ -333,8 +333,8 @@ pub fn entityAction(game: *Game.Game) !void {
                         if (Gamestate.cursor) |cur| {
                             const level = World.getCurrentLevel();
                             const location = Types.Location.init(level.worldPos, cur);
-                            if (Gamestate.isinMovable(cur) and Movement.canMove(location, grid, &entityPosHash)) {
-                                entity.path = try Pathfinder.findPath(entity.pos, cur, level.*, &entityPosHash);
+                            if (Gamestate.isinMovable(cur) and Movement.canMove(location, grid, entityPosHash)) {
+                                entity.path = try Pathfinder.findPath(entity.pos, cur, level.*, entityPosHash);
 
                                 TurnManager.updatingEntity = entity.id;
 

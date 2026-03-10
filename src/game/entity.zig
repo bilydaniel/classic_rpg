@@ -284,8 +284,9 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     if (TurnManager.turn != .player or !entity.inCombat) {
         return;
     }
+    std.debug.print("player_pos: {}\n", .{entity.pos});
     const level = World.getCurrentLevel();
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     try Movement.updateEntity(game.player, game, level.*, entitiesPosHash);
 
@@ -303,7 +304,7 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
     }
 
     const level = World.getCurrentLevel();
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
 
@@ -406,18 +407,16 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
     //TODO: fix the path finding, lags like a bitch
 
     const level = World.getLevelAt(entity.worldPos) orelse return;
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     if (entity.goal == null or entity.stuck >= 2) {
         const player = game.player;
         const location = Types.Location.init(player.worldPos, player.pos);
         const availablePosition = Movement.getAvailableTileAround(location, level.grid, entitiesPosHash);
-        if (availablePosition == null) {
-            std.debug.print("goal is null", .{});
+        if (availablePosition) |ap| {
+            const availableLocation = Types.Location.init(level.worldPos, ap);
+            entity.goal = availableLocation;
         }
-        //TODO: check for null
-        std.debug.print("setting_goal: {?}\n", .{availablePosition});
-        entity.goal = location;
     }
 
     //TODO: change this
@@ -434,7 +433,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
     const level = World.getLevelAt(entity.worldPos) orelse return;
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     if (entity.goal == null or entity.stuck >= 2) {
         const position = Systems.getRandomValidPosition(World.getLevelAt(entity.worldPos).?.grid);

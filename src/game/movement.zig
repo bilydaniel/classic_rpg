@@ -10,7 +10,7 @@ const Config = @import("../common/config.zig");
 const Game = @import("game.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 
-pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: *const Types.PositionHash) !void {
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: Types.PositionHash) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level, entities);
@@ -72,7 +72,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 }
 
-pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: *const Types.PositionHash) bool {
+pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: Types.PositionHash) bool {
     const pos_index = Utils.posToIndex(location.pos);
     if (pos_index) |index| {
         if (index < grid.len and grid[index].solid) {
@@ -89,8 +89,9 @@ pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: *cons
     return false;
 }
 
-pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: *const Types.PositionHash) ?Types.Vector2Int {
+pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) ?Types.Vector2Int {
     if (canMove(location, grid, entities)) {
+        std.debug.print("CAN_MOVE\n", .{});
         return location.pos;
     }
 
@@ -100,6 +101,7 @@ pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, enti
         std.debug.print("neigh: {}\n", .{neigh});
         const loc = Types.Location.init(location.worldPos, neigh);
         if (canMove(loc, grid, entities)) {
+            std.debug.print("returning: {}\n", .{loc});
             return neigh;
         }
     }
