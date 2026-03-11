@@ -156,7 +156,8 @@ pub const Entity = struct {
 
     pub fn allPupsTurnTaken(this: *Entity) bool {
         if (this.data == .player) {
-            for (this.data.player.puppets.items) |pupID| {
+            const puppets = this.data.player.puppets;
+            for (puppets.items[0..puppets.len]) |pupID| {
                 const puppet = EntityManager.getEntityID(pupID);
                 if (puppet) |pup| {
                     if (pup.turnTaken == false) {

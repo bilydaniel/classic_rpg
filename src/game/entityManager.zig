@@ -190,6 +190,7 @@ pub fn draw() void {
 pub fn allPlayerUnitsTurnTaken() bool {
     const player = getPlayer();
     if (player.inCombat) {
+        std.debug.print("player: {} pup: {}\n", .{ player.turnTaken, player.allPupsTurnTaken() });
         return player.turnTaken and player.allPupsTurnTaken();
     } else {
         return player.turnTaken;

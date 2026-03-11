@@ -349,6 +349,13 @@ pub fn entityAction(game: *Game.Game) !void {
                         //TODO: manage state after skip
                         //TODO: @fix, skipping doesent work
                         skipMovement();
+
+                        if (Gamestate.selectedEntityID) |d| {
+                            const ee = EntityManager.getEntityID(d);
+                            if (ee) |e| {
+                                std.debug.print("selectedEntity: {} {}\n", .{ e.hasMoved, e.hasAttacked });
+                            }
+                        }
                     }
                 },
                 .attack => {
@@ -385,6 +392,13 @@ pub fn entityAction(game: *Game.Game) !void {
                         //TODO: manage state after skip
                         //TODO: @fix, skipping doesent work
                         skipAttack();
+
+                        if (Gamestate.selectedEntityID) |d| {
+                            const ee = EntityManager.getEntityID(d);
+                            if (ee) |e| {
+                                std.debug.print("selectedEntity: {} {}\n", .{ e.hasMoved, e.hasAttacked });
+                            }
+                        }
                     }
                 },
             }
