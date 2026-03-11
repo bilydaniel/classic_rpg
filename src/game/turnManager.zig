@@ -23,7 +23,7 @@ pub var turnNumber: i32 = 1;
 pub var updatingEntity: ?u32 = null;
 
 pub var enemyQueue: std.ArrayList(u32) = undefined;
-var enemyQueueIndex: u32 = 0;
+pub var enemyQueueIndex: u32 = 0;
 
 var allocator: std.mem.Allocator = undefined;
 

@@ -108,6 +108,23 @@ pub fn update(game: *Game.Game) !void {
                 game.player.endCombat();
                 Gamestate.showMenu = .none;
                 try EntityManager.deactivatePuppets();
+
+                //TODO: make function
+                TurnManager.updatingEntity = null;
+                TurnManager.switchTurn(.player);
+                TurnManager.phase = .setup;
+                TurnManager.enemyQueue.clearRetainingCapacity();
+                TurnManager.enemyQueueIndex = 0;
+                EntityManager.resetTurnFlags();
+
+                for (EntityManager.entities.items) |*entity| {
+                    if (entity.data == .enemy) {
+                        entity.inCombat = false;
+                        entity.resetPathing();
+                    }
+                }
+
+                CameraManager.targetEntity = EntityManager.playerID;
             },
             .deploying_puppets => {
                 TurnManager.switchTurn(.player);
@@ -481,6 +498,8 @@ pub fn skipAttack() void {
         const entity = EntityManager.getEntityID(id);
         if (entity) |e| {
             e.hasAttacked = true;
+            e.hasMoved = true;
+            e.turnTaken = true;
         }
     }
     Gamestate.resetAttackHighlight();
