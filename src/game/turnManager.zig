@@ -38,6 +38,8 @@ pub fn deinit() void {
 }
 
 pub fn update(game: *Game.Game) !void {
+    //TODO: @fix turn manager is really messy, have a look at: https://claude.ai/chat/807c598e-5c59-4531-91f3-12b01bf65f82
+    //probably just make it on my own, fuck ai
 
     //TODO: @fix @continue
     if (PlayerController.state == .deploying_puppets) {

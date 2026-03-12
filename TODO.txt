@@ -1,3 +1,7 @@
+STUDY TIME:
+    go through the sources:
+        https://gemini.google.com/app/8775a3841376abf0
+        https://claude.ai/chat/051a5137-934a-4088-adae-36f5438127c4
 
 casey immediate mode ui video notes:
     if(doButton){ // draws button, returns true if it was clicked
