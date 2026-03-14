@@ -620,3 +620,19 @@ pub fn getRandomValidPosition(grid: []Level.Tile) Types.Vector2Int {
 
     return position;
 }
+
+pub fn getRandomMovablePosition(grid: []Level.Tile, entities: Types.PositionHash) Types.Vector2Int {
+    var movable: bool = false;
+    var position: Types.Vector2Int = undefined;
+    const level = World.getCurrentLevel();
+
+    while (!movable) {
+        position = getRandomPosition();
+        const location = Types.Location.init(level.worldPos, position);
+        if (Movement.isTileWalkable(grid, position) and Movement.canMove(location, grid, entities)) {
+            movable = true;
+        }
+    }
+
+    return position;
+}

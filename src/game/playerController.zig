@@ -56,7 +56,7 @@ pub fn update(game: *Game.Game) !void {
 
             //TODO: probably should only check when moved
             if (Combat.checkCombatStart(game.player, EntityManager.entities)) {
-                nextState = .deploying_puppets;
+                //nextState = .deploying_puppets;
             }
         },
         .deploying_puppets => {

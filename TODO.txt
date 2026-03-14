@@ -3,54 +3,11 @@ STUDY TIME:
         https://gemini.google.com/app/8775a3841376abf0
         https://claude.ai/chat/051a5137-934a-4088-adae-36f5438127c4
 
-casey immediate mode ui video notes:
-    if(doButton){ // draws button, returns true if it was clicked
-        action(); //stuff i wanna do if the button was clicked
-    }
-    uiContext: // tracks the users interaction at given time
-        hot:id, // about to be interacted with gets highlighter, pops out etc. no idead if i need this
-        active: id, // is interacted with
-        // store any other needed data for the active widget(only store data for its active period)
 
-    id:  // some sort of way to identify an element
-        // global identifier (pointer to function that does the stuff)
-        // or pointer to the data it uses
-        owener int, // group of elements
-        item int,
-        index int,
+RULE ZERO: gameplay first, always (other stuff as a necessity)
 
-    //this is a version for mouse
-    bool DoButton(uiContext, id, text, pos etc..){
-        if active { // compare active id in context with mine
-            if mousewentup {
-                if hot{
-                    result = true
-                }
-                set not active
-            }
-        }elseif hot {
-            if mousewentdown{
-                set active
-            }
-        }
+memory => ui manager => level generation => pathfinding (need to know how the levels are generated before doing the pathfinding thorugh the world) => AI + combat
 
-        if inside {
-            set hot// if there is an active item, it doesent set a hot item
-        }
-        
-        drawButton();
-    }
-
-    for menus {
-        for items{
-            doItem();
-        }
-    }
-    for popups{
-    }
-
-
-memory => ui manager => level generation => pathfinding (need to know how the levels are generated before doing the pathfinding thorugh the world)
 
 do i want to learn shaders?
 

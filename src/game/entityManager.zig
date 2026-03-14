@@ -118,6 +118,20 @@ pub fn fillEntities() !void {
     try addActiveEntity(entity);
     try addActiveEntity(entity2);
     try addActiveEntity(entity3);
+
+    try addRandomEnemies(50);
+}
+
+fn addRandomEnemies(number: usize) !void {
+    const enemy_tile = AssetManager.TileNames.robot_1;
+    var entity: Entity.Entity = undefined;
+    const grid = World.getCurrentLevel().grid;
+    for (0..number) |_| {
+        const pos = Systems.getRandomMovablePosition(grid, positionHash);
+        entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+        entity.setTextureID(enemy_tile);
+        try addActiveEntity(entity);
+    }
 }
 
 pub fn addActiveEntity(entity: Entity.Entity) !void {

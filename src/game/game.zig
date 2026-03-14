@@ -29,6 +29,8 @@ pub const Game = struct {
         Systems.init(allocator);
         PlayerController.init(allocator);
         Gamestate.init(allocator);
+
+        try World.init(allocator);
         EntityManager.init(allocator);
 
         try EntityManager.fillEntities();
@@ -39,7 +41,6 @@ pub const Game = struct {
         try TilesetManager.init();
         try Pathfinder.init(allocator);
         try CameraManager.init(allocator, player.id);
-        try World.init(allocator);
         try ShaderManager.init(allocator);
 
         try UiManager.init(allocator);
