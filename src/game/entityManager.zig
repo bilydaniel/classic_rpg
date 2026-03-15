@@ -119,7 +119,7 @@ pub fn fillEntities() !void {
     try addActiveEntity(entity2);
     try addActiveEntity(entity3);
 
-    try addRandomEnemies(50);
+    try addRandomEnemies(100);
 }
 
 fn addRandomEnemies(number: usize) !void {

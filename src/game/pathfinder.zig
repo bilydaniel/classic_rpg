@@ -49,9 +49,15 @@ pub const Path = struct {
 };
 
 var allocator: std.mem.Allocator = undefined;
+var arena: std.heap.ArenaAllocator = undefined;
 
 pub fn init(alloc: std.mem.Allocator) !void {
     allocator = alloc;
+    arena = std.heap.ArenaAllocator.init(allocator);
+}
+
+pub fn deinit() void {
+    arena.deinit();
 }
 
 //TODO: have two pathfinders, one with and one withou entities, in combat with entiites
@@ -62,19 +68,19 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Lev
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
     //TODO: @memory use arena allocator, maybe just dont deinit?
+    _ = arena.reset(.retain_capacity);
+    const arenaAlloc = arena.allocator();
     var open_list: std.ArrayList(Node) = .empty;
-    defer open_list.deinit(allocator);
 
     var closed_list: std.ArrayList(Node) = .empty;
-    defer closed_list.deinit(allocator);
 
-    try open_list.append(allocator, Node.init(start, null, 0, heuristic(start, end)));
+    try open_list.append(arenaAlloc, Node.init(start, null, 0, heuristic(start, end)));
 
     while (open_list.items.len > 0) {
         const current_index = lowestF(open_list);
         const current_open_node = open_list.swapRemove(current_index);
 
-        try closed_list.append(allocator, current_open_node);
+        try closed_list.append(arenaAlloc, current_open_node);
         var current_node = closed_list.getLast();
         const current_node_index = closed_list.items.len - 1;
 
@@ -105,7 +111,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Lev
                     open_list.items[found_node.index].parent = current_node_index;
                 }
             } else {
-                try open_list.append(allocator, Node.init(neigh, current_node_index, new_g, heuristic(neigh, end)));
+                try open_list.append(arenaAlloc, Node.init(neigh, current_node_index, new_g, heuristic(neigh, end)));
             }
         }
     }

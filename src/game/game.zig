@@ -14,6 +14,7 @@ const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
 const Config = @import("../common/config.zig");
 const rl = @import("raylib");
+const Profiler = @import("../common/profiler.zig");
 
 pub const Game = struct {
     delta: f32,
@@ -70,6 +71,7 @@ pub const Game = struct {
     }
 
     pub fn update(this: *Game) !void {
+        const updateProfile = Profiler.TimeBlock("update", @src());
         const delta = rl.getFrameTime();
 
         //
@@ -93,9 +95,12 @@ pub const Game = struct {
 
         try EntityManager.despawn();
         try EntityManager.spawn();
+        updateProfile.end();
     }
 
     pub fn draw(this: *Game) !void {
+        const drawProfile = Profiler.TimeBlock("draw", @src());
+
         UiManager.drawToBuffer();
         UiManager.draw(this);
         rl.drawFPS(0, 0);
@@ -142,6 +147,9 @@ pub const Game = struct {
         );
 
         //rl.endShaderMode();
+
+        drawProfile.end();
+
         rl.endDrawing();
     }
 };

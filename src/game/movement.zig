@@ -12,6 +12,8 @@ const Pathfinder = @import("../game/pathfinder.zig");
 
 pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: Types.PositionHash) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
+    //TODO: @continue @fix @finish, remove entities from findPath, handle entities bumping into each other here
+    //TODO: https://claude.ai/chat/dfcf88fa-e705-4d82-b2a0-dc0d537b938c
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level, entities);
         if (newPath) |new_path| {
@@ -50,6 +52,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
 
     // position has entity, recalculate
     if (new_pos_entity) |_| {
+        //TODO: @continu, wait or sidestep
         entity.removePath();
         entity.stuck += 1;
         return;

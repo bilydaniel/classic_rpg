@@ -20,7 +20,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     //TODO: @memory @check leaks
-    defer _ = gpa.deinit();
+    //defer _ = gpa.deinit();
 
     try Window.init();
     const game = try Game.Game.init(allocator);
@@ -34,13 +34,9 @@ pub fn main() !void {
     Profiler.BeginProfile();
 
     while (!rl.windowShouldClose() and running) {
-        const updateProfile = Profiler.TimeBlock("update", @src());
         try game.update();
-        updateProfile.end();
 
-        const drawProfile = Profiler.TimeBlock("draw", @src());
         try game.draw();
-        drawProfile.end();
     }
 
     Profiler.EndProfile();
