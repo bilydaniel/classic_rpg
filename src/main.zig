@@ -3,6 +3,7 @@ const Game = @import("game/game.zig");
 const Config = @import("common/config.zig");
 const Window = @import("game/window.zig");
 const rl = @import("raylib");
+const Profiler = @import("common/profiler.zig");
 
 pub fn main() !void {
     rl.setConfigFlags(.{ .window_resizable = true });
@@ -26,8 +27,21 @@ pub fn main() !void {
     defer game.deinit();
 
     const running = true;
+
+    Profiler.map = std.AutoHashMap(u64, u32).init(allocator);
+    defer Profiler.map.deinit();
+
+    Profiler.BeginProfile();
+
     while (!rl.windowShouldClose() and running) {
+        const updateProfile = Profiler.TimeBlock("update", @src());
         try game.update();
+        updateProfile.end();
+
+        const drawProfile = Profiler.TimeBlock("draw", @src());
         try game.draw();
+        drawProfile.end();
     }
+
+    Profiler.EndProfile();
 }

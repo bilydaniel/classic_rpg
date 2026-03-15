@@ -98,6 +98,7 @@ pub const Game = struct {
     pub fn draw(this: *Game) !void {
         UiManager.drawToBuffer();
         UiManager.draw(this);
+        rl.drawFPS(0, 0);
         UiManager.stopDrawingToBuffer();
 
         // First pass: render game into Window.screen
@@ -120,7 +121,6 @@ pub const Game = struct {
         //
         rl.beginDrawing();
         rl.clearBackground(rl.Color.black);
-        rl.drawFPS(0, 0);
 
         const t: f32 = @floatCast(rl.getTime());
         rl.setShaderValue(ShaderManager.crtShader.source, ShaderManager.crtShader.timeLoc, &t, .float);
