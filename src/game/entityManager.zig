@@ -57,6 +57,10 @@ pub fn despawn() !void {
     }
 }
 
+pub fn despawnQueueAdd(id: u32) !void {
+    try despawnQueue.append(entity_allocator, id);
+}
+
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
     //

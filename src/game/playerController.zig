@@ -318,6 +318,7 @@ pub fn entitySelect(game: *Game.Game) void {
 }
 
 pub fn entityAction(game: *Game.Game) !void {
+    _ = game;
     if (Gamestate.selectedEntityID) |id| {
         const selectedEntity = EntityManager.getEntityID(id);
         if (selectedEntity) |entity| {
@@ -389,7 +390,7 @@ pub fn entityAction(game: *Game.Game) !void {
                                 try ShaderManager.spawnSlash(entity.pos, cur);
                                 try ShaderManager.spawnImpact(cur);
 
-                                attack(game, entity, attackedEntity);
+                                Combat.attack(entity, attackedEntity);
 
                                 entity.hasAttacked = true;
 
@@ -505,12 +506,4 @@ pub fn skipAttack() void {
     Gamestate.resetAttackHighlight();
     Gamestate.removeCursor();
     Gamestate.selectedAction = null;
-}
-
-//TODO: @refactor probably a combat file or something
-pub fn attack(game: *Game.Game, entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
-    _ = game;
-    if (attackedEntity) |attacked_entity| {
-        attacked_entity.health -= entity.attack;
-    } else {}
 }

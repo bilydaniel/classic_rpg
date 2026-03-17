@@ -19,3 +19,9 @@ pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.E
     }
     return false;
 }
+
+pub fn attack(entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
+    if (attackedEntity) |attacked_entity| {
+        attacked_entity.health -= entity.attack;
+    } else {}
+}

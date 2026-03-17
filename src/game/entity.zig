@@ -39,6 +39,7 @@ pub const Entity = struct {
     id: u32,
     name: [:0]const u8 = "",
     active: bool = true,
+    alive: bool = true,
     health: i32,
     mana: i32,
     tp: i32,
@@ -277,6 +278,15 @@ pub const Entity = struct {
     pub fn finishMovement(this: *Entity) void {
         this.hasMoved = true;
         this.movedDistance = 0;
+    }
+
+    pub fn damage(this: *Entity, ammount: i32) void {
+        this.health -= ammount;
+        if (this.health <= 0) {
+            this.alive = false;
+            //TODO: do i want to have dead bodies?
+            EntityManager.despawnQueueAdd();
+        }
     }
 };
 
