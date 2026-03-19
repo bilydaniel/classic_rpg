@@ -50,11 +50,13 @@ pub fn deinit() void {
 }
 
 //TODO: @finish @continue
-pub fn spawn() !void {}
-pub fn despawn() !void {
+pub fn spawnEntities() !void {}
+pub fn despawnEntities() !void {
     for (despawnQueue.items) |id| {
-        _ = id;
+        try removeEntityID(id);
     }
+
+    despawnQueue.clearRetainingCapacity();
 }
 
 pub fn despawnQueueAdd(id: u32) !void {
@@ -123,7 +125,7 @@ pub fn fillEntities() !void {
     try addActiveEntity(entity2);
     try addActiveEntity(entity3);
 
-    try addRandomEnemies(100);
+    //try addRandomEnemies(100);
 }
 
 fn addRandomEnemies(number: usize) !void {
@@ -208,7 +210,6 @@ pub fn draw() void {
 pub fn allPlayerUnitsTurnTaken() bool {
     const player = getPlayer();
     if (player.inCombat) {
-        std.debug.print("player: {} pup: {}\n", .{ player.turnTaken, player.allPupsTurnTaken() });
         return player.turnTaken and player.allPupsTurnTaken();
     } else {
         return player.turnTaken;
@@ -279,4 +280,28 @@ pub fn getEntityIndex(index: usize) ?*Entity.Entity {
     }
 
     return &entities.items[index];
+}
+
+pub fn getPlayerEntities() []Entity.Entity {
+    const playerEntities = Types.StaticArray(Entity.Entity, 16);
+
+    const player = getPlayer();
+    const pups = player.getPuppets();
+
+    playerEntities.append(player.id);
+    for (pups.items) |pup| {
+        playerEntities.append(pup);
+    }
+}
+
+pub fn getPlayerEntitiesIDs() []u32 {
+    const playerEntities = Types.StaticArray(u32, 16);
+
+    const player = getPlayer();
+    const pups = player.getPuppetsIds();
+
+    playerEntities.append(player.id);
+    for (pups.items) |pup| {
+        playerEntities.append(pup);
+    }
 }

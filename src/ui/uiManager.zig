@@ -423,6 +423,9 @@ fn menuItem(label: [:0]const u8, pos: RelativePos) bool {
 }
 
 fn drawPuppetSelectMenu(game: *Game.Game) void {
+    if (TurnManager.turn == .enemy) {
+        return;
+    }
     const panelPos = RelativePos.init(.bottom_center, -100, -180);
     drawBackground(panelPos, .{ .x = 200, .y = 150 });
 
@@ -448,23 +451,25 @@ fn drawPuppetSelectMenu(game: *Game.Game) void {
 }
 
 fn drawActionSelectMenu(game: *Game.Game) void {
+    if (TurnManager.turn == .enemy) {
+        return;
+    }
     _ = game;
-
-    const panelPos = RelativePos.init(.bottom_center, -100, -180);
-    drawBackground(panelPos, .{ .x = 200, .y = 150 });
-
-    const titlePos = RelativePos.init(.bottom_center, -90, -175);
-    drawText(titlePos, .{ .x = 200, .y = 150 }, "Choose Action:", primaryColor);
-    var itemPos = titlePos;
-    itemPos.pos.x += 5;
-
-    beginMenu();
 
     if (Gamestate.selectedEntityID) |id| {
         const entity = EntityManager.getEntityID(id) orelse {
-            endMenu();
             return;
         };
+
+        const panelPos = RelativePos.init(.bottom_center, -100, -180);
+        drawBackground(panelPos, .{ .x = 200, .y = 150 });
+
+        const titlePos = RelativePos.init(.bottom_center, -90, -175);
+        drawText(titlePos, .{ .x = 200, .y = 150 }, "Choose Action:", primaryColor);
+        var itemPos = titlePos;
+        itemPos.pos.x += 5;
+
+        beginMenu();
 
         if (!entity.hasMoved) {
             itemPos.pos.y += 25;
@@ -478,8 +483,8 @@ fn drawActionSelectMenu(game: *Game.Game) void {
                 menuSelect = .{ .action = .attack };
             }
         }
+        endMenu();
     }
-    endMenu();
 }
 
 fn getMenuItemsCount() ?i32 {

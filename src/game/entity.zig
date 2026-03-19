@@ -12,6 +12,7 @@ const AssetManager = @import("assetManager.zig");
 const Movement = @import("movement.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("../game/turnManager.zig");
+const Combat = @import("../game/combat.zig");
 const rl = @import("raylib");
 
 pub const EntityType = enum {
@@ -83,7 +84,7 @@ pub const Entity = struct {
             .health = 10,
             .mana = 10,
             .tp = 0,
-            .attack = 3,
+            .attack = 10,
             .pos = pos,
             .textureID = null,
             .sourceRect = null,
@@ -280,13 +281,35 @@ pub const Entity = struct {
         this.movedDistance = 0;
     }
 
-    pub fn damage(this: *Entity, ammount: i32) void {
+    pub fn damage(this: *Entity, ammount: i32) !void {
         this.health -= ammount;
         if (this.health <= 0) {
             this.alive = false;
             //TODO: do i want to have dead bodies?
-            EntityManager.despawnQueueAdd();
+            try EntityManager.despawnQueueAdd(this.id);
         }
+        std.debug.print("hp: {}\n", .{this.health});
+    }
+
+    pub fn getPuppetsIds(this: *Entity) []u32 {
+        const result = []u32;
+        if (this.data == .player) {
+            result = this.data.player.puppets;
+        }
+
+        return result;
+    }
+
+    pub fn getPuppets(this: *Entity) []Entity {
+        const result = []Entity;
+        if (this.data == .player) {
+            const pups = this.data.player.puppets;
+            for (pups) |pup| {
+                //TODO: @continue
+            }
+        }
+
+        return result;
     }
 };
 
@@ -415,8 +438,6 @@ pub const PuppetData = struct {
 //TODO: maybe put into another file?
 //TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
-    //TODO: fix the path finding, lags like a bitch
-
     const level = World.getLevelAt(entity.worldPos) orelse return;
     const entitiesPosHash = EntityManager.positionHash;
 
@@ -437,6 +458,35 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
     try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
     if (entity.hasMoved) {
+        //TODO: priorities
+
+        const playerEntities = EntityManager.getPlayerEntities();
+
+        var canAttack = false;
+
+        const player = EntityManager.getPlayer();
+        if (Combat.canAttack(entity, player)) {
+            canAttack = true;
+            //TODO
+
+        }
+
+        for (player.data.player.puppets.items) |pupID| {
+            const puppet = EntityManager.getEntityID(pupID);
+            if (puppet) |pup| {
+                if (Combat.canAttack(entity, pup)) {
+                    canAttack = true;
+                    //TODO
+                }
+            }
+        }
+
+        // cant attack, skip
+        if (!canAttack) {
+            entity.hasAttacked = true;
+        }
+    }
+    if (entity.hasMoved and entity.hasAttacked) {
         //TODO: make more complex
         entity.turnTaken = true;
     }

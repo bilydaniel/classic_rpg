@@ -93,8 +93,8 @@ pub const Game = struct {
 
         ShaderManager.update(delta);
 
-        try EntityManager.despawn();
-        try EntityManager.spawn();
+        try EntityManager.despawnEntities();
+        try EntityManager.spawnEntities();
         updateProfile.end();
     }
 

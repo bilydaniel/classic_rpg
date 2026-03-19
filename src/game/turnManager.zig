@@ -3,6 +3,7 @@ const EntityManager = @import("../game/entityManager.zig");
 const PlayerController = @import("../game/playerController.zig");
 const CameraManager = @import("../game/cameraManager.zig");
 const Entity = @import("../game/entity.zig");
+const Gamestate = @import("gamestate.zig");
 const std = @import("std");
 
 pub const TurnEnum = enum {
@@ -69,6 +70,10 @@ pub fn update(game: *Game.Game) !void {
             //TODO: remove all the dead entities here so i dont fuck up any pointers during the update
             std.debug.print("cleanup\n", .{});
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
+
+            if (Gamestate.selectedEntityID) |id| {
+                CameraManager.targetEntity = id;
+            }
 
             enemyQueueIndex = 0;
             //@memory this is pretty much free

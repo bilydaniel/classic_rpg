@@ -390,7 +390,7 @@ pub fn entityAction(game: *Game.Game) !void {
                                 try ShaderManager.spawnSlash(entity.pos, cur);
                                 try ShaderManager.spawnImpact(cur);
 
-                                Combat.attack(entity, attackedEntity);
+                                try Combat.attack(entity, attackedEntity);
 
                                 entity.hasAttacked = true;
 

@@ -10,7 +10,7 @@ pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.E
             // std.debug.print("e: {}\n", .{e.worldPos});
             // std.debug.print("***************\n", .{});
             if (Types.vector3IntCompare(player.worldPos, e.worldPos)) {
-                const distance = Types.vector2Distance(player.pos, e.pos);
+                const distance = Types.vector2IntDistance(player.pos, e.pos);
                 if (distance < 3) {
                     return true;
                 }
@@ -20,8 +20,16 @@ pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.E
     return false;
 }
 
-pub fn attack(entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
+pub fn attack(entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) !void {
     if (attackedEntity) |attacked_entity| {
-        attacked_entity.health -= entity.attack;
+        try attacked_entity.damage(entity.attack);
     } else {}
+}
+
+pub fn canAttack(from: *Entity.Entity, to: *Entity.Entity) bool {
+    const distance = Types.vector2IntDistance(from.pos, to.pos);
+    if (distance <= from.attackDistance) {
+        return true;
+    }
+    return false;
 }

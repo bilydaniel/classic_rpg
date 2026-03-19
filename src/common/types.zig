@@ -77,7 +77,7 @@ pub fn vector2IntConvert(a: Vector2Int) c.Vector2 {
     };
 }
 
-pub fn vector2Distance(a: Vector2Int, b: Vector2Int) u32 {
+pub fn vector2IntDistance(a: Vector2Int, b: Vector2Int) u32 {
     const dx = @as(f32, @floatFromInt(a.x - b.x));
     const dy = @as(f32, @floatFromInt(a.y - b.y));
     return @as(u32, @intFromFloat(@floor(@sqrt(dx * dx + dy * dy))));
