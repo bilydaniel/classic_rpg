@@ -33,3 +33,21 @@ pub fn canAttack(from: *Entity.Entity, to: *Entity.Entity) bool {
     }
     return false;
 }
+
+pub fn closestEntity(from: Types.Vector2Int, to: []*Entity.Entity) ?*Entity.Entity {
+    var closestEnt: ?*Entity.Entity = null;
+    var closestDistance: u32 = std.math.maxInt(u32);
+
+    // std.debug.print("to_entities: {any}\n", .{to});
+    // std.debug.print("to_entities_len: {any}\n", .{to.len});
+
+    for (to) |toEntity| {
+        const distance = Types.vector2IntDistance(from, toEntity.pos);
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestEnt = toEntity;
+        }
+    }
+
+    return closestEnt;
+}

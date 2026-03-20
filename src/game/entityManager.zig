@@ -282,16 +282,18 @@ pub fn getEntityIndex(index: usize) ?*Entity.Entity {
     return &entities.items[index];
 }
 
-pub fn getPlayerEntities() []Entity.Entity {
-    const playerEntities = Types.StaticArray(Entity.Entity, 16);
+pub fn getPlayerEntities() !Types.StaticArray(*Entity.Entity, 16) {
+    var playerEntities = Types.StaticArray(*Entity.Entity, 16){};
 
     const player = getPlayer();
-    const pups = player.getPuppets();
+    const pups = try player.getPuppets();
 
-    playerEntities.append(player.id);
+    try playerEntities.append(player);
     for (pups.items) |pup| {
-        playerEntities.append(pup);
+        try playerEntities.append(pup);
     }
+
+    return playerEntities;
 }
 
 pub fn getPlayerEntitiesIDs() []u32 {

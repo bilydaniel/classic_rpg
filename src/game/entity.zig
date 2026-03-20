@@ -300,12 +300,15 @@ pub const Entity = struct {
         return result;
     }
 
-    pub fn getPuppets(this: *Entity) []Entity {
-        const result = []Entity;
+    pub fn getPuppets(this: *Entity) !Types.StaticArray(*Entity, 8) {
+        var result = Types.StaticArray(*Entity, 8){};
         if (this.data == .player) {
             const pups = this.data.player.puppets;
-            for (pups) |pup| {
-                //TODO: @continue
+            for (pups.items) |id| {
+                const entity = EntityManager.getEntityID(id);
+                if (entity) |e| {
+                    try result.append(e);
+                }
             }
         }
 
@@ -460,24 +463,17 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
     if (entity.hasMoved) {
         //TODO: priorities
 
-        const playerEntities = EntityManager.getPlayerEntities();
+        //TODO: @continue, @finish
+        var playerEntities = try EntityManager.getPlayerEntities();
+        const closestEntity = Combat.closestEntity(entity.pos, playerEntities.slice());
 
         var canAttack = false;
 
-        const player = EntityManager.getPlayer();
-        if (Combat.canAttack(entity, player)) {
-            canAttack = true;
-            //TODO
+        if (closestEntity) |closestEntity_| {
+            if (Combat.canAttack(entity, closestEntity_)) {
+                canAttack = true;
+                //TODO
 
-        }
-
-        for (player.data.player.puppets.items) |pupID| {
-            const puppet = EntityManager.getEntityID(pupID);
-            if (puppet) |pup| {
-                if (Combat.canAttack(entity, pup)) {
-                    canAttack = true;
-                    //TODO
-                }
             }
         }
 

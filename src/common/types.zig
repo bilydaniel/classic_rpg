@@ -134,5 +134,9 @@ pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
         pub fn zero(this: *This) void {
             this.items = std.mem.zeroes([capacity]T);
         }
+
+        pub fn slice(this: *This) []T {
+            return this.items[0..this.len];
+        }
     };
 }
