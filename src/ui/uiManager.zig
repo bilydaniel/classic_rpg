@@ -220,6 +220,7 @@ pub const MenuItemData = union(enum) {
 pub const ActionType = enum {
     move,
     attack,
+    skip_turn,
 };
 
 pub fn getConfirm() bool {
@@ -473,16 +474,25 @@ fn drawActionSelectMenu(game: *Game.Game) void {
 
         if (!entity.hasMoved) {
             itemPos.pos.y += 25;
-            if (menuItem("MOVE", itemPos)) {
+            if (menuItem("Move", itemPos)) {
                 menuSelect = .{ .action = .move };
             }
         }
+
         if (!entity.hasAttacked) {
             itemPos.pos.y += 25;
-            if (menuItem("ATTACK", itemPos)) {
+            if (menuItem("Attack", itemPos)) {
                 menuSelect = .{ .action = .attack };
             }
         }
+
+        if (!entity.hasMoved or !entity.hasAttacked) {
+            itemPos.pos.y += 25;
+            if (menuItem("Skip turn", itemPos)) {
+                menuSelect = .{ .action = .skip_turn };
+            }
+        }
+
         endMenu();
     }
 }
@@ -519,6 +529,11 @@ fn getMenuItemsCount() ?i32 {
                     }
 
                     if (!e.hasAttacked) {
+                        result += 1;
+                    }
+
+                    //skip turn
+                    if (!e.hasMoved or !e.hasAttacked) {
                         result += 1;
                     }
                 }

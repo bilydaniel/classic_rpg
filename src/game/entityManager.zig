@@ -53,7 +53,9 @@ pub fn deinit() void {
 pub fn spawnEntities() !void {}
 pub fn despawnEntities() !void {
     for (despawnQueue.items) |id| {
-        try removeEntityID(id);
+        if (id != playerID) {
+            try removeEntityID(id);
+        }
     }
 
     despawnQueue.clearRetainingCapacity();
@@ -289,7 +291,7 @@ pub fn getPlayerEntities() !Types.StaticArray(*Entity.Entity, 16) {
     const pups = try player.getPuppets();
 
     try playerEntities.append(player);
-    for (pups.items) |pup| {
+    for (pups.items[0..pups.len]) |pup| {
         try playerEntities.append(pup);
     }
 

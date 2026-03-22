@@ -12,6 +12,7 @@ const Pathfinder = @import("../game/pathfinder.zig");
 const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
+const Movement = @import("movement.zig");
 const Config = @import("../common/config.zig");
 const rl = @import("raylib");
 const Profiler = @import("../common/profiler.zig");
@@ -27,6 +28,8 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
 
+        Entity.init(allocator);
+        Movement.init(allocator);
         Systems.init(allocator);
         PlayerController.init(allocator);
         Gamestate.init(allocator);

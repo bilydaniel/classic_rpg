@@ -1,3 +1,10 @@
+
+SMALL GAME:
+    the game that iam making right now is probably way too big??
+    bouncy ball that falls down, bounces around, player shoots (kinda like a reverse space invader)
+
+
+
 jblow_programming:
 
 if a functions gets inlined out of debugging use this:

@@ -419,6 +419,13 @@ pub fn entityAction(game: *Game.Game) !void {
                         }
                     }
                 },
+                .skip_turn => {
+                    Gamestate.showMenu = .none;
+                    entity.hasAttacked = true;
+                    entity.hasMoved = true;
+                    entity.turnTaken = true;
+                    Gamestate.selectedAction = null;
+                },
             }
         }
     }

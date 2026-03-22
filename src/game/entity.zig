@@ -15,6 +15,12 @@ const TurnManager = @import("../game/turnManager.zig");
 const Combat = @import("../game/combat.zig");
 const rl = @import("raylib");
 
+var allocator: std.mem.Allocator = undefined;
+
+pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+}
+
 pub const EntityType = enum {
     player, // there could be an enemy puppet master
     puppet, // there could be an enemy puppet, would be cool loot(parts for the puppets, may be the way to optain head, torso)
@@ -72,13 +78,13 @@ pub const Entity = struct {
     data: EntityData,
 
     pub fn init(
-        allocator: std.mem.Allocator,
+        alloc: std.mem.Allocator,
         pos: Types.Vector2Int,
         speed: f32,
         entityData: anytype,
     ) !Entity {
         //const entity = try allocator.create(Entity);
-        _ = allocator;
+        _ = alloc;
         const entity = Entity{
             .id = entity_id,
             .health = 10,
@@ -286,7 +292,7 @@ pub const Entity = struct {
         if (this.health <= 0) {
             this.alive = false;
             //TODO: do i want to have dead bodies?
-            try EntityManager.despawnQueueAdd(this.id);
+            try EntityManager.despawnQueue.append(allocator, this.id);
         }
         std.debug.print("hp: {}\n", .{this.health});
     }
@@ -304,7 +310,7 @@ pub const Entity = struct {
         var result = Types.StaticArray(*Entity, 8){};
         if (this.data == .player) {
             const pups = this.data.player.puppets;
-            for (pups.items) |id| {
+            for (pups.items[0..pups.len]) |id| {
                 const entity = EntityManager.getEntityID(id);
                 if (entity) |e| {
                     try result.append(e);
@@ -388,7 +394,7 @@ pub const PlayerData = struct {
     puppets: Types.StaticArray(u32, 8),
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) !PlayerData {
+    pub fn init(alloc: std.mem.Allocator) !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
@@ -398,7 +404,7 @@ pub const PlayerData = struct {
         return PlayerData{
             .inCombatWith = inCombatWith,
             .puppets = puppets,
-            .allocator = allocator,
+            .allocator = alloc,
         };
     }
 
@@ -444,13 +450,18 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
     const level = World.getLevelAt(entity.worldPos) orelse return;
     const entitiesPosHash = EntityManager.positionHash;
 
-    if (entity.goal == null or entity.stuck >= 2) {
-        const player = game.player;
-        const location = Types.Location.init(player.worldPos, player.pos);
-        const availablePosition = Movement.getAvailableTileAround(location, level.grid, entitiesPosHash);
-        if (availablePosition) |ap| {
-            const availableLocation = Types.Location.init(level.worldPos, ap);
-            entity.goal = availableLocation;
+    var playerEntities = try EntityManager.getPlayerEntities();
+    //TODO: add vision
+    const closestEntity = Combat.closestEntity(entity.pos, playerEntities.slice());
+    if (closestEntity) |closestentity| {
+        std.debug.print("closest_entity: {}\n", .{closestentity});
+        if (entity.goal == null or entity.stuck >= 2) {
+            const location = Types.Location.init(closestentity.worldPos, closestentity.pos);
+            const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid, entitiesPosHash);
+            if (attackPosition) |ap| {
+                const attackLocation = Types.Location.init(level.worldPos, ap);
+                entity.goal = attackLocation;
+            }
         }
     }
 
@@ -464,8 +475,6 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         //TODO: priorities
 
         //TODO: @continue, @finish
-        var playerEntities = try EntityManager.getPlayerEntities();
-        const closestEntity = Combat.closestEntity(entity.pos, playerEntities.slice());
 
         var canAttack = false;
 
@@ -473,7 +482,9 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
             if (Combat.canAttack(entity, closestEntity_)) {
                 canAttack = true;
                 //TODO
-
+                std.debug.print("attacking: {}\n", .{closestEntity_});
+                try Combat.attack(entity, closestEntity_);
+                entity.hasAttacked = true;
             }
         }
 
