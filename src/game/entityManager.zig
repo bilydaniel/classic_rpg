@@ -16,6 +16,7 @@ const c = @cImport({
 var entity_allocator: std.mem.Allocator = undefined;
 
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
+//pub var entities: std.SegmentedList(Entity.Entity, 2) = undefined; //TODO: bigger preallocate, testing for now
 
 pub var positionHash: Types.PositionHash = undefined;
 pub var idHash: Types.IdHash = undefined;
@@ -28,6 +29,7 @@ pub var despawnQueue: std.ArrayList(u32) = undefined;
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
 
+    //entities = std.SegmentedList(Entity.Entity).empty;
     entities = std.ArrayList(Entity.Entity).empty;
 
     //@memory what allocator for hash?

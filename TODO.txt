@@ -1,3 +1,10 @@
+
+FIX:
+    use segmented list for storing entities, add a generation + freelist
+    stop using position hash, just put a handle into the tiles, probably gonna have a entity + item in a tile
+
+
+
 STUDY TIME:
     go through the sources:
         https://gemini.google.com/app/8775a3841376abf0

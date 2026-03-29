@@ -137,11 +137,13 @@ pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity:
         }
     }
 
-    const resultTile = Combat.closestPos(attackingEntity.pos, tiles.items);
+    //TODO: @finish @continue
+    //const resultTile = Combat.closestPos(attackingEntity.pos, tiles.items);
 
-    std.debug.print("tiles: {}\n", .{resultTile});
+    //std.debug.print("tiles: {}\n", .{resultTile});
 
-    return resultTile;
+    //return resultTile;
+    return null;
 }
 
 pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) ?Types.Vector2Int {
