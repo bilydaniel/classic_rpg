@@ -16,6 +16,7 @@ const c = @cImport({
 var entity_allocator: std.mem.Allocator = undefined;
 
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
+//pub var entities: std.SegmentedList(Entity.Entity, 2) = undefined; //TODO: bigger preallocate, testing for now
 
 pub var positionHash: Types.PositionHash = undefined;
 pub var idHash: Types.IdHash = undefined;
@@ -28,6 +29,7 @@ pub var despawnQueue: std.ArrayList(u32) = undefined;
 pub fn init(allocator: std.mem.Allocator) void {
     entity_allocator = allocator;
 
+    //entities = std.SegmentedList(Entity.Entity).empty;
     entities = std.ArrayList(Entity.Entity).empty;
 
     //@memory what allocator for hash?
@@ -50,32 +52,60 @@ pub fn deinit() void {
 }
 
 //TODO: @finish @continue
-pub fn spawn() !void {}
-pub fn despawn() !void {
+pub fn spawnEntities() !void {}
+pub fn despawnEntities() !void {
     for (despawnQueue.items) |id| {
-        _ = id;
+        if (id != playerID) {
+            try removeEntityID(id);
+        }
     }
+
+    despawnQueue.clearRetainingCapacity();
+}
+
+pub fn despawnQueueAdd(id: u32) !void {
+    try despawnQueue.append(entity_allocator, id);
 }
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
-    //TODO: @memory, remove arraylist, use array
+    //
+    //PLAYER
+    //
     const playerData = try Entity.PlayerData.init(entity_allocator);
-
     var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
+    player.name = "Pepega";
     player.setTextureID(AssetManager.TileNames.player);
     playerID = player.id;
 
+    //
+    //PUPPET_1
+    //
     const pup_pos = Types.Vector2Int{ .x = 1, .y = 1 };
     var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
-    try player.data.player.puppets.append(entity_allocator, puppet.id);
+    try player.data.player.puppets.append(puppet.id);
+    std.debug.print("puppets: {}\n", .{player.data.player.puppets});
+
+    //
+    //PUPPET_2
+    //
+    // const pup_pos_2 = Types.Vector2Int{ .x = 2, .y = 1 };
+    // var puppet2 = try Entity.Entity.init(entity_allocator, pup_pos_2, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
+    // puppet2.visible = false;
+    // puppet2.name = "igor";
+    // puppet2.setTextureID(AssetManager.TileNames.puppet_1);
+    // try player.data.player.puppets.append(puppet2.id);
 
     try addActiveEntity(player);
     try addInactiveEntity(puppet);
+    //try addInactiveEntity(puppet2);
 
+    //
+    //ENEMIES
+    //
     const pos = Types.Vector2Int{ .x = 5, .y = 15 };
     const enemy_tile = AssetManager.TileNames.robot_1;
     const enemy_goal_world = Types.Vector3Int.init(0, 0, 0);
@@ -98,6 +128,20 @@ pub fn fillEntities() !void {
     try addActiveEntity(entity);
     try addActiveEntity(entity2);
     try addActiveEntity(entity3);
+
+    //try addRandomEnemies(100);
+}
+
+fn addRandomEnemies(number: usize) !void {
+    const enemy_tile = AssetManager.TileNames.robot_1;
+    var entity: Entity.Entity = undefined;
+    const grid = World.getCurrentLevel().grid;
+    for (0..number) |_| {
+        const pos = Systems.getRandomMovablePosition(grid, positionHash);
+        entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+        entity.setTextureID(enemy_tile);
+        try addActiveEntity(entity);
+    }
 }
 
 pub fn addActiveEntity(entity: Entity.Entity) !void {
@@ -240,4 +284,30 @@ pub fn getEntityIndex(index: usize) ?*Entity.Entity {
     }
 
     return &entities.items[index];
+}
+
+pub fn getPlayerEntities() !Types.StaticArray(*Entity.Entity, 16) {
+    var playerEntities = Types.StaticArray(*Entity.Entity, 16){};
+
+    const player = getPlayer();
+    const pups = try player.getPuppets();
+
+    try playerEntities.append(player);
+    for (pups.items[0..pups.len]) |pup| {
+        try playerEntities.append(pup);
+    }
+
+    return playerEntities;
+}
+
+pub fn getPlayerEntitiesIDs() []u32 {
+    const playerEntities = Types.StaticArray(u32, 16);
+
+    const player = getPlayer();
+    const pups = player.getPuppetsIds();
+
+    playerEntities.append(player.id);
+    for (pups.items) |pup| {
+        playerEntities.append(pup);
+    }
 }

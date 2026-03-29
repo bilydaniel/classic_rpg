@@ -3,6 +3,7 @@ const EntityManager = @import("../game/entityManager.zig");
 const PlayerController = @import("../game/playerController.zig");
 const CameraManager = @import("../game/cameraManager.zig");
 const Entity = @import("../game/entity.zig");
+const Gamestate = @import("gamestate.zig");
 const std = @import("std");
 
 pub const TurnEnum = enum {
@@ -23,7 +24,7 @@ pub var turnNumber: i32 = 1;
 pub var updatingEntity: ?u32 = null;
 
 pub var enemyQueue: std.ArrayList(u32) = undefined;
-var enemyQueueIndex: u32 = 0;
+pub var enemyQueueIndex: u32 = 0;
 
 var allocator: std.mem.Allocator = undefined;
 
@@ -38,6 +39,8 @@ pub fn deinit() void {
 }
 
 pub fn update(game: *Game.Game) !void {
+    //TODO: @fix turn manager is really messy, have a look at: https://claude.ai/chat/807c598e-5c59-4531-91f3-12b01bf65f82
+    //probably just make it on my own, fuck ai
 
     //TODO: @fix @continue
     if (PlayerController.state == .deploying_puppets) {
@@ -67,6 +70,10 @@ pub fn update(game: *Game.Game) !void {
             //TODO: remove all the dead entities here so i dont fuck up any pointers during the update
             std.debug.print("cleanup\n", .{});
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
+
+            if (Gamestate.selectedEntityID) |id| {
+                CameraManager.targetEntity = id;
+            }
 
             enemyQueueIndex = 0;
             //@memory this is pretty much free

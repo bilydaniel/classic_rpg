@@ -56,11 +56,12 @@ pub fn update(game: *Game.Game) !void {
 
             //TODO: probably should only check when moved
             if (Combat.checkCombatStart(game.player, EntityManager.entities)) {
-                nextState = .deploying_puppets;
+                //nextState = .deploying_puppets;
             }
         },
         .deploying_puppets => {
             if (UiManager.getCombatToggle()) {
+                //TODO: @fix, bricks pretty much everithing
                 nextState = .walking;
             }
 
@@ -70,6 +71,7 @@ pub fn update(game: *Game.Game) !void {
         },
         .in_combat => {
             if (UiManager.getCombatToggle()) {
+                //TODO: @fix, bricks pretty much everithing
                 //TODO: check can end combat?
                 nextState = .walking;
             }
@@ -106,6 +108,23 @@ pub fn update(game: *Game.Game) !void {
                 game.player.endCombat();
                 Gamestate.showMenu = .none;
                 try EntityManager.deactivatePuppets();
+
+                //TODO: make function
+                TurnManager.updatingEntity = null;
+                TurnManager.switchTurn(.player);
+                TurnManager.phase = .setup;
+                TurnManager.enemyQueue.clearRetainingCapacity();
+                TurnManager.enemyQueueIndex = 0;
+                EntityManager.resetTurnFlags();
+
+                for (EntityManager.entities.items) |*entity| {
+                    if (entity.data == .enemy) {
+                        entity.inCombat = false;
+                        entity.resetPathing();
+                    }
+                }
+
+                CameraManager.targetEntity = EntityManager.playerID;
             },
             .deploying_puppets => {
                 TurnManager.switchTurn(.player);
@@ -192,7 +211,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         }
     }
 
-    if (!Movement.canMove(newLocation, grid, &entityPosHash)) {
+    if (!Movement.canMove(newLocation, grid, entityPosHash)) {
         //TODO: print to the player he cant move
         return;
     }
@@ -274,7 +293,7 @@ pub fn entitySelect(game: *Game.Game) void {
 
     Gamestate.resetMovementHighlight();
     Gamestate.resetAttackHighlight();
-    UiManager.resetActiveMenuIndex();
+    //UiManager.resetActiveMenuIndex();
     //TODO: reset the active menu index
     if (entityIndex == 0) {
         //Player
@@ -299,6 +318,7 @@ pub fn entitySelect(game: *Game.Game) void {
 }
 
 pub fn entityAction(game: *Game.Game) !void {
+    _ = game;
     if (Gamestate.selectedEntityID) |id| {
         const selectedEntity = EntityManager.getEntityID(id);
         if (selectedEntity) |entity| {
@@ -331,8 +351,8 @@ pub fn entityAction(game: *Game.Game) !void {
                         if (Gamestate.cursor) |cur| {
                             const level = World.getCurrentLevel();
                             const location = Types.Location.init(level.worldPos, cur);
-                            if (Gamestate.isinMovable(cur) and Movement.canMove(location, grid, &entityPosHash)) {
-                                entity.path = try Pathfinder.findPath(entity.pos, cur, level.*, &entityPosHash);
+                            if (Gamestate.isinMovable(cur) and Movement.canMove(location, grid, entityPosHash)) {
+                                entity.path = try Pathfinder.findPath(entity.pos, cur, level.*, entityPosHash);
 
                                 TurnManager.updatingEntity = entity.id;
 
@@ -345,7 +365,15 @@ pub fn entityAction(game: *Game.Game) !void {
 
                     if (c.IsKeyPressed(c.KEY_SPACE)) {
                         //TODO: manage state after skip
+                        //TODO: @fix, skipping doesent work
                         skipMovement();
+
+                        if (Gamestate.selectedEntityID) |d| {
+                            const ee = EntityManager.getEntityID(d);
+                            if (ee) |e| {
+                                std.debug.print("selectedEntity: {} {}\n", .{ e.hasMoved, e.hasAttacked });
+                            }
+                        }
                     }
                 },
                 .attack => {
@@ -362,7 +390,7 @@ pub fn entityAction(game: *Game.Game) !void {
                                 try ShaderManager.spawnSlash(entity.pos, cur);
                                 try ShaderManager.spawnImpact(cur);
 
-                                attack(game, entity, attackedEntity);
+                                try Combat.attack(entity, attackedEntity);
 
                                 entity.hasAttacked = true;
 
@@ -380,8 +408,23 @@ pub fn entityAction(game: *Game.Game) !void {
 
                     if (c.IsKeyPressed(c.KEY_SPACE)) {
                         //TODO: manage state after skip
+                        //TODO: @fix, skipping doesent work
                         skipAttack();
+
+                        if (Gamestate.selectedEntityID) |d| {
+                            const ee = EntityManager.getEntityID(d);
+                            if (ee) |e| {
+                                std.debug.print("selectedEntity: {} {}\n", .{ e.hasMoved, e.hasAttacked });
+                            }
+                        }
                     }
+                },
+                .skip_turn => {
+                    Gamestate.showMenu = .none;
+                    entity.hasAttacked = true;
+                    entity.hasMoved = true;
+                    entity.turnTaken = true;
+                    Gamestate.selectedAction = null;
                 },
             }
         }
@@ -463,17 +506,11 @@ pub fn skipAttack() void {
         const entity = EntityManager.getEntityID(id);
         if (entity) |e| {
             e.hasAttacked = true;
+            e.hasMoved = true;
+            e.turnTaken = true;
         }
     }
     Gamestate.resetAttackHighlight();
     Gamestate.removeCursor();
     Gamestate.selectedAction = null;
-}
-
-//TODO: @refactor probably a combat file or something
-pub fn attack(game: *Game.Game, entity: *Entity.Entity, attackedEntity: ?*Entity.Entity) void {
-    _ = game;
-    if (attackedEntity) |attacked_entity| {
-        attacked_entity.health -= entity.attack;
-    } else {}
 }

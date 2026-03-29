@@ -12,7 +12,14 @@ const AssetManager = @import("assetManager.zig");
 const Movement = @import("movement.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("../game/turnManager.zig");
+const Combat = @import("../game/combat.zig");
 const rl = @import("raylib");
+
+var allocator: std.mem.Allocator = undefined;
+
+pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+}
 
 pub const EntityType = enum {
     player, // there could be an enemy puppet master
@@ -21,7 +28,7 @@ pub const EntityType = enum {
     item,
 };
 
-pub var entity_id: u32 = 0;
+pub var entity_id: u32 = 1;
 
 pub const EntityData = union(EntityType) {
     player: PlayerData,
@@ -39,6 +46,7 @@ pub const Entity = struct {
     id: u32,
     name: [:0]const u8 = "",
     active: bool = true,
+    alive: bool = true,
     health: i32,
     mana: i32,
     tp: i32,
@@ -70,19 +78,19 @@ pub const Entity = struct {
     data: EntityData,
 
     pub fn init(
-        allocator: std.mem.Allocator,
+        alloc: std.mem.Allocator,
         pos: Types.Vector2Int,
         speed: f32,
         entityData: anytype,
     ) !Entity {
         //const entity = try allocator.create(Entity);
-        _ = allocator;
+        _ = alloc;
         const entity = Entity{
             .id = entity_id,
             .health = 10,
             .mana = 10,
             .tp = 0,
-            .attack = 3,
+            .attack = 10,
             .pos = pos,
             .textureID = null,
             .sourceRect = null,
@@ -139,7 +147,8 @@ pub const Entity = struct {
     }
 
     pub fn returnPuppets(this: *Entity) void {
-        for (this.data.player.puppets.items) |pupID| {
+        var puppets = this.data.player.puppets;
+        for (puppets.items[0..puppets.len]) |pupID| {
             const puppet = EntityManager.getEntityID(pupID);
             if (puppet) |pup| {
                 pup.visible = false;
@@ -155,7 +164,8 @@ pub const Entity = struct {
 
     pub fn allPupsTurnTaken(this: *Entity) bool {
         if (this.data == .player) {
-            for (this.data.player.puppets.items) |pupID| {
+            const puppets = this.data.player.puppets;
+            for (puppets.items[0..puppets.len]) |pupID| {
                 const puppet = EntityManager.getEntityID(pupID);
                 if (puppet) |pup| {
                     if (pup.turnTaken == false) {
@@ -276,6 +286,40 @@ pub const Entity = struct {
         this.hasMoved = true;
         this.movedDistance = 0;
     }
+
+    pub fn damage(this: *Entity, ammount: i32) !void {
+        this.health -= ammount;
+        if (this.health <= 0) {
+            this.alive = false;
+            //TODO: do i want to have dead bodies?
+            try EntityManager.despawnQueue.append(allocator, this.id);
+        }
+        std.debug.print("hp: {}\n", .{this.health});
+    }
+
+    pub fn getPuppetsIds(this: *Entity) []u32 {
+        const result = []u32;
+        if (this.data == .player) {
+            result = this.data.player.puppets;
+        }
+
+        return result;
+    }
+
+    pub fn getPuppets(this: *Entity) !Types.StaticArray(*Entity, 8) {
+        var result = Types.StaticArray(*Entity, 8){};
+        if (this.data == .player) {
+            const pups = this.data.player.puppets;
+            for (pups.items[0..pups.len]) |id| {
+                const entity = EntityManager.getEntityID(id);
+                if (entity) |e| {
+                    try result.append(e);
+                }
+            }
+        }
+
+        return result;
+    }
 };
 
 pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
@@ -283,8 +327,9 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     if (TurnManager.turn != .player or !entity.inCombat) {
         return;
     }
+    std.debug.print("player_pos: {}\n", .{entity.pos});
     const level = World.getCurrentLevel();
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     try Movement.updateEntity(game.player, game, level.*, entitiesPosHash);
 
@@ -302,7 +347,7 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
     }
 
     const level = World.getCurrentLevel();
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
 
@@ -347,28 +392,29 @@ pub const PlayerData = struct {
     inCombatWith: std.ArrayList(u32),
     //TODO: how does this arraylist work in memory?, how is it laid out?
     puppets: Types.StaticArray(u32, 8),
-    puppets_len: u8,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) !PlayerData {
+    pub fn init(alloc: std.mem.Allocator) !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
+        var puppets = Types.StaticArray(u32, 8){};
+        puppets.zero();
 
         return PlayerData{
             .inCombatWith = inCombatWith,
-            .puppets = undefined,
-            .puppets_len = 0,
-            .allocator = allocator,
+            .puppets = puppets,
+            .allocator = alloc,
         };
     }
 
     pub fn allPupsDeployed(this: *PlayerData) bool {
-        if (this.puppets.items.len == 0) {
+        var puppets = this.puppets;
+        if (puppets.len == 0) {
             return true;
         }
 
-        for (this.puppets.items) |pupID| {
+        for (puppets.items[0..puppets.len]) |pupID| {
             const puppet = EntityManager.getEntityID(pupID);
             std.debug.assert(puppet != null);
             if (puppet) |pup| {
@@ -402,18 +448,21 @@ pub const PuppetData = struct {
 //TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     const level = World.getLevelAt(entity.worldPos) orelse return;
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
-    if (entity.goal == null or entity.stuck >= 2) {
-        const player = game.player;
-        const location = Types.Location.init(player.worldPos, player.pos);
-        const availablePosition = Movement.getAvailableTileAround(location, level.grid, entitiesPosHash);
-        if (availablePosition == null) {
-            std.debug.print("goal is null", .{});
+    var playerEntities = try EntityManager.getPlayerEntities();
+    //TODO: add vision
+    const closestEntity = Combat.closestEntity(entity.pos, playerEntities.slice());
+    if (closestEntity) |closestentity| {
+        std.debug.print("closest_entity: {}\n", .{closestentity});
+        if (entity.goal == null or entity.stuck >= 2) {
+            const location = Types.Location.init(closestentity.worldPos, closestentity.pos);
+            const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid, entitiesPosHash);
+            if (attackPosition) |ap| {
+                const attackLocation = Types.Location.init(level.worldPos, ap);
+                entity.goal = attackLocation;
+            }
         }
-        //TODO: check for null
-        std.debug.print("setting_goal: {?}\n", .{availablePosition});
-        entity.goal = location;
     }
 
     //TODO: change this
@@ -423,6 +472,28 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
     try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
     if (entity.hasMoved) {
+        //TODO: priorities
+
+        //TODO: @continue, @finish
+
+        var canAttack = false;
+
+        if (closestEntity) |closestEntity_| {
+            if (Combat.canAttack(entity, closestEntity_)) {
+                canAttack = true;
+                //TODO
+                std.debug.print("attacking: {}\n", .{closestEntity_});
+                try Combat.attack(entity, closestEntity_);
+                entity.hasAttacked = true;
+            }
+        }
+
+        // cant attack, skip
+        if (!canAttack) {
+            entity.hasAttacked = true;
+        }
+    }
+    if (entity.hasMoved and entity.hasAttacked) {
         //TODO: make more complex
         entity.turnTaken = true;
     }
@@ -430,7 +501,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
     const level = World.getLevelAt(entity.worldPos) orelse return;
-    const entitiesPosHash = &EntityManager.positionHash;
+    const entitiesPosHash = EntityManager.positionHash;
 
     if (entity.goal == null or entity.stuck >= 2) {
         const position = Systems.getRandomValidPosition(World.getLevelAt(entity.worldPos).?.grid);

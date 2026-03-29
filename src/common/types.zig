@@ -77,7 +77,7 @@ pub fn vector2IntConvert(a: Vector2Int) c.Vector2 {
     };
 }
 
-pub fn vector2Distance(a: Vector2Int, b: Vector2Int) u32 {
+pub fn vector2IntDistance(a: Vector2Int, b: Vector2Int) u32 {
     const dx = @as(f32, @floatFromInt(a.x - b.x));
     const dy = @as(f32, @floatFromInt(a.y - b.y));
     return @as(u32, @intFromFloat(@floor(@sqrt(dx * dx + dy * dy))));
@@ -120,7 +120,7 @@ pub fn vector3IntAdd(a: Vector3Int, b: Vector3Int) Vector3Int {
 
 pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
     return struct {
-        items: [capacity]T = undefined,
+        items: [capacity]T = undefined, //std.mem.zeroes([capacity]T),
         len: usize = 0,
 
         const This = @This();
@@ -129,6 +129,14 @@ pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
             if (this.len >= capacity) return error.NoSpaceLeft;
             this.items[this.len] = item;
             this.len += 1;
+        }
+
+        pub fn zero(this: *This) void {
+            this.items = std.mem.zeroes([capacity]T);
+        }
+
+        pub fn slice(this: *This) []T {
+            return this.items[0..this.len];
         }
     };
 }

@@ -1,5 +1,14 @@
- if a functions gets inlined out of debugging use this:
-    @setRuntimeSafety(true);
+
+SMALL GAME:
+    the game that iam making right now is probably way too big??
+    bouncy ball that falls down, bounces around, player shoots (kinda like a reverse space invader)
+
+
+
+jblow_programming:
+
+if a functions gets inlined out of debugging use this:
+ @setRuntimeSafety(true);
 
 
 
@@ -16,3 +25,48 @@ jblow + casey:
    each run roll a bit different stats? maybe each drop has a bit different stats?
 
    
+casey immediate mode ui video notes:
+    if(doButton){ // draws button, returns true if it was clicked
+        action(); //stuff i wanna do if the button was clicked
+    }
+    uiContext: // tracks the users interaction at given time
+        hot:id, // about to be interacted with gets highlighter, pops out etc. no idead if i need this
+        active: id, // is interacted with
+        // store any other needed data for the active widget(only store data for its active period)
+
+    id:  // some sort of way to identify an element
+        // global identifier (pointer to function that does the stuff)
+        // or pointer to the data it uses
+        owener int, // group of elements
+        item int,
+        index int,
+
+    //this is a version for mouse
+    bool DoButton(uiContext, id, text, pos etc..){
+        if active { // compare active id in context with mine
+            if mousewentup {
+                if hot{
+                    result = true
+                }
+                set not active
+            }
+        }elseif hot {
+            if mousewentdown{
+                set active
+            }
+        }
+
+        if inside {
+            set hot// if there is an active item, it doesent set a hot item
+        }
+        
+        drawButton();
+    }
+
+    for menus {
+        for items{
+            doItem();
+        }
+    }
+    for popups{
+    }

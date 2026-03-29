@@ -8,10 +8,19 @@ const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("turnManager.zig");
 const Config = @import("../common/config.zig");
 const Game = @import("game.zig");
+const Combat = @import("combat.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 
-pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: *const Types.PositionHash) !void {
+var allocator: std.mem.Allocator = undefined;
+
+pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+}
+
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: Types.PositionHash) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
+    //TODO: @continue @fix @finish, remove entities from findPath, handle entities bumping into each other here
+    //TODO: https://claude.ai/chat/dfcf88fa-e705-4d82-b2a0-dc0d537b938c
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level, entities);
         if (newPath) |new_path| {
@@ -50,6 +59,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
 
     // position has entity, recalculate
     if (new_pos_entity) |_| {
+        //TODO: @continu, wait or sidestep
         entity.removePath();
         entity.stuck += 1;
         return;
@@ -72,7 +82,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 }
 
-pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: *const Types.PositionHash) bool {
+pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: Types.PositionHash) bool {
     const pos_index = Utils.posToIndex(location.pos);
     if (pos_index) |index| {
         if (index < grid.len and grid[index].solid) {
@@ -89,8 +99,56 @@ pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: *cons
     return false;
 }
 
-pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: *const Types.PositionHash) ?Types.Vector2Int {
+pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u32) !std.ArrayList(Types.Vector2Int) {
+    //TODO: use arena
+    var result: std.ArrayList(Types.Vector2Int) = .empty;
+
+    const dist: i32 = @intCast(distance);
+    var xOffset = -dist;
+    var yOffset = -dist;
+    while (yOffset <= distance) : (yOffset += 1) {
+        xOffset = -dist;
+        while (xOffset <= distance) : (xOffset += 1) {
+            // ignore center
+            if (yOffset == 0 and xOffset == 0) {
+                continue;
+            }
+
+            const newPos = Types.Vector2Int.init(pos.x + xOffset, pos.y + yOffset);
+            if (newPos.x > 0 and newPos.y > 0 and newPos.x < Config.level_width and newPos.y < Config.level_height) {
+                try result.append(alloc, newPos);
+            }
+        }
+    }
+
+    return result;
+}
+
+pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) !?Types.Vector2Int {
+    var tiles = try tilesAround(alloc, attackedLocation.pos, attackingEntity.attackDistance);
+    for (tiles.items, 0..) |tile, i| {
+        const tileLocation = Types.Location.init(attackedLocation.worldPos, tile);
+        if (!canMove(tileLocation, grid, entities)) {
+            _ = tiles.swapRemove(i);
+        }
+
+        if (!Combat.isLosFree(tile, attackedLocation.pos, attackedLocation.worldPos, entities)) {
+            _ = tiles.swapRemove(i);
+        }
+    }
+
+    //TODO: @finish @continue
+    //const resultTile = Combat.closestPos(attackingEntity.pos, tiles.items);
+
+    //std.debug.print("tiles: {}\n", .{resultTile});
+
+    //return resultTile;
+    return null;
+}
+
+pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) ?Types.Vector2Int {
     if (canMove(location, grid, entities)) {
+        std.debug.print("CAN_MOVE\n", .{});
         return location.pos;
     }
 
@@ -100,6 +158,7 @@ pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, enti
         std.debug.print("neigh: {}\n", .{neigh});
         const loc = Types.Location.init(location.worldPos, neigh);
         if (canMove(loc, grid, entities)) {
+            std.debug.print("returning: {}\n", .{loc});
             return neigh;
         }
     }
