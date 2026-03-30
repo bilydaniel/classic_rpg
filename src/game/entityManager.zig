@@ -18,7 +18,6 @@ var entity_allocator: std.mem.Allocator = undefined;
 pub var entities: std.ArrayList(Entity.Entity) = undefined;
 //pub var entities: std.SegmentedList(Entity.Entity, 2) = undefined; //TODO: bigger preallocate, testing for now
 
-pub var positionHash: Types.PositionHash = undefined;
 pub var idHash: Types.IdHash = undefined;
 
 pub var playerID: u32 = undefined;
@@ -33,7 +32,6 @@ pub fn init(allocator: std.mem.Allocator) void {
     entities = std.ArrayList(Entity.Entity).empty;
 
     //@memory what allocator for hash?
-    positionHash = Types.PositionHash.init(allocator);
     idHash = Types.IdHash.init(allocator);
 
     spawnQueue = std.ArrayList(Entity.Entity).empty;
@@ -45,7 +43,6 @@ pub fn init(allocator: std.mem.Allocator) void {
 pub fn deinit() void {
     const allocator = entity_allocator;
     entities.deinit(allocator);
-    positionHash.deinit();
     idHash.deinit();
     spawnQueue.deinit(allocator);
     despawnQueue.deinit(allocator);
@@ -137,7 +134,7 @@ fn addRandomEnemies(number: usize) !void {
     var entity: Entity.Entity = undefined;
     const grid = World.getCurrentLevel().grid;
     for (0..number) |_| {
-        const pos = Systems.getRandomMovablePosition(grid, positionHash);
+        const pos = Systems.getRandomMovablePosition(grid);
         entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
         entity.setTextureID(enemy_tile);
         try addActiveEntity(entity);
@@ -149,9 +146,6 @@ pub fn addActiveEntity(entity: Entity.Entity) !void {
     e.active = true;
     try entities.append(entity_allocator, e);
     try idHash.put(entity.id, entities.items.len - 1);
-
-    const location = Types.Location.init(e.worldPos, e.pos);
-    try positionHash.put(location, entities.items.len - 1);
 }
 
 pub fn addInactiveEntity(entity: Entity.Entity) !void {
@@ -165,9 +159,6 @@ pub fn activateEntity(id: u32) !void {
     const index = idHash.get(id) orelse return;
     const entity = getEntityIndex(index) orelse return;
     entity.active = true;
-
-    const location = Types.Location.init(entity.worldPos, entity.pos);
-    try positionHash.put(location, index);
 }
 
 pub fn deactivateEntity(id: u32) !void {
@@ -175,31 +166,18 @@ pub fn deactivateEntity(id: u32) !void {
     const entity = getEntityIndex(index) orelse return;
     entity.active = false;
     //TODO: check this, not sure if correct, tired
-    const location = Types.Location.init(entity.worldPos, entity.pos);
-    _ = positionHash.remove(location);
 }
 
 pub fn removeEntityID(id: u32) !void {
     const entityIndex = idHash.get(id) orelse return;
 
     const entity = entities.swapRemove(entityIndex);
-    const location = Types.Location.init(entity.worldPos, entity.pos);
-    _ = positionHash.remove(location);
     _ = idHash.remove(entity.id);
 
     // if we swapremoved any elemnt other than the last
     if (entityIndex < entities.items.len) {
         const swappedEntity = entities.items[entityIndex];
-        const swappedLocation = Types.Location.init(swappedEntity.worldPos, swappedEntity.pos);
-        try positionHash.put(swappedLocation, entityIndex);
         try idHash.put(swappedEntity.id, entityIndex);
-    }
-}
-
-pub fn moveEntityHash(from: Types.Location, to: Types.Location) !void {
-    const keyValue = positionHash.fetchRemove(from);
-    if (keyValue) |kv| {
-        try positionHash.put(to, kv.value);
     }
 }
 
@@ -246,12 +224,11 @@ pub fn getEntityID(id: u32) ?*Entity.Entity {
     return &entities.items[entityIndex];
 }
 
-pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
-    //TODO: check if correct
-    const location = Types.Location.init(worldPos, pos);
-    const index = positionHash.get(location) orelse return null;
-    return &entities.items[index];
-}
+// pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
+//     //TODO: check if correct
+//     const location = Types.Location.init(worldPos, pos);
+//     return &entities.items[index];
+// }
 
 pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
     for (entities_.items) |*e| {
