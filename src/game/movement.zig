@@ -17,12 +17,12 @@ pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 }
 
-pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: Types.PositionHash) !void {
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
     //TODO: @continue @fix @finish, remove entities from findPath, handle entities bumping into each other here
     //TODO: https://claude.ai/chat/dfcf88fa-e705-4d82-b2a0-dc0d537b938c
     if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level, entities);
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level);
         if (newPath) |new_path| {
             entity.setNewPath(new_path);
             entity.stuck = 0;
@@ -82,21 +82,19 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 }
 
-pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: Types.PositionHash) bool {
+pub fn canMove(location: Types.Location, grid: []Level.Tile) bool {
     const pos_index = Utils.posToIndex(location.pos);
     if (pos_index) |index| {
-        if (index < grid.len and grid[index].solid) {
+        if (grid[index].solid) {
             //TODO: probably gonna add something like walkable
             return false;
         }
-    }
 
-    const entityID = entitiesHash.get(location);
-    if (entityID == null) {
-        return true;
+        if (grid[index].entity != null) {
+            return false;
+        }
     }
-
-    return false;
+    return true;
 }
 
 pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u32) !std.ArrayList(Types.Vector2Int) {
@@ -124,11 +122,11 @@ pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u3
     return result;
 }
 
-pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) !?Types.Vector2Int {
+pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: []Level.Tile) !?Types.Vector2Int {
     var tiles = try tilesAround(alloc, attackedLocation.pos, attackingEntity.attackDistance);
     for (tiles.items, 0..) |tile, i| {
         const tileLocation = Types.Location.init(attackedLocation.worldPos, tile);
-        if (!canMove(tileLocation, grid, entities)) {
+        if (!canMove(tileLocation, grid)) {
             _ = tiles.swapRemove(i);
         }
 

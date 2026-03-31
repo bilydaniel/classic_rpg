@@ -33,6 +33,9 @@ pub const Tile = struct {
     seen: bool = false,
     visible: bool = false,
 
+    entity: ?EntityManager.Handle = null,
+    item: ?EntityManager.Handle = null,
+
     pub fn init(tileType: TileType) Tile {
         switch (tileType) {
             .wall => {

@@ -43,7 +43,7 @@ pub const EntityData = union(EntityType) {
 //would be alot more work
 // make the game without progression / balance first
 pub const Entity = struct {
-    id: u32,
+    index: usize,
     name: [:0]const u8 = "",
     active: bool = true,
     alive: bool = true,
@@ -85,8 +85,9 @@ pub const Entity = struct {
     ) !Entity {
         //const entity = try allocator.create(Entity);
         _ = alloc;
+
         const entity = Entity{
-            .id = entity_id,
+            //TODO: entity id is index, get it from manager
             .health = 10,
             .mana = 10,
             .tp = 0,
@@ -448,7 +449,6 @@ pub const PuppetData = struct {
 //TODO: combat only on one level, no transitions
 pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!void {
     const level = World.getLevelAt(entity.worldPos) orelse return;
-    const entitiesPosHash = EntityManager.positionHash;
 
     var playerEntities = try EntityManager.getPlayerEntities();
     //TODO: add vision
@@ -457,7 +457,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         std.debug.print("closest_entity: {}\n", .{closestentity});
         if (entity.goal == null or entity.stuck >= 2) {
             const location = Types.Location.init(closestentity.worldPos, closestentity.pos);
-            const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid, entitiesPosHash);
+            const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid);
             if (attackPosition) |ap| {
                 const attackLocation = Types.Location.init(level.worldPos, ap);
                 entity.goal = attackLocation;
@@ -470,7 +470,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.turnTaken = true;
     }
 
-    try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
+    try Movement.updateEntity(entity, game, level.*);
     if (entity.hasMoved) {
         //TODO: priorities
 
@@ -501,7 +501,6 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
 pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
     const level = World.getLevelAt(entity.worldPos) orelse return;
-    const entitiesPosHash = EntityManager.positionHash;
 
     if (entity.goal == null or entity.stuck >= 2) {
         const position = Systems.getRandomValidPosition(World.getLevelAt(entity.worldPos).?.grid);
@@ -509,7 +508,7 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
         entity.goal = location;
     }
 
-    try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
+    try Movement.updateEntity(entity, game, level.*);
 
     if (entity.hasMoved) {
         entity.turnTaken = true;
