@@ -79,7 +79,7 @@ pub fn closestEntity(from: Types.Vector2Int, to: []*Entity.Entity) ?*Entity.Enti
 //return closestEnt;
 //}
 
-pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.Vector3Int, entities: Types.PositionHash) bool {
+pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.Vector3Int) bool {
     //TODO: debug this, no idea if it works
     const level = World.getLevelAt(worldPos) orelse return false;
     const grid = level.grid;
@@ -130,8 +130,7 @@ pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.V
             return false;
         }
 
-        const location = Types.Location.init(worldPos, currentPos);
-        if (entities.get(location) != null) {
+        if (grid[tileIndex].entity != null) {
             return false;
         }
     }

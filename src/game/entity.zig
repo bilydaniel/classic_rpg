@@ -88,6 +88,7 @@ pub const Entity = struct {
 
         const entity = Entity{
             //TODO: entity id is index, get it from manager
+            .index = EntityManager.entities.len,
             .health = 10,
             .mana = 10,
             .tp = 0,
@@ -311,8 +312,8 @@ pub const Entity = struct {
         var result = Types.StaticArray(*Entity, 8){};
         if (this.data == .player) {
             const pups = this.data.player.puppets;
-            for (pups.items[0..pups.len]) |id| {
-                const entity = EntityManager.getEntityID(id);
+            for (pups.items[0..pups.len]) |handle| {
+                const entity = EntityManager.getEntityHandle(handle);
                 if (entity) |e| {
                     try result.append(e);
                 }
@@ -392,14 +393,14 @@ pub const PlayerData = struct {
 
     inCombatWith: std.ArrayList(u32),
     //TODO: how does this arraylist work in memory?, how is it laid out?
-    puppets: Types.StaticArray(u32, 8),
+    puppets: Types.StaticArray(EntityManager.Handle, 8),
     allocator: std.mem.Allocator,
 
     pub fn init(alloc: std.mem.Allocator) !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(u32) = .empty;
-        var puppets = Types.StaticArray(u32, 8){};
+        var puppets = Types.StaticArray(EntityManager.Handle, 8){};
         puppets.zero();
 
         return PlayerData{

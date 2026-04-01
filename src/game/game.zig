@@ -44,7 +44,7 @@ pub const Game = struct {
 
         try TilesetManager.init();
         try Pathfinder.init(allocator);
-        try CameraManager.init(allocator, player.id);
+        try CameraManager.init(allocator, EntityManager.playerHandle);
         try ShaderManager.init(allocator);
 
         try UiManager.init(allocator);

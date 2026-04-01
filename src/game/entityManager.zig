@@ -19,8 +19,7 @@ pub var entities: std.SegmentedList(Slot, 2) = undefined; //TODO: bigger preallo
 
 pub var freeList: std.ArrayList(usize) = undefined;
 
-pub var playerID: u32 = undefined;
-pub var playerIndex: usize = undefined;
+pub var playerHandle: Handle = undefined;
 
 pub var spawnQueue: std.ArrayList(Entity.Entity) = undefined;
 pub var despawnQueue: std.ArrayList(u32) = undefined;
@@ -50,8 +49,15 @@ pub const Handle = struct {
         };
     }
 
+    pub fn initFirst(index: usize) Handle {
+        return Handle{
+            .index = index,
+            .generation = 1,
+        };
+    }
+
     pub fn valid(this: *Handle) bool {
-        return (this.index != 0 and this.generation != 0);
+        return (this.generation != 0);
     }
 };
 
@@ -98,7 +104,7 @@ pub fn fillEntities() !void {
     var player = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
     player.name = "Pepega";
     player.setTextureID(AssetManager.TileNames.player);
-    playerID = player.id;
+    playerHandle = Handle.initFirst(player.index);
 
     //
     //PUPPET_1
@@ -108,8 +114,8 @@ pub fn fillEntities() !void {
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
-    try player.data.player.puppets.append(puppet.id);
-    std.debug.print("puppets: {}\n", .{player.data.player.puppets});
+    const pupHandle = Handle.initFirst(puppet.index);
+    try player.data.player.puppets.append(pupHandle);
 
     //
     //PUPPET_2
@@ -167,10 +173,12 @@ fn addRandomEnemies(number: usize) !void {
 }
 
 //TODO: maybe send entity as pointer? entity is kinda big
-pub fn addActiveEntity(entity: Entity.Entity) !void {
+pub fn addActiveEntity(ent: Entity.Entity) !void {
+    var entity = ent;
     if (freeList.items.len > 0) {
         //get the free slot
-        const index = freeList.pop();
+        const index = freeList.pop() orelse unreachable;
+
         const oldSlot = entities.at(index);
         //TODO: check, no idea if it works this way
 
@@ -180,16 +188,33 @@ pub fn addActiveEntity(entity: Entity.Entity) !void {
         return; //TODO: maybe return handle?
     }
 
+    entity.active = true;
     const slot = Slot.init(entity, 1, true);
-    entities.append(allocator, slot);
+    try entities.append(allocator, slot);
 
     return; //TODO: maybe return handle?
 }
 
-pub fn addInactiveEntity(entity: Entity.Entity) !void {
-    var e = entity;
-    e.active = false;
-    try entities.append(allocator, e);
+pub fn addInactiveEntity(ent: Entity.Entity) !void {
+    var entity = ent;
+    if (freeList.items.len > 0) {
+        //get the free slot
+        const index = freeList.pop() orelse unreachable;
+
+        const oldSlot = entities.at(index);
+        //TODO: check, no idea if it works this way
+
+        oldSlot.*.occupied = true;
+        oldSlot.*.generation += 1;
+        oldSlot.*.entity = entity;
+        return; //TODO: maybe return handle?
+    }
+
+    entity.active = false;
+    const slot = Slot.init(entity, 1, true);
+    try entities.append(allocator, slot);
+
+    return; //TODO: maybe return handle?
 }
 
 pub fn activateEntity(handle: Handle) !void {
@@ -247,7 +272,12 @@ pub fn allEnemiesTurnTaken() bool {
 }
 
 pub fn getPlayer() *Entity.Entity {
-    return &entities.items[playerIndex];
+    const player = getEntityHandle(playerHandle);
+    if (player) |p| {
+        return p;
+    } else {
+        unreachable;
+    }
 }
 
 pub fn getEnemies() []*Entity.Entity {}
@@ -258,9 +288,6 @@ pub fn getPuppets() []*Entity.Entity {
 
 pub fn getEntityHandle(handle: Handle) ?*Entity.Entity {
     //TODO: do i need to check this?, when should i check it?
-    if (!handle.valid()) {
-        return null;
-    }
 
     const slot = entities.at(handle.index);
     if (!slot.occupied) {
@@ -299,7 +326,6 @@ pub fn resetTurnFlags() void {
 
 pub fn deactivatePuppets() !void {
     //TODO: @contitnue @finish, change the puppets in playert from id to handle
-    asd
     const player = getPlayer();
     for (player.data.player.puppets.items) |id| {
         try deactivateEntity(id);

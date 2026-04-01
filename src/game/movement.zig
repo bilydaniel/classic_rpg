@@ -21,6 +21,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
     //TODO: @continue @fix @finish, remove entities from findPath, handle entities bumping into each other here
     //TODO: https://claude.ai/chat/dfcf88fa-e705-4d82-b2a0-dc0d537b938c
+    const grid = level.grid;
     if (entity.path == null and entity.goal != null) {
         const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level);
         if (newPath) |new_path| {
@@ -55,14 +56,18 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 
     const new_pos = path.nodes.items[nextIndex];
-    const new_pos_entity = EntityManager.getEntityByPos(new_pos, level.worldPos);
 
-    // position has entity, recalculate
-    if (new_pos_entity) |_| {
-        //TODO: @continu, wait or sidestep
-        entity.removePath();
-        entity.stuck += 1;
-        return;
+    const tileIndex = Utils.posToIndex(new_pos);
+    if (tileIndex) |tile_index| {
+        const new_pos_entity = grid[tile_index].entity;
+
+        // position has entity, recalculate
+        if (new_pos_entity) |_| {
+            //TODO: @continu, wait or sidestep
+            entity.removePath();
+            entity.stuck += 1;
+            return;
+        }
     }
 
     const newLocation = Types.Location.init(level.worldPos, new_pos);
@@ -130,7 +135,7 @@ pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity:
             _ = tiles.swapRemove(i);
         }
 
-        if (!Combat.isLosFree(tile, attackedLocation.pos, attackedLocation.worldPos, entities)) {
+        if (!Combat.isLosFree(tile, attackedLocation.pos, attackedLocation.worldPos)) {
             _ = tiles.swapRemove(i);
         }
     }
