@@ -206,11 +206,14 @@ pub const Entity = struct {
         }
     }
 
-    pub fn move(this: *Entity, moveTo: Types.Location) !void {
-        const location = Types.Location.init(this.worldPos, this.pos);
-        try EntityManager.moveEntityHash(location, moveTo);
-        this.pos = moveTo.pos;
-        this.worldPos = moveTo.worldPos;
+    pub fn move(this: *Entity, level: *Level.Level, moveTo: Types.Vector2Int) !void {
+        //TODO: should i add canmove check?
+
+        const fromPos = this.pos;
+
+        this.pos = moveTo;
+
+        level.moveEntity(fromPos, moveTo);
 
         if (this.active) {
             if (this.data == .player or this.data == .puppet) {
@@ -294,7 +297,9 @@ pub const Entity = struct {
         if (this.health <= 0) {
             this.alive = false;
             //TODO: do i want to have dead bodies?
-            try EntityManager.despawnQueue.append(allocator, this.id);
+            const slot = EntityManager.entities.at(this.index);
+            const handle = EntityManager.Handle.init(this.index, slot.generation);
+            try EntityManager.despawnQueue.append(allocator, handle);
         }
         std.debug.print("hp: {}\n", .{this.health});
     }
@@ -471,7 +476,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         entity.turnTaken = true;
     }
 
-    try Movement.updateEntity(entity, game, level.*);
+    try Movement.updateEntity(entity, game, level);
     if (entity.hasMoved) {
         //TODO: priorities
 
@@ -509,7 +514,7 @@ pub fn aiBehaviourWander(entity: *Entity, game: *Game.Game) anyerror!void {
         entity.goal = location;
     }
 
-    try Movement.updateEntity(entity, game, level.*);
+    try Movement.updateEntity(entity, game, level);
 
     if (entity.hasMoved) {
         entity.turnTaken = true;

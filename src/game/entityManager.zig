@@ -15,14 +15,15 @@ const c = @cImport({
 
 var allocator: std.mem.Allocator = undefined;
 
-pub var entities: std.SegmentedList(Slot, 2) = undefined; //TODO: bigger preallocate, testing for now
+pub const Entities = std.SegmentedList(Slot, 2);
+pub var entities: Entities = undefined; //TODO: bigger preallocate, testing for now
 
 pub var freeList: std.ArrayList(usize) = undefined;
 
 pub var playerHandle: Handle = undefined;
 
 pub var spawnQueue: std.ArrayList(Entity.Entity) = undefined;
-pub var despawnQueue: std.ArrayList(u32) = undefined;
+pub var despawnQueue: std.ArrayList(Handle) = undefined;
 
 const Slot = struct {
     entity: Entity.Entity,
@@ -68,7 +69,7 @@ pub fn init(alloc: std.mem.Allocator) void {
     freeList = std.ArrayList(usize).empty;
 
     spawnQueue = std.ArrayList(Entity.Entity).empty;
-    despawnQueue = std.ArrayList(u32).empty;
+    despawnQueue = std.ArrayList(Handle).empty;
     //TODO: uncomment, testing for now if dangling pointers happen
 }
 
@@ -90,10 +91,6 @@ pub fn spawnEntities() !void {}
 //
 //     despawnQueue.clearRetainingCapacity();
 // }
-
-pub fn despawnQueueAdd(id: u32) !void {
-    try despawnQueue.append(allocator, id);
-}
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {

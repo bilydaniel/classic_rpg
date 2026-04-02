@@ -17,7 +17,7 @@ pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 }
 
-pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level) !void {
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: *Level.Level) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
     //TODO: @continue @fix @finish, remove entities from findPath, handle entities bumping into each other here
     //TODO: https://claude.ai/chat/dfcf88fa-e705-4d82-b2a0-dc0d537b938c
@@ -70,8 +70,7 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
         }
     }
 
-    const newLocation = Types.Location.init(level.worldPos, new_pos);
-    try entity.move(newLocation);
+    try entity.move(level, new_pos);
     entity.stuck = 0;
     path.currIndex = nextIndex;
 

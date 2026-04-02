@@ -1,12 +1,14 @@
 const std = @import("std");
 const Entity = @import("entity.zig");
+const EntityManager = @import("entityManager.zig");
 const World = @import("world.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const rl = @import("raylib");
 
-pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.Entity)) bool {
-    for (entities.items) |e| {
+pub fn checkCombatStart(player: *Entity.Entity, entities: EntityManager.Entities) bool {
+    for (entities) |slot| {
+        const e = slot.entity;
         if (e.data == .enemy) {
             //TODO: remove prints
             // std.debug.print("player: {}\n", .{player.worldPos});

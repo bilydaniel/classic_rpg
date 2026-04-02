@@ -100,10 +100,12 @@ pub const Tile = struct {
     }
 };
 
+pub const Grid = []Tile;
+
 pub const Level = struct {
     id: u32,
     worldPos: Types.Vector3Int, //TODO: dont know if needed
-    grid: []Tile,
+    grid: Grid,
 
     pub fn init(allocator: std.mem.Allocator, id: u32, worldPos: Types.Vector3Int) !Level {
         const tileCount = Config.level_height * Config.level_width;
@@ -126,6 +128,22 @@ pub const Level = struct {
 
     pub fn deinit(this: *Level, allocator: std.mem.Allocator) void {
         allocator.free(this.grid);
+    }
+
+    pub fn moveEntity(this: *Level, from: Types.Vector2Int, to: Types.Vector2Int) void {
+        //TODO: should i return an error?
+        const fromIndex = Utils.posToIndex(from) orelse unreachable;
+        const toIndex = Utils.posToIndex(to) orelse unreachable;
+
+        const fromTile = &this.grid[fromIndex];
+        std.debug.assert(fromTile.entity != null);
+
+        const toTile = &this.grid[toIndex];
+
+        if (fromTile.entity) |entity| {
+            fromTile.entity = null;
+            toTile.entity = entity;
+        }
     }
 
     pub fn draw(this: *Level) void {

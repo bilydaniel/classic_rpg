@@ -63,7 +63,7 @@ pub fn deinit() void {
 //TODO: have two pathfinders, one with and one withou entities, in combat with entiites
 //outside of combat without, recalculate path when you hit another entity, could ask that entity what is its path
 //and recalculate accordingly
-pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Level) !?Path {
+pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Level) !?Path {
     //TODO: @continue figure out world path finding
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
