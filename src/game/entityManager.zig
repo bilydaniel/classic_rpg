@@ -313,11 +313,12 @@ pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vec
 }
 
 pub fn resetTurnFlags() void {
-    for (entities.items) |*entity| {
-        entity.hasMoved = false;
-        entity.hasAttacked = false;
-        entity.turnTaken = false;
-        entity.movedDistance = 0;
+    var iterator = entities.iterator(0);
+    while (iterator.next()) |slot| {
+        slot.entity.hasMoved = false;
+        slot.entity.hasAttacked = false;
+        slot.entity.turnTaken = false;
+        slot.entity.movedDistance = 0;
     }
 }
 

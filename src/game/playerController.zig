@@ -29,6 +29,11 @@ pub const playerStateEnum = enum {
     in_combat,
 };
 
+pub const DeployPhase = enum {
+    selecting_puppet,
+    selecting_position,
+};
+
 pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
     state = .walking;
@@ -117,14 +122,15 @@ pub fn update(game: *Game.Game) !void {
                 TurnManager.enemyQueueIndex = 0;
                 EntityManager.resetTurnFlags();
 
-                for (EntityManager.entities.items) |*entity| {
-                    if (entity.data == .enemy) {
-                        entity.inCombat = false;
-                        entity.resetPathing();
+                var iterator = EntityManager.entities.iterator(0);
+                while (iterator.next()) |slot| {
+                    if (slot.entity.data == .enemy) {
+                        slot.entity.inCombat = false;
+                        slot.entity.resetPathing();
                     }
                 }
 
-                CameraManager.targetEntity = EntityManager.playerID;
+                CameraManager.targetEntity = EntityManager.playerHandle;
             },
             .deploying_puppets => {
                 TurnManager.switchTurn(.player);
@@ -137,11 +143,15 @@ pub fn update(game: *Game.Game) !void {
                 //TODO: @fix enemies seem to go before player
 
                 game.player.inCombat = true;
-                for (EntityManager.entities.items) |*entity| {
+                var iterator = EntityManager.entities.iterator(0);
+                while (iterator.next()) |slot| {
+                    //TODO: test out, not sure if the pointer to entity works
+                    var entity = &slot.entity;
                     //TODO: all enemies for now
                     if (entity.data == .enemy) {
                         //TODO: probably should make it into a static array, like 10 elements if way more then enough
-                        try playerData.inCombatWith.append(allocator, entity.id);
+                        const handle = EntityManager.Handle.init(entity.index, slot.generation);
+                        try playerData.inCombatWith.append(allocator, handle);
                         entity.resetPathing();
                         entity.inCombat = true;
                     }
@@ -196,22 +206,22 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     var newLocation = Types.Location.init(game.player.worldPos, game.player.pos);
     newLocation.pos = Types.vector2IntAdd(newLocation.pos, moveDelta.?);
 
-    var grid = World.getCurrentLevel().grid;
-    const entityPosHash = EntityManager.positionHash;
+    var level = World.getCurrentLevel();
 
     //TODO: @test the broundry transition and staircase
     newLocation = Movement.boundryTransition(currentLocation, newLocation);
-    newLocation = Movement.staircaseTransition(newLocation, grid);
+    newLocation = Movement.staircaseTransition(newLocation, level);
 
     const changingLevel = !Types.vector3IntCompare(currentLocation.worldPos, newLocation.worldPos);
     if (changingLevel) {
+        //TODO: do proper level swap
         const newLevel = World.getLevelAt(newLocation.worldPos);
         if (newLevel) |l| {
-            grid = l.grid;
+            level = l;
         }
     }
 
-    if (!Movement.canMove(newLocation, grid, entityPosHash)) {
+    if (!Movement.canMove(newLocation.pos, level.grid)) {
         //TODO: print to the player he cant move
         return;
     }
@@ -219,11 +229,12 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
     if (changingLevel) {
         World.changeCurrentLevel(newLocation.worldPos);
     }
-    try game.player.move(newLocation);
+    try game.player.move(level, newLocation.pos);
     game.player.movementCooldown = 0;
     game.player.turnTaken = true;
 }
 
+// https://gemini.google.com/app/20a4973dde216575
 pub fn handlePlayerDeploying(game: *Game.Game) !void {
     //
     // puppet select
@@ -246,6 +257,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     //
     // puppet deploy
     //
+    //TODO: probably refactor the whole deploying logic, do i need deployable cells?
     if (Gamestate.selectedPupId) |selected_pup| {
         Gamestate.showMenu = .none;
         Gamestate.makeUpdateCursor(game.player.pos);
@@ -266,8 +278,11 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
             }
         }
         if (UiManager.getConfirm()) {
-            if (canDeploy(game.player)) {
-                if (Gamestate.cursor) |curs| {
+            asd
+            //TODO: @finish @continue @refactor deployable cells, more than 8
+            if (Gamestate.cursor) |curs| {
+                const level = World.getCurrentLevel();
+            if (canDeploy(curs, level, Gamestate.deployableCells)) {
                     const worldPos = World.getCurrentLevel().worldPos;
                     const location = Types.Location.init(worldPos, curs);
                     try deployPuppet(selected_pup, location);
@@ -432,33 +447,18 @@ pub fn entityAction(game: *Game.Game) !void {
 }
 
 //TODO: put somewhere else?
-pub fn canDeploy(player: *Entity.Entity) bool {
-    //TODO: @refactor change the api
-    const deploy_pos = Gamestate.cursor;
-    if (deploy_pos) |dep_pos| {
-        if (Types.vector2IntCompare(player.pos, dep_pos)) {
-            return false;
-        }
-
-        const entity = EntityManager.getEntityByPos(dep_pos, World.currentLevel);
-        if (entity) |_| {
-            return false;
-        }
-
-        const grid = World.getCurrentLevel().grid;
-        if (!Movement.isTileWalkable(grid, dep_pos)) {
-            return false;
-        }
-
-        if (Gamestate.deployableCells) |deployable_cells| {
-            if (!isDeployable(dep_pos, &deployable_cells)) {
-                return false;
-            }
-        }
-
-        return true;
+pub fn canDeploy(deployPos: Types.Vector2Int,level *Level.Level, deployableCells) bool {
+    if(!Movement.canMove(deployPos, level.grid)){
+        return false;
     }
-    return false;
+
+    if (Gamestate.deployableCells) |deployable_cells| {
+        if (!isDeployable(dep_pos, &deployable_cells)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 pub fn deployPuppet(pupId: u32, location: Types.Location) !void {

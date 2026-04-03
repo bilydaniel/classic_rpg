@@ -7,7 +7,8 @@ const Utils = @import("../common/utils.zig");
 const rl = @import("raylib");
 
 pub fn checkCombatStart(player: *Entity.Entity, entities: EntityManager.Entities) bool {
-    for (entities) |slot| {
+    var iterator = entities.constIterator(0);
+    while (iterator.next()) |slot| {
         const e = slot.entity;
         if (e.data == .enemy) {
             //TODO: remove prints

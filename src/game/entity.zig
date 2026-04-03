@@ -150,8 +150,8 @@ pub const Entity = struct {
 
     pub fn returnPuppets(this: *Entity) void {
         var puppets = this.data.player.puppets;
-        for (puppets.items[0..puppets.len]) |pupID| {
-            const puppet = EntityManager.getEntityID(pupID);
+        for (puppets.items[0..puppets.len]) |pupHandle| {
+            const puppet = EntityManager.getEntityHandle(pupHandle);
             if (puppet) |pup| {
                 pup.visible = false;
                 pup.targetable = false;
@@ -396,7 +396,7 @@ pub const PlayerData = struct {
     //Butchering enemies, destroying stuff like chairs and crafting
     // dark magic like fear to protect the puppetmaster from enemies
 
-    inCombatWith: std.ArrayList(u32),
+    inCombatWith: std.ArrayList(EntityManager.Handle),
     //TODO: how does this arraylist work in memory?, how is it laid out?
     puppets: Types.StaticArray(EntityManager.Handle, 8),
     allocator: std.mem.Allocator,
@@ -404,7 +404,7 @@ pub const PlayerData = struct {
     pub fn init(alloc: std.mem.Allocator) !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
-        const inCombatWith: std.ArrayList(u32) = .empty;
+        const inCombatWith: std.ArrayList(EntityManager.Handle) = .empty;
         var puppets = Types.StaticArray(EntityManager.Handle, 8){};
         puppets.zero();
 
@@ -421,8 +421,8 @@ pub const PlayerData = struct {
             return true;
         }
 
-        for (puppets.items[0..puppets.len]) |pupID| {
-            const puppet = EntityManager.getEntityID(pupID);
+        for (puppets.items[0..puppets.len]) |pupHandle| {
+            const puppet = EntityManager.getEntityHandle(pupHandle);
             std.debug.assert(puppet != null);
             if (puppet) |pup| {
                 if (!pup.active) {

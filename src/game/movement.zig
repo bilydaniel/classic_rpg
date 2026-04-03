@@ -86,8 +86,8 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: *Level.Leve
     }
 }
 
-pub fn canMove(location: Types.Location, grid: []Level.Tile) bool {
-    const pos_index = Utils.posToIndex(location.pos);
+pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile) bool {
+    const pos_index = Utils.posToIndex(pos);
     if (pos_index) |index| {
         if (grid[index].solid) {
             //TODO: probably gonna add something like walkable
@@ -126,11 +126,10 @@ pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u3
     return result;
 }
 
-pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: []Level.Tile) !?Types.Vector2Int {
+pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: Level.Grid) !?Types.Vector2Int {
     var tiles = try tilesAround(alloc, attackedLocation.pos, attackingEntity.attackDistance);
     for (tiles.items, 0..) |tile, i| {
-        const tileLocation = Types.Location.init(attackedLocation.worldPos, tile);
-        if (!canMove(tileLocation, grid)) {
+        if (!canMove(tile, grid)) {
             _ = tiles.swapRemove(i);
         }
 
@@ -244,9 +243,9 @@ pub fn boundryTransition(currentLocation: Types.Location, newLocation: Types.Loc
     return locationResult;
 }
 
-pub fn staircaseTransition(newLocation: Types.Location, grid: Types.Grid) Types.Location {
+pub fn staircaseTransition(newLocation: Types.Location, level: *Level.Level) Types.Location {
     //TODO: no transitins during combat
-    const tile = Utils.getTilePos(grid, newLocation.pos);
+    const tile = Utils.getTilePos(level.grid, newLocation.pos);
     var zDelta: i32 = 0;
     if (tile) |t| {
         switch (t.tileType) {
@@ -269,8 +268,8 @@ pub fn staircaseTransition(newLocation: Types.Location, grid: Types.Grid) Types.
 
     tmpLocation.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);
 
-    const level = World.getLevelAt(tmpLocation.worldPos);
-    if (level == null) {
+    const newLevel = World.getLevelAt(tmpLocation.worldPos);
+    if (newLevel == null) {
         //TODO: put a log out to player that the path is blocked or something
         std.debug.print("NO LEVEL IN THAT WAY", .{});
         return newLocation;

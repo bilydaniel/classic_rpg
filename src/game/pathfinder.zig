@@ -93,8 +93,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
 
         for (neighbours) |neighbour| {
             const neigh = neighbour orelse continue;
-            const neighLoc = Types.Location.init(level.worldPos, neigh);
-            if (!Movement.canMove(neighLoc, level.grid)) {
+            if (!Movement.canMove(neigh, level.grid)) {
                 continue;
             }
 

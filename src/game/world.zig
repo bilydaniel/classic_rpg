@@ -66,6 +66,7 @@ pub fn draw() void {
 pub fn update() void {}
 
 pub fn changeCurrentLevel(to: Types.Vector3Int) void {
+    //TODO: make proper
     currentLevel = to;
 }
 
