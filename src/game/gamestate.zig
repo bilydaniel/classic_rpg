@@ -35,10 +35,11 @@ pub const EntityModeEnum = enum {
 
 pub var cursor: ?Types.Vector2Int = null;
 
-pub var deployableCells: ?[8]?Types.Vector2Int = null; //TODO: maybe more than 8?, after some power up
+//TODO: energetic fields that would deny deployment, filter out the cells with the field
+pub var deployableCells: std.ArrayList(Types.Vector2Int) = undefined;
 pub var deployHighlighted: bool = false;
 
-pub var selectedEntityID: ?u32 = null;
+pub var selectedEntityHandle: ?EntityManager.Handle = null;
 pub var selectedEntityMode: EntityModeEnum = .none;
 pub var selectedEntityHighlight: ?Highlight = null;
 
@@ -51,7 +52,7 @@ pub var highlightedTiles: std.ArrayList(Highlight) = undefined;
 pub var attackableTiles: std.ArrayList(Types.Vector2Int) = undefined;
 pub var attackHighlighted: bool = false;
 
-pub var selectedPupId: ?u32 = null;
+pub var selectedPupHandle: ?EntityManager.Handle = null;
 pub var selectedAction: ?UiManager.ActionType = null;
 
 pub var showMenu: UiManager.MenuType = .none;
@@ -59,6 +60,8 @@ pub var showMenu: UiManager.MenuType = .none;
 var allocator: std.mem.Allocator = undefined;
 
 pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+
     const highlighted_tiles = std.ArrayList(Highlight).empty;
     highlightedTiles = highlighted_tiles;
 
@@ -67,7 +70,8 @@ pub fn init(alloc: std.mem.Allocator) void {
 
     const attackable_tiles = std.ArrayList(Types.Vector2Int).empty;
     attackableTiles = attackable_tiles;
-    allocator = alloc;
+
+    deployableCells = std.ArrayList(Types.Vector2Int).empty;
 }
 
 pub fn deinit() void {
@@ -79,8 +83,8 @@ pub fn deinit() void {
 pub fn update() void {
     //TODO: maybe update the cursor through this function????
 
-    if (selectedEntityID != null and selectedEntityHighlight != null) {
-        const selectedEntity = EntityManager.getEntityID(selectedEntityID.?);
+    if (selectedEntityHandle != null and selectedEntityHighlight != null) {
+        const selectedEntity = EntityManager.getEntityHandle(selectedEntityHandle.?);
         if (selectedEntity) |se| {
             selectedEntityHighlight.?.pos = se.pos;
         }
@@ -93,12 +97,12 @@ pub fn reset() void {
     // @memory, is this better? i keep the arraylist, or is arena better and reset the whole thing?
     highlightedTiles.clearRetainingCapacity();
     movableTiles.clearRetainingCapacity();
-    deployableCells = null;
+    deployableCells.clearRetainingCapacity();
 
     movementHighlighted = false;
 
     highlightedEntity = null;
-    selectedEntityID = null;
+    selectedEntityHandle = null;
     selectedEntityHighlight = null;
     selectedEntityMode = .none;
     selectedAction = null;

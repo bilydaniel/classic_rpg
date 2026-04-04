@@ -146,6 +146,16 @@ pub const Level = struct {
         }
     }
 
+    pub fn getEntityHandleByPos(this: *Level, pos: Types.Vector2Int) ?EntityManager.Handle {
+        const tile = Utils.getTilePos(this.grid, pos) orelse return null;
+        return tile.entity;
+    }
+
+    pub fn getEntityByPos(this: *Level, pos: Types.Vector2Int) ?*Entity.Entity {
+        const handle = this.getEntityHandleByPos(pos) orelse return null;
+        return EntityManager.getEntityHandle(handle);
+    }
+
     pub fn draw(this: *Level) void {
         const debugPos = Types.Vector2Int.init(0, 0);
         const testPos = Types.vector2IntToPixels(debugPos);

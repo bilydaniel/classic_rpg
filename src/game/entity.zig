@@ -396,6 +396,7 @@ pub const PlayerData = struct {
     //Butchering enemies, destroying stuff like chairs and crafting
     // dark magic like fear to protect the puppetmaster from enemies
 
+    deployDistance: u32 = 1,
     inCombatWith: std.ArrayList(EntityManager.Handle),
     //TODO: how does this arraylist work in memory?, how is it laid out?
     puppets: Types.StaticArray(EntityManager.Handle, 8),

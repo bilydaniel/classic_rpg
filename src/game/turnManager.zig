@@ -21,9 +21,9 @@ pub var turn: TurnEnum = .player;
 pub var phase: PhaseEnum = .setup;
 pub var turnNumber: i32 = 1;
 
-pub var updatingEntity: ?u32 = null;
+pub var updatingEntity: ?EntityManager.Handle = null;
 
-pub var enemyQueue: std.ArrayList(u32) = undefined;
+pub var enemyQueue: std.ArrayList(EntityManager.Handle) = undefined;
 pub var enemyQueueIndex: u32 = 0;
 
 var allocator: std.mem.Allocator = undefined;
@@ -50,9 +50,15 @@ pub fn update(game: *Game.Game) !void {
         .setup => {
             std.debug.print("setup\n", .{});
 
-            for (EntityManager.entities.items) |e| {
-                if (e.data == .enemy) {
-                    try enemyQueue.append(allocator, e.id);
+            var iterator = EntityManager.entities.constIterator(0);
+            while (iterator.next()) |slot| {
+                if (!slot.occupied) {
+                    continue;
+                }
+
+                if (slot.entity.data == .enemy) {
+                    const handle = EntityManager.Handle.init(slot.entity.index, slot.generation);
+                    try enemyQueue.append(allocator, handle);
                 }
             }
             //TODO: order enemies, some heuristic(distance to goal)

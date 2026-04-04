@@ -213,7 +213,7 @@ pub const MenuType = enum {
 };
 
 pub const MenuItemData = union(enum) {
-    puppet_id: u32,
+    puppet_handle: EntityManager.Handle,
     action: ActionType,
 };
 
@@ -438,12 +438,12 @@ fn drawPuppetSelectMenu(game: *Game.Game) void {
     beginMenu();
 
     const puppets = &game.player.data.player.puppets;
-    for (puppets.items[0..puppets.len]) |pupID| {
-        const puppet = EntityManager.getEntityID(pupID) orelse continue;
+    for (puppets.items[0..puppets.len]) |pupHandle| {
+        const puppet = EntityManager.getEntityHandle(pupHandle) orelse continue;
         if (!puppet.data.puppet.deployed) {
             itemPos.pos.y += 25;
             if (menuItem(puppet.name, itemPos)) {
-                menuSelect = .{ .puppet_id = pupID };
+                menuSelect = .{ .puppet_handle = pupHandle };
             }
         }
     }

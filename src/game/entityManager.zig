@@ -62,6 +62,52 @@ pub const Handle = struct {
     }
 };
 
+pub fn activeIterator(index: usize) ActiveEntityIterator {
+    return ActiveEntityIterator.init(index, &entities);
+}
+
+pub fn activeConstIterator(index: usize) ActiveEntityConstIterator {
+    return ActiveEntityConstIterator.init(index, entities);
+}
+
+pub const ActiveEntityIterator = struct {
+    iterator: Entities.Iterator,
+
+    pub fn init(index: usize, _entities: *Entities) ActiveEntityIterator {
+        return ActiveEntityIterator{
+            .iterator = _entities.iterator(index),
+        };
+    }
+
+    pub fn next(this: *ActiveEntityIterator) ?*Entity.Entity {
+        while (this.iterator.next()) |slot| {
+            if (slot.occupied) {
+                return &slot.entity;
+            }
+        }
+        return null;
+    }
+};
+
+pub const ActiveEntityConstIterator = struct {
+    iterator: Entities.ConstIterator,
+
+    pub fn init(index: usize, _entities: Entities) ActiveEntityConstIterator {
+        return ActiveEntityConstIterator{
+            .iterator = _entities.constIterator(index),
+        };
+    }
+
+    pub fn next(this: *ActiveEntityConstIterator) ?*const Entity.Entity {
+        while (this.iterator.next()) |slot| {
+            if (slot.occupied) {
+                return &slot.entity;
+            }
+        }
+        return null;
+    }
+};
+
 pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 
@@ -313,12 +359,12 @@ pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vec
 }
 
 pub fn resetTurnFlags() void {
-    var iterator = entities.iterator(0);
-    while (iterator.next()) |slot| {
-        slot.entity.hasMoved = false;
-        slot.entity.hasAttacked = false;
-        slot.entity.turnTaken = false;
-        slot.entity.movedDistance = 0;
+    var iterator = activeIterator(0);
+    while (iterator.next()) |entity| {
+        entity.hasMoved = false;
+        entity.hasAttacked = false;
+        entity.turnTaken = false;
+        entity.movedDistance = 0;
     }
 }
 

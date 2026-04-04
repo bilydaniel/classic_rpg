@@ -6,10 +6,9 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const rl = @import("raylib");
 
-pub fn checkCombatStart(player: *Entity.Entity, entities: EntityManager.Entities) bool {
-    var iterator = entities.constIterator(0);
-    while (iterator.next()) |slot| {
-        const e = slot.entity;
+pub fn checkCombatStart(player: *Entity.Entity) bool {
+    var iterator = EntityManager.activeConstIterator(0);
+    while (iterator.next()) |e| {
         if (e.data == .enemy) {
             //TODO: remove prints
             // std.debug.print("player: {}\n", .{player.worldPos});
@@ -127,13 +126,13 @@ pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.V
             return true;
         }
 
-        const tileIndex = Utils.posToIndex(currentPos) orelse return false;
+        const tile = Utils.getTilePos(grid, currentPos) orelse return false;
 
-        if (grid[tileIndex].solid) {
+        if (tile.solid) {
             return false;
         }
 
-        if (grid[tileIndex].entity != null) {
+        if (tile.entity != null) {
             return false;
         }
     }

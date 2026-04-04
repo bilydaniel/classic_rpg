@@ -12,6 +12,7 @@ pub const camera_zoom_min: f32 = 1;
 pub const camera_zoom_max: f32 = 5;
 pub const camera_zoom_step: f32 = 0.25;
 
+//TODO: cogmind is 200x200, what size do i want?
 pub const level_width: i32 = 80;
 pub const level_height: i32 = 25;
 
