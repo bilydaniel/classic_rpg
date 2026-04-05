@@ -167,8 +167,8 @@ pub const Entity = struct {
     pub fn allPupsTurnTaken(this: *Entity) bool {
         if (this.data == .player) {
             const puppets = this.data.player.puppets;
-            for (puppets.items[0..puppets.len]) |pupID| {
-                const puppet = EntityManager.getEntityID(pupID);
+            for (puppets.items[0..puppets.len]) |pupHandle| {
+                const puppet = EntityManager.getEntityHandle(pupHandle);
                 if (puppet) |pup| {
                     if (pup.turnTaken == false) {
                         return false;
@@ -336,9 +336,8 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     }
     std.debug.print("player_pos: {}\n", .{entity.pos});
     const level = World.getCurrentLevel();
-    const entitiesPosHash = EntityManager.positionHash;
 
-    try Movement.updateEntity(game.player, game, level.*, entitiesPosHash);
+    try Movement.updateEntity(game.player, game, level);
 
     if (entity.hasAttacked) {
         entity.turnTaken = true;
@@ -354,9 +353,8 @@ pub fn updatePuppet(entity: *Entity, game: *Game.Game) !void {
     }
 
     const level = World.getCurrentLevel();
-    const entitiesPosHash = EntityManager.positionHash;
 
-    try Movement.updateEntity(entity, game, level.*, entitiesPosHash);
+    try Movement.updateEntity(entity, game, level);
 
     if (entity.hasAttacked) {
         entity.turnTaken = true;

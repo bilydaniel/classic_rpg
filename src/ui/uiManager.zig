@@ -440,6 +440,7 @@ fn drawPuppetSelectMenu(game: *Game.Game) void {
     const puppets = &game.player.data.player.puppets;
     for (puppets.items[0..puppets.len]) |pupHandle| {
         const puppet = EntityManager.getEntityHandle(pupHandle) orelse continue;
+        //TODO: @fix doesent work, accessing player instaed of a puppet
         if (!puppet.data.puppet.deployed) {
             itemPos.pos.y += 25;
             if (menuItem(puppet.name, itemPos)) {
@@ -457,8 +458,8 @@ fn drawActionSelectMenu(game: *Game.Game) void {
     }
     _ = game;
 
-    if (Gamestate.selectedEntityID) |id| {
-        const entity = EntityManager.getEntityID(id) orelse {
+    if (Gamestate.selectedEntityHandle) |handle| {
+        const entity = EntityManager.getEntityHandle(handle) orelse {
             return;
         };
 
@@ -507,8 +508,8 @@ fn getMenuItemsCount() ?i32 {
         .puppet_select => {
             const player = EntityManager.getPlayer();
             const pups = player.data.player.puppets;
-            for (pups.items[0..pups.len]) |id| {
-                const pup = EntityManager.getEntityID(id);
+            for (pups.items[0..pups.len]) |handle| {
+                const pup = EntityManager.getEntityHandle(handle);
                 if (pup) |p| {
                     //TODO: active or deployed?
                     if (!p.active) {
@@ -520,9 +521,9 @@ fn getMenuItemsCount() ?i32 {
         .action_select => {
             // result = @typeInfo(ActionType).@"enum".fields.len;
 
-            const entityID = Gamestate.selectedEntityID;
-            if (entityID) |id| {
-                const entity = EntityManager.getEntityID(id);
+            const entityHandle = Gamestate.selectedEntityHandle;
+            if (entityHandle) |handle| {
+                const entity = EntityManager.getEntityHandle(handle);
                 if (entity) |e| {
                     if (!e.hasMoved) {
                         result += 1;

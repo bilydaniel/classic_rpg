@@ -130,6 +130,24 @@ pub const Level = struct {
         allocator.free(this.grid);
     }
 
+    pub fn addEntity(this: *Level, handle: EntityManager.Handle, pos: Types.Vector2Int) void {
+        const index = Utils.posToIndex(pos);
+        if (index) |i| {
+            var tile = &this.grid[i];
+
+            std.debug.assert(tile.entity == null);
+            tile.entity = handle;
+        }
+    }
+
+    pub fn removeEntity(this: *Level, pos: Types.Vector2Int) void {
+        const index = Utils.posToIndex(pos);
+        if (index) |i| {
+            var tile = &this.grid[i];
+            tile.entity = null;
+        }
+    }
+
     pub fn moveEntity(this: *Level, from: Types.Vector2Int, to: Types.Vector2Int) void {
         //TODO: should i return an error?
         const fromIndex = Utils.posToIndex(from) orelse unreachable;

@@ -234,6 +234,7 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
         World.changeCurrentLevel(newLocation.worldPos);
     }
     try game.player.move(level, newLocation.pos);
+    //TODO: moving between levels no work
     game.player.movementCooldown = 0;
     game.player.turnTaken = true;
 }

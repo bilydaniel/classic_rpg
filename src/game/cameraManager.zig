@@ -56,9 +56,9 @@ pub fn update(delta: f32) void {
         }
     }
     if (!manual) {
-        if (targetEntity) |entityid| {
+        if (targetEntity) |entityHandle| {
             //TODO: make it possible to just set a camera position without target
-            const entity = EntityManager.getEntityID(entityid) orelse return;
+            const entity = EntityManager.getEntityHandle(entityHandle) orelse return;
             camera.target.x = @floor(@as(f32, @floatFromInt(entity.pos.x * Config.tile_width)) - Window.scaledWidthHalf / camera.zoom);
             camera.target.y = @floor(@as(f32, @floatFromInt(entity.pos.y * Config.tile_height)) - Window.scaledHeightHalf / camera.zoom);
         }

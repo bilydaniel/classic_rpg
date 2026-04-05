@@ -60,6 +60,13 @@ pub const Handle = struct {
     pub fn valid(this: *Handle) bool {
         return (this.generation != 0);
     }
+
+    pub fn equal(this: Handle, other: Handle) bool {
+        if (this.index == other.index and this.generation == other.generation) {
+            return true;
+        }
+        return false;
+    }
 };
 
 pub fn activeIterator(index: usize) ActiveEntityIterator {
@@ -128,15 +135,16 @@ pub fn deinit() void {
 
 //TODO: @finish @continue
 pub fn spawnEntities() !void {}
-// pub fn despawnEntities() !void {
-//     for (despawnQueue.items) |id| {
-//         if (id != playerID) {
-//             try removeEntityID(id);
-//         }
-//     }
-//
-//     despawnQueue.clearRetainingCapacity();
-// }
+
+pub fn despawnEntities() !void {
+    for (despawnQueue.items) |handle| {
+        if (handle.equal(handle)) {
+            try removeEntity(handle);
+        }
+    }
+
+    despawnQueue.clearRetainingCapacity();
+}
 
 // just a helper funciton, returns the player so it can be used to fill into context
 pub fn fillEntities() !void {
@@ -215,9 +223,20 @@ fn addRandomEnemies(number: usize) !void {
     }
 }
 
+pub fn addEntityToLevel(handle: Handle, pos: Types.Vector2Int) void {
+    const level = World.getCurrentLevel();
+    level.addEntity(handle, pos);
+}
+
+pub fn removeEntityFromLevel(pos: Types.Vector2Int) void {
+    const level = World.getCurrentLevel();
+    level.removeEntity(pos);
+}
+
 //TODO: maybe send entity as pointer? entity is kinda big
 pub fn addActiveEntity(ent: Entity.Entity) !void {
     var entity = ent;
+
     if (freeList.items.len > 0) {
         //get the free slot
         const index = freeList.pop() orelse unreachable;
@@ -225,17 +244,24 @@ pub fn addActiveEntity(ent: Entity.Entity) !void {
         const oldSlot = entities.at(index);
         //TODO: check, no idea if it works this way
 
-        oldSlot.*.occupied = true;
-        oldSlot.*.generation += 1;
-        oldSlot.*.entity = entity;
-        return; //TODO: maybe return handle?
+        oldSlot.occupied = true;
+        oldSlot.generation += 1;
+        oldSlot.entity = entity;
+
+        const handle = Handle.init(entity.index, oldSlot.generation);
+        addEntityToLevel(handle, entity.pos);
+
+        return;
     }
 
     entity.active = true;
     const slot = Slot.init(entity, 1, true);
     try entities.append(allocator, slot);
 
-    return; //TODO: maybe return handle?
+    const handle = Handle.initFirst(entity.index);
+    addEntityToLevel(handle, entity.pos);
+
+    return;
 }
 
 pub fn addInactiveEntity(ent: Entity.Entity) !void {
@@ -264,6 +290,7 @@ pub fn activateEntity(handle: Handle) !void {
     const entity = getEntityHandle(handle);
     if (entity) |e| {
         e.active = true;
+        addEntityToLevel(handle, e.pos);
     }
 }
 
@@ -271,24 +298,26 @@ pub fn deactivateEntity(handle: Handle) !void {
     const entity = getEntityHandle(handle);
     if (entity) |e| {
         e.active = false;
+        removeEntityFromLevel(e.pos);
     }
 }
 
-// pub fn removeEntityID(id: u32) !void {
-//     const entityIndex = idHash.get(id) orelse return;
-//
-//     const entity = entities.swapRemove(entityIndex);
-//     _ = idHash.remove(entity.id);
-//
-//     // if we swapremoved any elemnt other than the last
-//     if (entityIndex < entities.items.len) {
-//         const swappedEntity = entities.items[entityIndex];
-//         try idHash.put(swappedEntity.id, entityIndex);
-//     }
-// }
+pub fn removeEntity(handle: Handle) !void {
+    const slot = entities.at(handle.index);
+    if (slot.generation != handle.generation) {
+        return;
+    }
+    if (slot.occupied) {
+        removeEntityFromLevel(slot.entity.pos);
+        slot.occupied = false;
+        slot.generation += 1;
+        try freeList.append(allocator, handle.index);
+    }
+}
 
 pub fn draw() void {
-    for (entities.items) |*e| {
+    var iterator = activeIterator(0);
+    while (iterator.next()) |e| {
         if (Types.vector3IntCompare(e.worldPos, World.currentLevel)) {
             e.draw();
         }
