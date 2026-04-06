@@ -76,48 +76,21 @@ pub fn closestPos(from: Types.Vector2Int, to: []Types.Vector2Int) ?Types.Vector2
 }
 
 pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.Vector3Int) bool {
-    //TODO: debug this, no idea if it works
     const level = World.getLevelAt(worldPos) orelse return false;
     const grid = level.grid;
 
     var currentPos = from;
-    const dPos = Types.Vector2Int.init(@intCast(@abs(to.x - currentPos.x)), @intCast(@abs(to.y - currentPos.y)));
 
-    var stepX: i32 = 0;
-    if (from.x < to.x) {
-        stepX = 1;
-    } else {
-        stepX = -1;
-    }
+    const dx = @as(i32, @intCast(@abs(to.x - from.x)));
+    const dy = @as(i32, @intCast(@abs(to.y - from.y)));
 
-    var stepY: i32 = 0;
-    if (from.y < to.y) {
-        stepY = 1;
-    } else {
-        stepY = -1;
-    }
+    const stepX: i32 = if (from.x < to.x) 1 else if (from.x > to.x) -1 else 0;
+    const stepY: i32 = if (from.y < to.y) 1 else if (from.y > to.y) -1 else 0;
 
-    var e: i32 = 0;
-    if (dPos.x > dPos.y) {
-        e = @divTrunc(dPos.x, 2);
-    } else {
-        e = @divTrunc(-dPos.y, 2);
-    }
-    var e2: i32 = 0;
+    var err: i32 = dx - dy;
 
     while (true) {
-        //std.debug.print("LOS\n", .{});
-        e2 = e;
-        if (e2 > -dPos.x) {
-            e -= @as(i32, @intCast(dPos.y));
-            currentPos.x += stepX;
-        }
-        if (e2 < @as(i32, @intCast(dPos.x))) {
-            e += @as(i32, @intCast(dPos.x));
-            currentPos.y += stepY;
-        }
-
-        if (currentPos.x == to.x and currentPos.y == to.y) {
+        if (Types.vector2IntCompare(currentPos, to)) {
             return true;
         }
 
@@ -127,8 +100,20 @@ pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.V
             return false;
         }
 
-        if (tile.entity != null) {
+        if (tile.entity != null and !Types.vector2IntCompare(currentPos, from)) {
             return false;
+        }
+
+        const e2 = err * 2;
+
+        if (e2 > -dy) {
+            err -= dy;
+            currentPos.x += stepX;
+        }
+
+        if (e2 < dx) {
+            err += dx;
+            currentPos.y += stepY;
         }
     }
 }
