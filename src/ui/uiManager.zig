@@ -63,7 +63,7 @@ pub fn readInput(game: *Game.Game) void {
     cancel = InputManager.takeCancelInput();
 
     //move
-    move = InputManager.takePositionInput();
+    move = InputManager.takePositionInput(game.delta);
 
     //quick select
     quickSelect = InputManager.takeQuickSelectInput();

@@ -30,9 +30,9 @@ const Slot = struct {
     generation: u32,
     occupied: bool,
 
-    pub fn init(entity: Entity.Entity, generation: u32, occupied: bool) Slot {
+    pub fn init(entity: *Entity.Entity, generation: u32, occupied: bool) Slot {
         return Slot{
-            .entity = entity,
+            .entity = entity.*,
             .generation = generation,
             .occupied = occupied,
         };
@@ -74,7 +74,7 @@ pub fn activeIterator(index: usize) ActiveEntityIterator {
 }
 
 pub fn activeConstIterator(index: usize) ActiveEntityConstIterator {
-    return ActiveEntityConstIterator.init(index, entities);
+    return ActiveEntityConstIterator.init(index, &entities);
 }
 
 pub const ActiveEntityIterator = struct {
@@ -99,7 +99,7 @@ pub const ActiveEntityIterator = struct {
 pub const ActiveEntityConstIterator = struct {
     iterator: Entities.ConstIterator,
 
-    pub fn init(index: usize, _entities: Entities) ActiveEntityConstIterator {
+    pub fn init(index: usize, _entities: *const Entities) ActiveEntityConstIterator {
         return ActiveEntityConstIterator{
             .iterator = _entities.constIterator(index),
         };
@@ -152,10 +152,17 @@ pub fn fillEntities() !void {
     //PLAYER
     //
     const playerData = try Entity.PlayerData.init(allocator);
-    var player = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
-    player.name = "Pepega";
-    player.setTextureID(AssetManager.TileNames.player);
-    playerHandle = Handle.initFirst(player.index);
+    var playerEntity = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
+
+    playerEntity.name = "Pepega";
+    playerEntity.setTextureID(AssetManager.TileNames.player);
+
+    //player has index 0
+    try addActiveEntity(&playerEntity);
+    playerHandle = Handle.initFirst(playerEntity.index);
+
+    var player = getPlayer();
+    var puppets = &player.data.player.puppets;
 
     //
     //PUPPET_1
@@ -165,8 +172,11 @@ pub fn fillEntities() !void {
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
+    try addInactiveEntity(&puppet);
+
     const pupHandle = Handle.initFirst(puppet.index);
-    try player.data.player.puppets.append(pupHandle);
+    try puppets.append(pupHandle);
+    std.debug.print("puppets_init: {}\n", .{puppets});
 
     //
     //PUPPET_2
@@ -178,8 +188,6 @@ pub fn fillEntities() !void {
     // puppet2.setTextureID(AssetManager.TileNames.puppet_1);
     // try player.data.player.puppets.append(puppet2.id);
 
-    try addActiveEntity(player);
-    try addInactiveEntity(puppet);
     //try addInactiveEntity(puppet2);
 
     //
@@ -204,9 +212,9 @@ pub fn fillEntities() !void {
     var entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity3.setTextureID(enemy_tile);
 
-    try addActiveEntity(entity);
-    try addActiveEntity(entity2);
-    try addActiveEntity(entity3);
+    try addActiveEntity(&entity);
+    try addActiveEntity(&entity2);
+    try addActiveEntity(&entity3);
 
     //try addRandomEnemies(100);
 }
@@ -234,19 +242,20 @@ pub fn removeEntityFromLevel(pos: Types.Vector2Int) void {
 }
 
 //TODO: maybe send entity as pointer? entity is kinda big
-pub fn addActiveEntity(ent: Entity.Entity) !void {
+pub fn addActiveEntity(ent: *Entity.Entity) !void {
     var entity = ent;
 
     if (freeList.items.len > 0) {
         //get the free slot
         const index = freeList.pop() orelse unreachable;
+        entity.index = index;
 
         const oldSlot = entities.at(index);
         //TODO: check, no idea if it works this way
 
         oldSlot.occupied = true;
         oldSlot.generation += 1;
-        oldSlot.entity = entity;
+        oldSlot.entity = entity.*;
 
         const handle = Handle.init(entity.index, oldSlot.generation);
         addEntityToLevel(handle, entity.pos);
@@ -254,6 +263,7 @@ pub fn addActiveEntity(ent: Entity.Entity) !void {
         return;
     }
 
+    entity.index = entities.len;
     entity.active = true;
     const slot = Slot.init(entity, 1, true);
     try entities.append(allocator, slot);
@@ -264,21 +274,23 @@ pub fn addActiveEntity(ent: Entity.Entity) !void {
     return;
 }
 
-pub fn addInactiveEntity(ent: Entity.Entity) !void {
+pub fn addInactiveEntity(ent: *Entity.Entity) !void {
     var entity = ent;
     if (freeList.items.len > 0) {
         //get the free slot
         const index = freeList.pop() orelse unreachable;
+        entity.index = index;
 
         const oldSlot = entities.at(index);
         //TODO: check, no idea if it works this way
 
         oldSlot.*.occupied = true;
         oldSlot.*.generation += 1;
-        oldSlot.*.entity = entity;
+        oldSlot.*.entity = entity.*;
         return; //TODO: maybe return handle?
     }
 
+    entity.index = entities.len;
     entity.active = false;
     const slot = Slot.init(entity, 1, true);
     try entities.append(allocator, slot);

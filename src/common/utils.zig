@@ -123,3 +123,9 @@ pub fn getTilePos(grid: []Level.Tile, pos: Types.Vector2Int) ?Level.Tile {
     }
     return null;
 }
+
+pub fn cooldown(time: *f32, deltaTime: f32) void {
+    if (time.* > 0) {
+        time.* -= deltaTime;
+    }
+}

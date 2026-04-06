@@ -83,12 +83,11 @@ pub const Entity = struct {
         speed: f32,
         entityData: anytype,
     ) !Entity {
-        //const entity = try allocator.create(Entity);
         _ = alloc;
 
         const entity = Entity{
             //TODO: entity id is index, get it from manager
-            .index = EntityManager.entities.len,
+            .index = 0,
             .health = 10,
             .mana = 10,
             .tp = 0,
@@ -214,6 +213,32 @@ pub const Entity = struct {
         this.pos = moveTo;
 
         level.moveEntity(fromPos, moveTo);
+
+        if (this.active) {
+            if (this.data == .player or this.data == .puppet) {
+                Systems.calculateFOV(this.pos, 8);
+            }
+        }
+    }
+
+    pub fn forceMove(this: *Entity, moveTo: Types.Vector2Int) !void {
+        this.pos = moveTo;
+    }
+
+    pub fn moveLevel(this: *Entity, to: Types.Location) !void {
+        const from = Types.Location.init(this.worldPos, this.pos);
+
+        const fromIndex = Utils.posToIndex(from.pos) orelse return;
+        const toIndex = Utils.posToIndex(to.pos) orelse return;
+
+        const levelFrom = World.getLevelAt(from.worldPos) orelse return;
+        const levelTo = World.getLevelAt(to.worldPos) orelse return;
+
+        levelTo.grid[toIndex].entity = levelFrom.grid[fromIndex].entity;
+        levelFrom.grid[fromIndex].entity = null;
+
+        this.worldPos = to.worldPos;
+        this.pos = to.pos;
 
         if (this.active) {
             if (this.data == .player or this.data == .puppet) {
@@ -463,7 +488,9 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
         if (entity.goal == null or entity.stuck >= 2) {
             const location = Types.Location.init(closestentity.worldPos, closestentity.pos);
             const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid);
+            std.debug.print("attacked_position: {?}\n", .{attackPosition});
             if (attackPosition) |ap| {
+                std.debug.print("ap: {}\n", .{ap});
                 const attackLocation = Types.Location.init(level.worldPos, ap);
                 entity.goal = attackLocation;
             }
@@ -472,6 +499,7 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
 
     //TODO: change this
     if (entity.stuck > 2) {
+        entity.stuck = 0;
         entity.turnTaken = true;
     }
 

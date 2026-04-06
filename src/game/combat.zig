@@ -60,26 +60,20 @@ pub fn closestEntity(from: Types.Vector2Int, to: []*Entity.Entity) ?*Entity.Enti
     return closestEnt;
 }
 
-//pub fn closestPos(from: Types.Vector2Int, to: []Types.Vector2Int) ?Types.Vector2Int {
-// var closestEnt: ?*Entity.Entity = null;
-// var closestDistance: u32 = std.math.maxInt(u32);
+pub fn closestPos(from: Types.Vector2Int, to: []Types.Vector2Int) ?Types.Vector2Int {
+    var closestTile: ?Types.Vector2Int = null;
+    var closestDistance: u32 = std.math.maxInt(u32);
 
-// std.debug.print("to_entities: {any}\n", .{to});
-// std.debug.print("to_entities_len: {any}\n", .{to.len});
+    for (to) |toPos| {
+        const distance = Types.vector2IntDistance(from, toPos);
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestTile = toPos;
+        }
+    }
 
-//for (to) |toEntity| {
-//std.debug.print("toEntity: {s}\n", .{toEntity.name});
-//const distance = Types.vector2IntDistance(from, toEntity.pos);
-// std.debug.print("distance: {}\n", .{distance});
-// std.debug.print("closest_distance: {}\n", .{closestDistance});
-// if (distance < closestDistance) {
-//     closestDistance = distance;
-//     closestEnt = toEntity;
-// }
-//}
-
-//return closestEnt;
-//}
+    return closestTile;
+}
 
 pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.Vector3Int) bool {
     //TODO: debug this, no idea if it works
@@ -112,6 +106,7 @@ pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.V
     var e2: i32 = 0;
 
     while (true) {
+        //std.debug.print("LOS\n", .{});
         e2 = e;
         if (e2 > -dPos.x) {
             e -= @as(i32, @intCast(dPos.y));

@@ -232,8 +232,10 @@ pub fn handlePlayerWalking(game: *Game.Game) !void {
 
     if (changingLevel) {
         World.changeCurrentLevel(newLocation.worldPos);
+        try game.player.moveLevel(newLocation);
+    } else {
+        try game.player.move(level, newLocation.pos);
     }
-    try game.player.move(level, newLocation.pos);
     //TODO: moving between levels no work
     game.player.movementCooldown = 0;
     game.player.turnTaken = true;
@@ -249,6 +251,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
         Gamestate.showMenu = .puppet_select;
 
         if (UiManager.getMenuSelect()) |menu_item| {
+            std.debug.print("menu_item: {}\n", .{menu_item});
             switch (menu_item) {
                 .puppet_handle => |handle| {
                     Gamestate.selectedPupHandle = handle;
@@ -264,7 +267,7 @@ pub fn handlePlayerDeploying(game: *Game.Game) !void {
     // puppet deploy
     //
     //TODO: probably refactor the whole deploying logic, do i need deployable cells?
-    if (Gamestate.selectedEntityHandle) |selected_pup| {
+    if (Gamestate.selectedPupHandle) |selected_pup| {
         Gamestate.showMenu = .none;
         Gamestate.makeUpdateCursor(game.player.pos);
 
@@ -445,9 +448,10 @@ pub fn canDeploy(deployPos: Types.Vector2Int, level: *Level.Level, deployableCel
 }
 
 pub fn deployPuppet(pupHandle: EntityManager.Handle, pos: Types.Vector2Int, level: *Level.Level) !void {
+    _ = level;
     const puppet = EntityManager.getEntityHandle(pupHandle);
     if (puppet) |pup| {
-        try pup.move(level, pos);
+        try pup.forceMove(pos);
 
         pup.data.puppet.deployed = true;
         pup.visible = true;
@@ -456,6 +460,7 @@ pub fn deployPuppet(pupHandle: EntityManager.Handle, pos: Types.Vector2Int, leve
         Gamestate.selectedPupHandle = null; //TODO: maybe wrong, check
 
         try EntityManager.activateEntity(pupHandle);
+        Systems.calculateFOV(pos, 8);
 
         return;
     }
