@@ -77,6 +77,10 @@ pub fn activeConstIterator(index: usize) ActiveEntityConstIterator {
     return ActiveEntityConstIterator.init(index, &entities);
 }
 
+pub fn allIterator(index: usize) AllEntityIterator {
+    return AllEntityIterator.init(index, &entities);
+}
+
 pub const ActiveEntityIterator = struct {
     iterator: Entities.Iterator,
 
@@ -115,6 +119,23 @@ pub const ActiveEntityConstIterator = struct {
     }
 };
 
+pub const AllEntityIterator = struct {
+    iterator: Entities.Iterator,
+
+    pub fn init(index: usize, _entities: *Entities) AllEntityIterator {
+        return AllEntityIterator{
+            .iterator = _entities.iterator(index),
+        };
+    }
+
+    pub fn next(this: *AllEntityIterator) ?*Entity.Entity {
+        while (this.iterator.next()) |slot| {
+            return &slot.entity;
+        }
+        return null;
+    }
+};
+
 pub fn init(alloc: std.mem.Allocator) void {
     allocator = alloc;
 
@@ -127,6 +148,11 @@ pub fn init(alloc: std.mem.Allocator) void {
 }
 
 pub fn deinit() void {
+    //TODO: @fix @finish @continue
+    var it = allIterator(0);
+    while (it.next()) |entity| {
+        entity.deinit();
+    }
     entities.deinit(allocator);
     freeList.deinit(allocator);
     spawnQueue.deinit(allocator);
@@ -322,6 +348,8 @@ pub fn removeEntity(handle: Handle) !void {
         removeEntityFromLevel(slot.entity.pos);
         slot.occupied = false;
         slot.generation += 1;
+        slot.entity.deinit();
+        //TODO: deinit the entity?
         try freeList.append(allocator, handle.index);
     }
 }

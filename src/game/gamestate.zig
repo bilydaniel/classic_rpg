@@ -78,6 +78,7 @@ pub fn deinit() void {
     highlightedTiles.deinit(allocator);
     movableTiles.deinit(allocator);
     attackableTiles.deinit(allocator);
+    deployableCells.deinit(allocator);
 }
 
 pub fn update() void {

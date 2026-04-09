@@ -68,6 +68,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
     //TODO: @memory use arena allocator, maybe just dont deinit?
+
     _ = arena.reset(.retain_capacity);
     const arenaAlloc = arena.allocator();
     var open_list: std.ArrayList(Node) = .empty;

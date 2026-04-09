@@ -115,6 +115,16 @@ pub const Entity = struct {
         return entity;
     }
 
+    pub fn deinit(this: *Entity) void {
+        if (this.path) |*path| {
+            path.deinit();
+        }
+
+        if (this.data == .player) {
+            this.data.player.inCombatWith.deinit(allocator);
+        }
+    }
+
     pub fn draw(this: *Entity) void {
         if (this.visible) {
             if (this.path) |path| {

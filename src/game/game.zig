@@ -68,6 +68,7 @@ pub const Game = struct {
         CameraManager.deinit(this.allocator);
         World.deinit(this.allocator);
         try ShaderManager.deinit();
+        Pathfinder.deinit();
         //try UiManager.init(allocator);
 
         this.allocator.destroy(this);

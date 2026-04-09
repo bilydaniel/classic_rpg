@@ -128,6 +128,7 @@ pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u3
 
 pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: Level.Grid) !?Types.Vector2Int {
     var tiles = try tilesAround(alloc, attackedLocation.pos, attackingEntity.attackDistance);
+    defer tiles.deinit(allocator);
     for (tiles.items, 0..) |tile, i| {
         if (!canMove(tile, grid)) {
             _ = tiles.swapRemove(i);
@@ -140,6 +141,7 @@ pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity:
 
     //TODO: @finish @continue
     const resultTile = Combat.closestPos(attackingEntity.pos, tiles.items);
+
     return resultTile;
 }
 
