@@ -1,7 +1,14 @@
 
-FIX:
-    use segmented list for storing entities, add a generation + freelist
-    stop using position hash, just put a handle into the tiles, probably gonna have a entity + item in a tile
+Enter the Arena notes:
+    -allocate / free things in groups
+
+WORK ON NOW:
+    - test leaks with gpa, fix them
+    - use arena pretty much everywhere
+    - do a overall refactor
+    - 
+
+
 
 
 

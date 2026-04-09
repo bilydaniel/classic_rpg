@@ -138,11 +138,10 @@ pub fn spawnEntities() !void {}
 
 pub fn despawnEntities() !void {
     for (despawnQueue.items) |handle| {
-        if (handle.equal(handle)) {
+        if (!handle.equal(playerHandle)) {
             try removeEntity(handle);
         }
     }
-
     despawnQueue.clearRetainingCapacity();
 }
 
