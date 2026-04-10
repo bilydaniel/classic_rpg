@@ -270,13 +270,6 @@ pub const Entity = struct {
         }
     }
 
-    pub fn resetPathing(this: *Entity) void {
-        if (this.data == .enemy) {
-            this.goal = null;
-        }
-        this.path = null;
-    }
-
     pub fn resetTurnTakens(this: *Entity) void {
         if (this.data == .player) {
             this.hasMoved = false;

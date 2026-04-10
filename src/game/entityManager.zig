@@ -438,6 +438,7 @@ pub fn resetTurnFlags() void {
 
 pub fn deactivatePuppets() !void {
     //TODO: @contitnue @finish, change the puppets in playert from id to handle
+    //TODO: probably should clear out things like path etc.
     const player = getPlayer();
     for (player.data.player.puppets.items) |id| {
         try deactivateEntity(id);
