@@ -5,6 +5,7 @@ const std = @import("std");
 const Level = @import("level.zig");
 const Entity = @import("entity.zig");
 const Config = @import("../common/config.zig");
+const Allocators = @import("../common/allocators.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -44,21 +45,9 @@ pub const Path = struct {
     }
 
     pub fn deinit(this: *Path) void {
-        this.nodes.deinit(allocator);
+        this.nodes.deinit(Allocators.persistent);
     }
 };
-
-var allocator: std.mem.Allocator = undefined;
-var arena: std.heap.ArenaAllocator = undefined;
-
-pub fn init(alloc: std.mem.Allocator) !void {
-    allocator = alloc;
-    arena = std.heap.ArenaAllocator.init(allocator);
-}
-
-pub fn deinit() void {
-    arena.deinit();
-}
 
 //TODO: have two pathfinders, one with and one withou entities, in combat with entiites
 //outside of combat without, recalculate path when you hit another entity, could ask that entity what is its path
@@ -69,12 +58,11 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
     //TODO: different pathfinding for different enemy types??
     //TODO: @memory use arena allocator, maybe just dont deinit?
 
-    _ = arena.reset(.retain_capacity);
-    const arenaAlloc = arena.allocator();
     var open_list: std.ArrayList(Node) = .empty;
 
     var closed_list: std.ArrayList(Node) = .empty;
 
+    const arenaAlloc = Allocators.scratch;
     try open_list.append(arenaAlloc, Node.init(start, null, 0, heuristic(start, end)));
 
     while (open_list.items.len > 0) {
@@ -116,11 +104,15 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
         }
     }
 
+    Allocators.resetScratchArena();
+
     return null;
 }
 
 pub fn reconstructPath(closed_list: std.ArrayList(Node), node: *Node) !Path {
     var path = Path.init();
+    //TODO: @finish
+    Allocators.scratch2
     var temp_path = Path.init();
     defer temp_path.nodes.deinit(allocator);
 

@@ -329,7 +329,6 @@ pub const Entity = struct {
             const handle = EntityManager.Handle.init(this.index, slot.generation);
             try EntityManager.despawnQueue.append(allocator, handle);
         }
-        std.debug.print("hp: {}\n", .{this.health});
     }
 
     pub fn getPuppetsIds(this: *Entity) []u32 {
@@ -362,7 +361,6 @@ pub fn updatePlayer(entity: *Entity, game: *Game.Game) !void {
     if (TurnManager.turn != .player or !entity.inCombat) {
         return;
     }
-    std.debug.print("player_pos: {}\n", .{entity.pos});
     const level = World.getCurrentLevel();
 
     try Movement.updateEntity(game.player, game, level);
@@ -487,13 +485,10 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
     //TODO: add vision
     const closestEntity = Combat.closestEntity(entity.pos, playerEntities.slice());
     if (closestEntity) |closestentity| {
-        std.debug.print("closest_entity: {}\n", .{closestentity});
         if (entity.goal == null or entity.stuck >= 2) {
             const location = Types.Location.init(closestentity.worldPos, closestentity.pos);
             const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid);
-            std.debug.print("attacked_position: {?}\n", .{attackPosition});
             if (attackPosition) |ap| {
-                std.debug.print("ap: {}\n", .{ap});
                 const attackLocation = Types.Location.init(level.worldPos, ap);
                 entity.goal = attackLocation;
             }
@@ -518,7 +513,6 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
             if (Combat.canAttack(entity, closestEntity_)) {
                 canAttack = true;
                 //TODO
-                std.debug.print("attacking: {}\n", .{closestEntity_});
                 try Combat.attack(entity, closestEntity_);
                 entity.hasAttacked = true;
             }

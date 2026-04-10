@@ -127,7 +127,7 @@ pub fn update(game: *Game.Game) !void {
                 while (iterator.next()) |entity| {
                     if (entity.data == .enemy) {
                         entity.inCombat = false;
-                        entity.removePath();
+                        entity.removePathGoal();
                     }
                 }
 
@@ -153,10 +153,10 @@ pub fn update(game: *Game.Game) !void {
                     var entity = &slot.entity;
                     //TODO: all enemies for now
                     if (entity.data == .enemy) {
-                        //TODO: probably should make it into a static array, like 10 elements if way more then enough
                         const handle = EntityManager.Handle.init(entity.index, slot.generation);
                         try playerData.inCombatWith.append(allocator, handle);
-                        entity.removePath();
+                        entity.removePathGoal();
+                        //TODO: probably should make it into a static array, like 10 elements if way more then enough
                         entity.inCombat = true;
                     }
                 }

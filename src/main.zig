@@ -4,6 +4,7 @@ const Config = @import("common/config.zig");
 const Window = @import("game/window.zig");
 const rl = @import("raylib");
 const Profiler = @import("common/profiler.zig");
+const Allocators = @import("common/allocators.zig");
 
 pub fn main() !void {
     rl.setConfigFlags(.{ .window_resizable = true });
@@ -16,19 +17,17 @@ pub fn main() !void {
     // std.SegmentedList(comptime T: type, comptime prealloc_item_count: usize);
     // https://gemini.google.com/app/492731873f4e47c6
     // TODO: @memory figure out the lifetimes of evertything, do proper memory management
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-
-    //TODO: @memory @check leaks
-    defer _ = gpa.deinit();
+    Allocators.init();
+    defer Allocators.deinit();
 
     try Window.init();
-    const game = try Game.Game.init(allocator);
+
+    const game = try Game.Game.init(Allocators.persistent);
     defer game.deinit();
 
     const running = true;
 
-    Profiler.map = std.AutoHashMap(u64, u32).init(allocator);
+    Profiler.map = std.AutoHashMap(u64, u32).init(Allocators.persistent);
     defer Profiler.map.deinit();
 
     Profiler.BeginProfile();
