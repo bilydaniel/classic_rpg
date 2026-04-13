@@ -59,7 +59,6 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
     //TODO: @memory use arena allocator, maybe just dont deinit?
 
     var open_list: std.ArrayList(Node) = .empty;
-
     var closed_list: std.ArrayList(Node) = .empty;
 
     const arenaAlloc = Allocators.scratch;
@@ -109,29 +108,30 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
     return null;
 }
 
-pub fn reconstructPath(closed_list: std.ArrayList(Node), node: *Node) !Path {
+pub fn reconstructPath(closedList: std.ArrayList(Node), node: *Node) !Path {
+    const allocator = Allocators.persistent;
+    const tempAllocator = Allocators.scratch2;
+    defer _ = Allocators.scratchArena2.reset(.retain_capacity);
+
     var path = Path.init();
-    //TODO: @finish
-    Allocators.scratch2
-    var temp_path = Path.init();
-    defer temp_path.nodes.deinit(allocator);
+    var tempPath = Path.init();
 
     var current: ?*Node = node;
     while (current) |current_node| {
-        try temp_path.nodes.append(allocator, current_node.pos);
+        try tempPath.nodes.append(tempAllocator, current_node.pos);
         const parentIndex = current_node.parent;
 
         if (parentIndex) |parent_index| {
-            current = &closed_list.items[parent_index];
+            current = &closedList.items[parent_index];
         } else {
             current = null;
         }
     }
 
-    var i = temp_path.nodes.items.len;
+    var i = tempPath.nodes.items.len;
     while (i > 0) {
         i -= 1;
-        try path.nodes.append(allocator, temp_path.nodes.items[i]);
+        try path.nodes.append(allocator, tempPath.nodes.items[i]);
     }
     return path;
 }

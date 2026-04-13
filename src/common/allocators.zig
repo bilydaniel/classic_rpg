@@ -35,5 +35,5 @@ pub fn deinit() void {
 }
 
 pub fn resetScratchArena() void {
-    scratchArena.reset(.retain_capacity);
+    _ = scratchArena.reset(.retain_capacity);
 }

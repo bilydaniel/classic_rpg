@@ -43,7 +43,6 @@ pub const Game = struct {
         TurnManager.init(allocator);
 
         try TilesetManager.init();
-        try Pathfinder.init(allocator);
         try CameraManager.init(allocator, EntityManager.playerHandle);
         try ShaderManager.init(allocator);
 
@@ -68,7 +67,6 @@ pub const Game = struct {
         CameraManager.deinit(this.allocator);
         World.deinit(this.allocator);
         try ShaderManager.deinit();
-        Pathfinder.deinit();
         //try UiManager.init(allocator);
 
         this.allocator.destroy(this);
