@@ -17,6 +17,7 @@ pub var scratch2: std.mem.Allocator = undefined;
 
 pub fn init() void {
     persistent = gpa.allocator();
+    page = persistent;
 
     frameArena = std.heap.ArenaAllocator.init(page);
     frame = frameArena.allocator();

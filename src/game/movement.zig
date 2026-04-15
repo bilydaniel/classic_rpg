@@ -7,15 +7,10 @@ const Utils = @import("../common/utils.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("turnManager.zig");
 const Config = @import("../common/config.zig");
+const Allocators = @import("../common/allocators.zig");
 const Game = @import("game.zig");
 const Combat = @import("combat.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
-
-var allocator: std.mem.Allocator = undefined;
-
-pub fn init(alloc: std.mem.Allocator) void {
-    allocator = alloc;
-}
 
 pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: *Level.Level) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
@@ -102,7 +97,6 @@ pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile) bool {
 }
 
 pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u32) !std.ArrayList(Types.Vector2Int) {
-    //TODO: use arena
     var result: std.ArrayList(Types.Vector2Int) = .empty;
 
     const dist: i32 = @intCast(distance);
@@ -128,7 +122,10 @@ pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u3
 
 pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: Level.Grid) !?Types.Vector2Int {
     var tiles = try tilesAround(alloc, attackedLocation.pos, attackingEntity.attackDistance);
-    defer tiles.deinit(allocator);
+
+    defer Allocators.resetScratchArena();
+    defer tiles.deinit(alloc);
+
     for (tiles.items, 0..) |tile, i| {
         if (!canMove(tile, grid)) {
             _ = tiles.swapRemove(i);

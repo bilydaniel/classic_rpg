@@ -14,12 +14,7 @@ const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("../game/turnManager.zig");
 const Combat = @import("../game/combat.zig");
 const rl = @import("raylib");
-
-var allocator: std.mem.Allocator = undefined;
-
-pub fn init(alloc: std.mem.Allocator) void {
-    allocator = alloc;
-}
+const Allocators = @import("../common/allocators.zig");
 
 pub const EntityType = enum {
     player, // there could be an enemy puppet master
@@ -78,13 +73,10 @@ pub const Entity = struct {
     data: EntityData,
 
     pub fn init(
-        alloc: std.mem.Allocator,
         pos: Types.Vector2Int,
         speed: f32,
         entityData: anytype,
     ) !Entity {
-        _ = alloc;
-
         const entity = Entity{
             //TODO: entity id is index, get it from manager
             .index = 0,
@@ -121,7 +113,7 @@ pub const Entity = struct {
         }
 
         if (this.data == .player) {
-            this.data.player.inCombatWith.deinit(allocator);
+            this.data.player.inCombatWith.deinit(Allocators.persistent);
         }
     }
 
@@ -327,7 +319,7 @@ pub const Entity = struct {
             //TODO: do i want to have dead bodies?
             const slot = EntityManager.entities.at(this.index);
             const handle = EntityManager.Handle.init(this.index, slot.generation);
-            try EntityManager.despawnQueue.append(allocator, handle);
+            try EntityManager.despawnQueue.append(Allocators.persistent, handle);
         }
     }
 
@@ -424,9 +416,8 @@ pub const PlayerData = struct {
     inCombatWith: std.ArrayList(EntityManager.Handle),
     //TODO: how does this arraylist work in memory?, how is it laid out?
     puppets: Types.StaticArray(EntityManager.Handle, 8),
-    allocator: std.mem.Allocator,
 
-    pub fn init(alloc: std.mem.Allocator) !PlayerData {
+    pub fn init() !PlayerData {
         //TODO: @memory deallocate
         //testing what happens if i dont
         const inCombatWith: std.ArrayList(EntityManager.Handle) = .empty;
@@ -436,7 +427,6 @@ pub const PlayerData = struct {
         return PlayerData{
             .inCombatWith = inCombatWith,
             .puppets = puppets,
-            .allocator = alloc,
         };
     }
 
@@ -487,7 +477,8 @@ pub fn aiBehaviourAggresiveMellee(entity: *Entity, game: *Game.Game) anyerror!vo
     if (closestEntity) |closestentity| {
         if (entity.goal == null or entity.stuck >= 2) {
             const location = Types.Location.init(closestentity.worldPos, closestentity.pos);
-            const attackPosition = try Movement.getClosestAttackPositionAround(allocator, entity, location, level.grid);
+            const attackPosition = try Movement.getClosestAttackPositionAround(Allocators.scratch, entity, location, level.grid);
+
             if (attackPosition) |ap| {
                 const attackLocation = Types.Location.init(level.worldPos, ap);
                 entity.goal = attackLocation;

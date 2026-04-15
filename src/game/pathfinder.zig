@@ -115,6 +115,7 @@ pub fn reconstructPath(closedList: std.ArrayList(Node), node: *Node) !Path {
 
     var path = Path.init();
     var tempPath = Path.init();
+    defer tempPath.nodes.deinit(tempAllocator);
 
     var current: ?*Node = node;
     while (current) |current_node| {

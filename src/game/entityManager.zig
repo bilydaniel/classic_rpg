@@ -176,8 +176,8 @@ pub fn fillEntities() !void {
     //
     //PLAYER
     //
-    const playerData = try Entity.PlayerData.init(allocator);
-    var playerEntity = try Entity.Entity.init(allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
+    const playerData = try Entity.PlayerData.init();
+    var playerEntity = try Entity.Entity.init(Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
 
     playerEntity.name = "Pepega";
     playerEntity.setTextureID(AssetManager.TileNames.player);
@@ -193,7 +193,7 @@ pub fn fillEntities() !void {
     //PUPPET_1
     //
     const pup_pos = Types.Vector2Int{ .x = 1, .y = 1 };
-    var puppet = try Entity.Entity.init(allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
+    var puppet = try Entity.Entity.init(pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
@@ -224,17 +224,17 @@ pub fn fillEntities() !void {
     const enemy_goal_pos = Types.Vector2Int.init(2, 2);
     const enemy_goal = Types.Location.init(enemy_goal_world, enemy_goal_pos);
 
-    var entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+    var entity = try Entity.Entity.init(pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity.goal = enemy_goal;
 
     entity.setTextureID(enemy_tile);
 
     const pos2 = Types.Vector2Int{ .x = 6, .y = 16 };
-    var entity2 = try Entity.Entity.init(allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+    var entity2 = try Entity.Entity.init(pos2, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity2.setTextureID(enemy_tile);
 
     const pos3 = Types.Vector2Int{ .x = 7, .y = 17 };
-    var entity3 = try Entity.Entity.init(allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+    var entity3 = try Entity.Entity.init(pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity3.setTextureID(enemy_tile);
 
     try addActiveEntity(&entity);
@@ -250,7 +250,7 @@ fn addRandomEnemies(number: usize) !void {
     const grid = World.getCurrentLevel().grid;
     for (0..number) |_| {
         const pos = Systems.getRandomMovablePosition(grid);
-        entity = try Entity.Entity.init(allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+        entity = try Entity.Entity.init(pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
         entity.setTextureID(enemy_tile);
         try addActiveEntity(entity);
     }

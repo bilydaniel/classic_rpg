@@ -28,8 +28,6 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
 
-        Entity.init(allocator);
-        Movement.init(allocator);
         Systems.init(allocator);
         PlayerController.init(allocator);
         Gamestate.init(allocator);
