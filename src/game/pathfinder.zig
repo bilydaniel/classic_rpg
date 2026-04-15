@@ -62,6 +62,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
     var closed_list: std.ArrayList(Node) = .empty;
 
     const arenaAlloc = Allocators.scratch;
+    defer Allocators.resetScratchArena();
     try open_list.append(arenaAlloc, Node.init(start, null, 0, heuristic(start, end)));
 
     while (open_list.items.len > 0) {
@@ -102,8 +103,6 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Le
             }
         }
     }
-
-    Allocators.resetScratchArena();
 
     return null;
 }

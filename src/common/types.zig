@@ -2,9 +2,7 @@ const std = @import("std");
 const Config = @import("../common/config.zig");
 const Level = @import("../game/level.zig");
 const EntityManager = @import("../game/entityManager.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 pub const Grid = []Level.Tile;
 pub const PositionHash = std.AutoHashMap(Location, usize);
@@ -70,8 +68,8 @@ pub fn vector2IntSub(a: Vector2Int, b: Vector2Int) Vector2Int {
     };
 }
 
-pub fn vector2IntConvert(a: Vector2Int) c.Vector2 {
-    return c.Vector2{
+pub fn vector2IntConvert(a: Vector2Int) rl.Vector2 {
+    return rl.Vector2{
         .x = @floatFromInt(a.x),
         .y = @floatFromInt(a.y),
     };
@@ -82,14 +80,14 @@ pub fn vector2IntDistance(a: Vector2Int, b: Vector2Int) u32 {
     const dy = @as(f32, @floatFromInt(a.y - b.y));
     return @as(u32, @intFromFloat(@floor(@sqrt(dx * dx + dy * dy))));
 }
-pub fn vector2Convert(a: c.Vector2) Vector2Int {
+pub fn vector2Convert(a: rl.Vector2) Vector2Int {
     return Vector2Int{
         .x = @intFromFloat(a.x),
         .y = @intFromFloat(a.y),
     };
 }
 
-pub fn vector2ConvertWithPixels(a: c.Vector2) Vector2Int {
+pub fn vector2ConvertWithPixels(a: rl.Vector2) Vector2Int {
     return Vector2Int{
         .x = @intFromFloat(a.x / Config.tile_width),
         .y = @intFromFloat(a.y / Config.tile_height),

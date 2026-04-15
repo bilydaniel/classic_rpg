@@ -32,6 +32,7 @@ pub fn init() void {
 pub fn deinit() void {
     frameArena.deinit();
     scratchArena.deinit();
+    scratchArena2.deinit();
     _ = gpa.deinit();
 }
 

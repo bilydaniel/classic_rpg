@@ -162,32 +162,34 @@ fn getScaledSize(size: rl.Vector2) rl.Vector2 {
 }
 
 fn relativeToScreenPos(rPos: RelativePos, size: rl.Vector2) rl.Vector2 {
+    _ = size;
     const anchorPosition = getAnchorPosition(rPos.anchor);
     const position = Utils.vector2Scale(rPos.pos, Window.scale);
-    var result = Utils.vector2Add(anchorPosition, position);
+    const result = Utils.vector2Add(anchorPosition, position);
+    return result;
 
     //Adjust for element size based on anchor
-    switch (rPos.anchor) {
-        .top_center, .center, .bottom_center => {
-            result.x -= (size.x * Window.scale) / 2;
-        },
-        .top_right, .center_right, .bottom_right => {
-            result.x -= size.x * Window.scale;
-        },
-        else => {},
-    }
-
-    switch (rPos.anchor) {
-        .center_left, .center, .center_right => {
-            result.y -= (size.y * Window.scale) / 2;
-        },
-        .bottom_left, .bottom_center, .bottom_right => {
-            result.y -= size.y * Window.scale;
-        },
-        else => {},
-    }
-
-    return result;
+    // switch (rPos.anchor) {
+    //     .top_center, .center, .bottom_center => {
+    //         result.x -= (size.x * Window.scale) / 2;
+    //     },
+    //     .top_right, .center_right, .bottom_right => {
+    //         result.x -= size.x * Window.scale;
+    //     },
+    //     else => {},
+    // }
+    //
+    // switch (rPos.anchor) {
+    //     .center_left, .center, .center_right => {
+    //         result.y -= (size.y * Window.scale) / 2;
+    //     },
+    //     .bottom_left, .bottom_center, .bottom_right => {
+    //         result.y -= size.y * Window.scale;
+    //     },
+    //     else => {},
+    // }
+    //
+    // return result;
 }
 
 fn getAnchorPosition(anchor: AnchorEnum) rl.Vector2 {
@@ -266,10 +268,33 @@ pub fn getCombatToggle() bool {
 }
 
 fn drawNonInteractive() void {
+    drawHealthBar();
+
     drawPlayerPlate();
     drawTurnPhase();
     drawTurnNumber();
     drawCombatIndicator();
+    drawIndicators();
+}
+
+fn drawIndicators() void {
+    drawHealthBars();
+}
+
+fn drawHealthBars() void {
+    var iterator = EntityManager.activeConstIterator(0);
+    while (iterator.next()) |entity| {
+        _ = entity;
+    }
+}
+
+fn drawHealthBar() void {
+    const player = EntityManager.getPlayer();
+    const pos = player.pos;
+    const playerVector = Types.vector2IntConvert(pos);
+    const pixelPos = Utils.vector2TileToPixel(playerVector);
+    const size = rl.Vector2.init(100, 50);
+    rl.drawRectangleV(pixelPos, size, rl.Color.red);
 }
 
 fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2, name: [:0]const u8) void {

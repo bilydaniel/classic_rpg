@@ -109,6 +109,7 @@ pub const Game = struct {
         // First pass: render game into Window.screen
         rl.beginTextureMode(Window.screen);
         rl.clearBackground(rl.Color.black);
+
         rl.beginMode2D(CameraManager.camera.*);
         World.draw();
         this.player.draw();
