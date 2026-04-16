@@ -1,6 +1,7 @@
 const std = @import("std");
 const Game = @import("../game/game.zig");
 const TurnManager = @import("../game/turnManager.zig");
+const CameraManger = @import("../game/cameraManager.zig");
 const Window = @import("../game/window.zig");
 const Gamestate = @import("../game/gamestate.zig");
 const Types = @import("../common/types.zig");
@@ -293,8 +294,9 @@ fn drawHealthBar() void {
     const pos = player.pos;
     const playerVector = Types.vector2IntConvert(pos);
     const pixelPos = Utils.vector2TileToPixel(playerVector);
-    const size = rl.Vector2.init(100, 50);
-    rl.drawRectangleV(pixelPos, size, rl.Color.red);
+    const worldPos = rl.getWorldToScreen2D(pixelPos, CameraManger.camera.*);
+    const size = rl.Vector2.init(Config.tile_width, 5);
+    rl.drawRectangleV(worldPos, size, rl.Color.red);
 }
 
 fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2, name: [:0]const u8) void {

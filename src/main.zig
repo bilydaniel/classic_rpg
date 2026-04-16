@@ -14,9 +14,6 @@ pub fn main() !void {
     rl.initWindow(Config.window_width, Config.window_height, "PuppetMasterRL");
     defer rl.closeWindow();
 
-    // std.SegmentedList(comptime T: type, comptime prealloc_item_count: usize);
-    // https://gemini.google.com/app/492731873f4e47c6
-    // TODO: @memory figure out the lifetimes of evertything, do proper memory management
     Allocators.init();
     defer Allocators.deinit();
 

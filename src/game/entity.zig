@@ -20,7 +20,8 @@ pub const EntityType = enum {
     player, // there could be an enemy puppet master
     puppet, // there could be an enemy puppet, would be cool loot(parts for the puppets, may be the way to optain head, torso)
     enemy,
-    item,
+    item, // box, trap, chair
+    drop, // weapons, food etc.
 };
 
 pub var entity_id: u32 = 1;
@@ -31,6 +32,7 @@ pub const EntityData = union(EntityType) {
     puppet: PuppetData,
     enemy: EnemyData,
     item: ItemData,
+    drop: DropData,
 };
 
 //TODO: lets not add rpg stats,
@@ -204,6 +206,7 @@ pub const Entity = struct {
             .puppet => try updatePuppet(this, game),
             .enemy => try updateEnemy(this, game),
             .item => {}, //TODO: later
+            .drop => {}, //TODO: later
         }
     }
 
@@ -461,6 +464,7 @@ pub const EnemyData = struct {
 };
 
 pub const ItemData = struct {};
+pub const DropData = struct {};
 
 pub const PuppetData = struct {
     deployed: bool,

@@ -34,7 +34,8 @@ pub const Tile = struct {
     visible: bool = false,
 
     entity: ?EntityManager.Handle = null,
-    item: ?EntityManager.Handle = null,
+    item: ?EntityManager.Handle = null, // boxes, traps, etc.
+    drop: ?EntityManager.Handle = null,
 
     pub fn init(tileType: TileType) Tile {
         switch (tileType) {
@@ -105,7 +106,7 @@ pub const Grid = []Tile;
 pub const Level = struct {
     id: u32,
     worldPos: Types.Vector3Int, //TODO: dont know if needed
-    grid: Grid,
+    grid: Grid, //TODO: should i switch to a static array?
 
     pub fn init(allocator: std.mem.Allocator, id: u32, worldPos: Types.Vector3Int) !Level {
         const tileCount = Config.level_height * Config.level_width;
@@ -114,10 +115,10 @@ pub const Level = struct {
         // const tile_test = Tile.init(.wall, c.BLACK);
         // std.debug.print("t: {}\n", .{tile_test});
 
-        for (0..grid.len) |i| {
-            //grid[i] = Tile.initFloor();
-            grid[i] = Tile.init(.wall);
-        }
+        // for (0..grid.len) |i| {
+        //     //grid[i] = Tile.initFloor();
+        //     grid[i] = Tile.init(.wall);
+        // }
 
         return Level{
             .id = id,

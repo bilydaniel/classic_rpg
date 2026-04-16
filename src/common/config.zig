@@ -36,3 +36,5 @@ pub const movement_animation_duration: f32 = 0.2;
 pub const movement_animation_duration_in_combat: f32 = 0.4;
 
 pub var drawPathDebug: bool = true;
+
+pub var useRandomLevel: bool = true;
