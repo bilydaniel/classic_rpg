@@ -14,6 +14,7 @@ const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
 const Movement = @import("movement.zig");
 const Config = @import("../common/config.zig");
+const LevelGenerator = @import("levelGenerator.zig");
 const rl = @import("raylib");
 const Profiler = @import("../common/profiler.zig");
 
@@ -28,6 +29,7 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
 
+        LevelGenerator.init(allocator);
         Systems.init(allocator);
         PlayerController.init(allocator);
         Gamestate.init(allocator);
