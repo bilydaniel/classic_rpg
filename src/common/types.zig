@@ -138,3 +138,32 @@ pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
         }
     };
 }
+
+pub const RectangleInt = struct {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+
+    pub fn init(x: i32, y: i32, w: i32, h: i32) RectangleInt {
+        return RectangleInt{
+            .x = x,
+            .y = y,
+            .w = w,
+            .h = h,
+        };
+    }
+
+    pub fn collision(this: RectangleInt, other: RectangleInt) bool {
+        //touching == collision
+        return this.x <= other.x + other.w and
+            this.x + this.w >= other.x and
+            this.y <= other.y + other.h and
+            this.y + this.h >= other.y;
+    }
+
+    pub fn center(this: RectangleInt) Vector2Int {
+        const result = Vector2Int.init(this.x + @divFloor(this.w, 2), this.y + @divFloor(this.h, 2));
+        return result;
+    }
+};

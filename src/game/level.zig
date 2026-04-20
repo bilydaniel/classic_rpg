@@ -107,12 +107,12 @@ pub const Level = struct {
     id: u32,
     worldPos: Types.Vector3Int, //TODO: dont know if needed
     grid: Grid, //TODO: should i switch to a static array?
-    rooms: std.ArrayList(rl.Rectangle),
+    rooms: std.ArrayList(Types.RectangleInt),
 
     pub fn init(allocator: std.mem.Allocator, id: u32, worldPos: Types.Vector3Int) !Level {
         const tileCount = Config.level_height * Config.level_width;
         const grid = try allocator.alloc(Tile, tileCount);
-        const rooms: std.ArrayList(rl.Rectangle) = .empty;
+        const rooms: std.ArrayList(Types.RectangleInt) = .empty;
 
         // const tile_test = Tile.init(.wall, c.BLACK);
         // std.debug.print("t: {}\n", .{tile_test});

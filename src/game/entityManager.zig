@@ -176,8 +176,16 @@ pub fn fillEntities() !void {
     //
     //PLAYER
     //
+    const firstLevel = World.getLevelAt(Types.Vector3Int.init(0, 0, 0)) orelse undefined;
+    const rooms = firstLevel.rooms;
+    std.debug.assert(rooms.items.len > 0);
+
+    //TODO: spawn enemies into other rooms
+    const firstRoom = rooms.items[0];
+    const spawnPoint = Types.Vector2Int.init(firstRoom.x, firstRoom.y);
+
     const playerData = try Entity.PlayerData.init();
-    var playerEntity = try Entity.Entity.init(Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
+    var playerEntity = try Entity.Entity.init(spawnPoint, 1, Entity.EntityData{ .player = playerData });
 
     playerEntity.name = "Pepega";
     playerEntity.setTextureID(AssetManager.TileNames.player);

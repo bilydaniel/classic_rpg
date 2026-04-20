@@ -1,3 +1,11 @@
+chandler carruth performance:
+    race to sleep => better for battery, only way to save battery life is to turn the cpu off
+    efficiency(how much work is required by a task) comes from algorithms, improving efficiency means doing less work
+    performance(how quickly does a program do its work) comes from data structures, improving means doint work faster, pretty much no limit(bremermans limit)
+
+    getting from a hash map means hashing, dont hash over and over
+    ALWAYS do less work, go through my code and have a look
+
 
 SMALL GAME:
     the game that iam making right now is probably way too big??
