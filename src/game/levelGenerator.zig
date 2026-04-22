@@ -17,6 +17,8 @@ pub fn init(alloc: std.mem.Allocator) void {
 
 //TODO: start with pure random + BSP trees, more complex later
 pub fn generate(id: u32, worldPos: Types.Vector3Int) !Level.Level {
+    _ = try generateBSP(id, worldPos);
+
     //TODO: make a opposite version, mostly empty, add random walls
     var level = try Level.Level.init(Allocators.persistent, id, worldPos);
 
@@ -162,4 +164,13 @@ pub fn makeLine(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2In
     } else {
         return generatorError.NoLine;
     }
+}
+
+pub fn generateBSP(id: u32, worldPos: Types.Vector3Int) !Level.Level {
+    var tree = Types.BinaryTree(Types.RectangleInt).init(Allocators.persistent);
+    defer tree.deinit();
+    var level = try Level.Level.init(Allocators.persistent, id, worldPos);
+    defer level.deinit(Allocators.persistent);
+
+    return level;
 }

@@ -167,3 +167,33 @@ pub const RectangleInt = struct {
         return result;
     }
 };
+
+pub fn BinaryNode(comptime T: type) type {
+    return struct {
+        data: T,
+        left: ?*u32,
+        right: ?*u32,
+    };
+}
+
+pub fn BinaryTree(comptime T: type) type {
+    return struct {
+        const this = @This();
+        allocator: std.mem.Allocator,
+        nodes: std.ArrayList(BinaryNode(T)),
+
+        pub fn init(alloc: std.mem.Allocator) this {
+            const nodes = std.ArrayList(BinaryNode(T)).empty;
+            return this{
+                .allocator = alloc,
+                .nodes = nodes,
+            };
+        }
+
+        pub fn deinit(t: *this) void {
+            t.nodes.deinit(t.allocator);
+        }
+
+        pub fn insert(t: *this) void {}
+    };
+}
