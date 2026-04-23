@@ -182,34 +182,40 @@ pub fn generateBSP(id: u32, worldPos: Types.Vector3Int) !Level.Level {
     try tree.insert(mainRoom);
 
     var splitRooms = std.ArrayList(Types.RectangleInt).empty;
-    splitRoom(mainRoom, splitRooms, iterations);
+    //TODO: use arena
+    try splitRooms.insert(Allocators.persistent, 0, mainRoom);
+
+    for (0..iterations) |_| {
+        const room = splitRooms.orderedRemove(splitRooms.items.len - 1);
+        const horizontal = std.crypto.random.boolean();
+        const split = std.crypto.random.float(f32);
+
+        var splitValue: i32 = 0;
+        var room1 = Types.RectangleInt.init(0, 0, 0, 0);
+        var room2 = Types.RectangleInt.init(0, 0, 0, 0);
+
+        if (horizontal) {
+            splitValue = @intFromFloat(split * @as(f32, @floatFromInt(room.h)));
+            room1 = Types.RectangleInt.init(0, 0, room.w, splitValue);
+            room2 = Types.RectangleInt.init(0, splitValue, room.w, room.h - splitValue);
+        } else {
+            splitValue = @intFromFloat(split * @as(f32, @floatFromInt(room.w)));
+            room1 = Types.RectangleInt.init(0, 0, splitValue, room.h);
+            room2 = Types.RectangleInt.init(splitValue, 0, room.w - splitValue, room.h);
+        }
+
+        try splitRooms.insert(Allocators.persistent, 0, room1);
+        try splitRooms.insert(Allocators.persistent, 0, room2);
+        try tree.insert(room1);
+        try tree.insert(room2);
+    }
+
+    const carveRoom = splitRooms.items[splitRooms.items.len - 1];
+    //tree.print();
+    tree.printTopDown();
+    std.debug.print("tree: {any}\n", .{tree.nodes.items});
+    try carveRoomRectangle(level, carveRoom);
+    // try carveRoomRectangle(level, room2);
 
     return levelVal;
-}
-
-pub fn splitRoom(inRoom: Types.RectangleInt, outSplitRooms: std.ArrayList(Types.RectangleInt), iteration: u32) void {
-    if (iteration == 0) {
-        return;
-    }
-
-    var horizontal = std.crypto.random.boolean();
-    const split = std.crypto.random.float(f32);
-    horizontal = true;
-
-    if (horizontal) {
-        const splitValue: i32 = @intFromFloat(split * @as(f32, @floatFromInt(mainRoom.h)));
-
-        const room1 = Types.RectangleInt.init(0, 0, mainRoom.w, splitValue);
-        const room2 = Types.RectangleInt.init(0, splitValue, mainRoom.w, mainRoom.h - splitValue);
-
-        try carveRoomRectangle(level, room1);
-        try carveRoomRectangle(level, room2);
-    } else {
-        const splitValue: i32 = @intFromFloat(split * @as(f32, @floatFromInt(mainRoom.w)));
-
-        const room1 = Types.RectangleInt.init(0, 0, splitValue, mainRoom.h);
-        const room2 = Types.RectangleInt.init(splitValue, 0, mainRoom.w - splitValue, mainRoom.h);
-        try carveRoomRectangle(level, room1);
-        try carveRoomRectangle(level, room2);
-    }
 }

@@ -221,5 +221,109 @@ pub fn BinaryTree(comptime T: type) type {
                 parentNode.left = nodeIndex;
             }
         }
+        pub fn print(t: *const this) void {
+            if (t.nodes.items.len == 0) {
+                std.debug.print("Tree is empty\n", .{});
+                return;
+            }
+
+            std.debug.print("\n--- Binary Tree ---\n", .{});
+            t.printRecursive(0, 0);
+            std.debug.print("-------------------\n\n", .{});
+        }
+
+        /// Private recursive helper to handle indentation and traversal
+        fn printRecursive(t: *const this, index: usize, depth: usize) void {
+            // Base case: if the index is out of bounds, this branch is done
+            if (index >= t.nodes.items.len) {
+                return;
+            }
+
+            const left_index = 2 * index + 1;
+            const right_index = 2 * index + 2;
+
+            // 1. Traverse Right Subtree (prints at the top)
+            t.printRecursive(right_index, depth + 1);
+
+            // 2. Print current node with indentation based on its depth
+            var i: usize = 0;
+            while (i < depth) : (i += 1) {
+                std.debug.print("    ", .{}); // 4 spaces of indentation per level
+            }
+
+            // Assuming your BinaryNode(T) struct stores its value in a field called `data`
+            // {any} is used so it can print whatever type T happens to be (integers, floats, etc.)
+            std.debug.print("{any}\n", .{t.nodes.items[index].data});
+
+            // 3. Traverse Left Subtree (prints at the bottom)
+            t.printRecursive(left_index, depth + 1);
+        }
+        // Add this inside your struct, replacing the previous print functions
+
+        /// Public function to trigger the top-down tree print
+        pub fn printTopDown(t: *const this) void {
+            if (t.nodes.items.len == 0) {
+                std.debug.print("Tree is empty\n", .{});
+                return;
+            }
+
+            std.debug.print("\n--- Binary Tree (Top-Down) ---\n", .{});
+            t.printTopDownRecursive(0, 0, 0, true);
+            std.debug.print("------------------------------\n\n", .{});
+        }
+
+        /// Private recursive helper to handle box-drawing characters and lines
+        fn printTopDownRecursive(t: *const this, index: usize, mask: u64, depth: usize, is_last: bool) void {
+            if (index >= t.nodes.items.len) return;
+
+            // 1. Print the vertical lines and branches
+            if (depth > 0) {
+                var i: usize = 0;
+                while (i < depth - 1) : (i += 1) {
+                    // Safe cast to u6 for the bit shift. A tree would need exabytes
+                    // of RAM to exceed depth 64, so this will never overflow.
+                    const shift_amt = @as(u6, @intCast(i));
+
+                    if ((mask & (@as(u64, 1) << shift_amt)) != 0) {
+                        std.debug.print("│   ", .{}); // Branch continues down
+                    } else {
+                        std.debug.print("    ", .{}); // Empty space
+                    }
+                }
+
+                // Draw the connector for the current node
+                if (is_last) {
+                    std.debug.print("└── ", .{});
+                } else {
+                    std.debug.print("├── ", .{});
+                }
+            }
+
+            // 2. Print current node data
+            std.debug.print("{any}\n", .{t.nodes.items[index].data});
+
+            // 3. Update the line-drawing mask for the children
+            var new_mask = mask;
+            if (depth > 0 and !is_last) {
+                const mask_shift = @as(u6, @intCast(depth - 1));
+                new_mask |= (@as(u64, 1) << mask_shift);
+            }
+
+            // 4. Find valid children (Array-backed complete tree math)
+            const left_idx = 2 * index + 1;
+            const right_idx = 2 * index + 2;
+            const has_left = left_idx < t.nodes.items.len;
+            const has_right = right_idx < t.nodes.items.len;
+
+            // 5. Traverse downwards
+            if (has_left) {
+                // If there is a right child coming after this, the left child is NOT the last child
+                t.printTopDownRecursive(left_idx, new_mask, depth + 1, !has_right);
+            }
+            if (has_right) {
+                // The right child is always the last child in a standard binary tree
+                t.printTopDownRecursive(right_idx, new_mask, depth + 1, true);
+            }
+        }
     };
 }
