@@ -22,7 +22,8 @@ pub fn init(allocator: std.mem.Allocator) !void {
 
     if (Config.useRandomLevel) {
         level1.deinit(allocator);
-        level1 = try LevelGenerator.generate(0, worldPos);
+        //level1 = try LevelGenerator.generate(0, worldPos);
+        level1 = try LevelGenerator.generateBSP(0, worldPos);
     } else {
         level1.generateInterestingLevel();
     }

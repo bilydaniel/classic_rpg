@@ -84,9 +84,9 @@ pub fn carveRoomRectangle(level: *Level.Level, room: Types.RectangleInt) !void {
     var i: i32 = 0;
     var j: i32 = 0;
 
-    while (i < room.w) : (i += 1) {
-        j = 0;
-        while (j < room.h) : (j += 1) {
+    while (j < room.h) : (j += 1) {
+        i = 0;
+        while (i < room.w) : (i += 1) {
             const position = Types.Vector2Int.init(room.x + i, room.y + j);
             const index = Utils.posToIndex(position);
             if (index) |_index| {
@@ -167,10 +167,49 @@ pub fn makeLine(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2In
 }
 
 pub fn generateBSP(id: u32, worldPos: Types.Vector3Int) !Level.Level {
+    const iterations: u32 = 5;
+    //TODO: add min / max
+    //const splitMin = 0.1;
+
     var tree = Types.BinaryTree(Types.RectangleInt).init(Allocators.persistent);
     defer tree.deinit();
-    var level = try Level.Level.init(Allocators.persistent, id, worldPos);
-    defer level.deinit(Allocators.persistent);
 
-    return level;
+    var levelVal = try Level.Level.init(Allocators.persistent, id, worldPos);
+    const level = &levelVal;
+    fillLevelWith(level, .wall);
+
+    const mainRoom = Types.RectangleInt.init(0, 0, Config.level_width, Config.level_height);
+    try tree.insert(mainRoom);
+
+    var splitRooms = std.ArrayList(Types.RectangleInt).empty;
+    splitRoom(mainRoom, splitRooms, iterations);
+
+    return levelVal;
+}
+
+pub fn splitRoom(inRoom: Types.RectangleInt, outSplitRooms: std.ArrayList(Types.RectangleInt), iteration: u32) void {
+    if (iteration == 0) {
+        return;
+    }
+
+    var horizontal = std.crypto.random.boolean();
+    const split = std.crypto.random.float(f32);
+    horizontal = true;
+
+    if (horizontal) {
+        const splitValue: i32 = @intFromFloat(split * @as(f32, @floatFromInt(mainRoom.h)));
+
+        const room1 = Types.RectangleInt.init(0, 0, mainRoom.w, splitValue);
+        const room2 = Types.RectangleInt.init(0, splitValue, mainRoom.w, mainRoom.h - splitValue);
+
+        try carveRoomRectangle(level, room1);
+        try carveRoomRectangle(level, room2);
+    } else {
+        const splitValue: i32 = @intFromFloat(split * @as(f32, @floatFromInt(mainRoom.w)));
+
+        const room1 = Types.RectangleInt.init(0, 0, splitValue, mainRoom.h);
+        const room2 = Types.RectangleInt.init(splitValue, 0, mainRoom.w - splitValue, mainRoom.h);
+        try carveRoomRectangle(level, room1);
+        try carveRoomRectangle(level, room2);
+    }
 }

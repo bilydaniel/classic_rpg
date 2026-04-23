@@ -170,9 +170,16 @@ pub const RectangleInt = struct {
 
 pub fn BinaryNode(comptime T: type) type {
     return struct {
+        const this = @This();
         data: T,
-        left: ?*u32,
-        right: ?*u32,
+        left: ?usize = null,
+        right: ?usize = null,
+
+        pub fn init(data: T) this {
+            return this{
+                .data = data,
+            };
+        }
     };
 }
 
@@ -194,6 +201,25 @@ pub fn BinaryTree(comptime T: type) type {
             t.nodes.deinit(t.allocator);
         }
 
-        pub fn insert(t: *this) void {}
+        pub fn insert(t: *this, data: T) !void {
+            const node = BinaryNode(T).init(data);
+            const nodeIndex = t.nodes.items.len;
+
+            try t.nodes.append(t.allocator, node);
+
+            if (nodeIndex == 0) {
+                return;
+            }
+
+            const parentIndex = @divFloor(nodeIndex - 1, 2);
+            const parentNode = &t.nodes.items[parentIndex];
+            if (@mod(nodeIndex, 2) == 0) {
+                //right child
+                parentNode.right = nodeIndex;
+            } else {
+                //left child
+                parentNode.left = nodeIndex;
+            }
+        }
     };
 }
