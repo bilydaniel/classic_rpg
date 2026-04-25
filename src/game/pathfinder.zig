@@ -5,6 +5,7 @@ const std = @import("std");
 const Level = @import("level.zig");
 const Entity = @import("entity.zig");
 const Config = @import("../common/config.zig");
+const Allocators = @import("../common/allocators.zig");
 const c = @cImport({
     @cInclude("raylib.h");
 });
@@ -44,36 +45,24 @@ pub const Path = struct {
     }
 
     pub fn deinit(this: *Path) void {
-        this.nodes.deinit(allocator);
+        this.nodes.deinit(Allocators.persistent);
     }
 };
-
-var allocator: std.mem.Allocator = undefined;
-var arena: std.heap.ArenaAllocator = undefined;
-
-pub fn init(alloc: std.mem.Allocator) !void {
-    allocator = alloc;
-    arena = std.heap.ArenaAllocator.init(allocator);
-}
-
-pub fn deinit() void {
-    arena.deinit();
-}
 
 //TODO: have two pathfinders, one with and one withou entities, in combat with entiites
 //outside of combat without, recalculate path when you hit another entity, could ask that entity what is its path
 //and recalculate accordingly
-pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Level, entities: Types.PositionHash) !?Path {
+pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: *Level.Level) !?Path {
     //TODO: @continue figure out world path finding
     //TODO: check the code, made by ai
     //TODO: different pathfinding for different enemy types??
     //TODO: @memory use arena allocator, maybe just dont deinit?
-    _ = arena.reset(.retain_capacity);
-    const arenaAlloc = arena.allocator();
-    var open_list: std.ArrayList(Node) = .empty;
 
+    var open_list: std.ArrayList(Node) = .empty;
     var closed_list: std.ArrayList(Node) = .empty;
 
+    const arenaAlloc = Allocators.scratch;
+    defer Allocators.resetScratchArena();
     try open_list.append(arenaAlloc, Node.init(start, null, 0, heuristic(start, end)));
 
     while (open_list.items.len > 0) {
@@ -93,8 +82,7 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Lev
 
         for (neighbours) |neighbour| {
             const neigh = neighbour orelse continue;
-            const neighLoc = Types.Location.init(level.worldPos, neigh);
-            if (!Movement.canMove(neighLoc, level.grid, entities)) {
+            if (!Movement.canMove(neigh, level.grid)) {
                 continue;
             }
 
@@ -119,27 +107,31 @@ pub fn findPath(start: Types.Vector2Int, end: Types.Vector2Int, level: Level.Lev
     return null;
 }
 
-pub fn reconstructPath(closed_list: std.ArrayList(Node), node: *Node) !Path {
+pub fn reconstructPath(closedList: std.ArrayList(Node), node: *Node) !Path {
+    const allocator = Allocators.persistent;
+    const tempAllocator = Allocators.scratch2;
+    defer _ = Allocators.scratchArena2.reset(.retain_capacity);
+
     var path = Path.init();
-    var temp_path = Path.init();
-    defer temp_path.nodes.deinit(allocator);
+    var tempPath = Path.init();
+    defer tempPath.nodes.deinit(tempAllocator);
 
     var current: ?*Node = node;
     while (current) |current_node| {
-        try temp_path.nodes.append(allocator, current_node.pos);
+        try tempPath.nodes.append(tempAllocator, current_node.pos);
         const parentIndex = current_node.parent;
 
         if (parentIndex) |parent_index| {
-            current = &closed_list.items[parent_index];
+            current = &closedList.items[parent_index];
         } else {
             current = null;
         }
     }
 
-    var i = temp_path.nodes.items.len;
+    var i = tempPath.nodes.items.len;
     while (i > 0) {
         i -= 1;
-        try path.nodes.append(allocator, temp_path.nodes.items[i]);
+        try path.nodes.append(allocator, tempPath.nodes.items[i]);
     }
     return path;
 }

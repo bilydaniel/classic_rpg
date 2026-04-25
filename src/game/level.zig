@@ -33,6 +33,10 @@ pub const Tile = struct {
     seen: bool = false,
     visible: bool = false,
 
+    entity: ?EntityManager.Handle = null,
+    item: ?EntityManager.Handle = null, // boxes, traps, etc.
+    drop: ?EntityManager.Handle = null,
+
     pub fn init(tileType: TileType) Tile {
         switch (tileType) {
             .wall => {
@@ -97,32 +101,82 @@ pub const Tile = struct {
     }
 };
 
+pub const Grid = []Tile;
+
 pub const Level = struct {
     id: u32,
     worldPos: Types.Vector3Int, //TODO: dont know if needed
-    grid: []Tile,
+    grid: Grid, //TODO: should i switch to a static array?
+    rooms: std.ArrayList(Types.RectangleInt),
 
     pub fn init(allocator: std.mem.Allocator, id: u32, worldPos: Types.Vector3Int) !Level {
         const tileCount = Config.level_height * Config.level_width;
         const grid = try allocator.alloc(Tile, tileCount);
+        const rooms: std.ArrayList(Types.RectangleInt) = .empty;
 
         // const tile_test = Tile.init(.wall, c.BLACK);
         // std.debug.print("t: {}\n", .{tile_test});
 
-        for (0..grid.len) |i| {
-            //grid[i] = Tile.initFloor();
-            grid[i] = Tile.init(.wall);
-        }
+        // for (0..grid.len) |i| {
+        //     //grid[i] = Tile.initFloor();
+        //     grid[i] = Tile.init(.wall);
+        // }
 
         return Level{
             .id = id,
             .worldPos = worldPos,
             .grid = grid,
+            .rooms = rooms,
         };
     }
 
     pub fn deinit(this: *Level, allocator: std.mem.Allocator) void {
         allocator.free(this.grid);
+        this.rooms.deinit(allocator);
+    }
+
+    pub fn addEntity(this: *Level, handle: EntityManager.Handle, pos: Types.Vector2Int) void {
+        const index = Utils.posToIndex(pos);
+        if (index) |i| {
+            var tile = &this.grid[i];
+
+            std.debug.assert(tile.entity == null);
+            tile.entity = handle;
+        }
+    }
+
+    pub fn removeEntity(this: *Level, pos: Types.Vector2Int) void {
+        const index = Utils.posToIndex(pos);
+        if (index) |i| {
+            var tile = &this.grid[i];
+            tile.entity = null;
+        }
+    }
+
+    pub fn moveEntity(this: *Level, from: Types.Vector2Int, to: Types.Vector2Int) void {
+        //TODO: should i return an error?
+        const fromIndex = Utils.posToIndex(from) orelse unreachable;
+        const toIndex = Utils.posToIndex(to) orelse unreachable;
+
+        const fromTile = &this.grid[fromIndex];
+        std.debug.assert(fromTile.entity != null);
+
+        const toTile = &this.grid[toIndex];
+
+        if (fromTile.entity) |entity| {
+            fromTile.entity = null;
+            toTile.entity = entity;
+        }
+    }
+
+    pub fn getEntityHandleByPos(this: *Level, pos: Types.Vector2Int) ?EntityManager.Handle {
+        const tile = Utils.getTilePos(this.grid, pos) orelse return null;
+        return tile.entity;
+    }
+
+    pub fn getEntityByPos(this: *Level, pos: Types.Vector2Int) ?*Entity.Entity {
+        const handle = this.getEntityHandleByPos(pos) orelse return null;
+        return EntityManager.getEntityHandle(handle);
     }
 
     pub fn draw(this: *Level) void {

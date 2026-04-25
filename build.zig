@@ -30,6 +30,7 @@ pub fn build(b: *std.Build) void {
             .optimize = actual_optimize,
         }),
     });
+    game.use_llvm = true; //llvm for debugging
 
     // Link the fetched Raylib instead of system library
     game.linkLibrary(raylib_artifact);
@@ -121,6 +122,8 @@ pub fn build(b: *std.Build) void {
     game_debug.linkLibrary(raylib_artifact);
     game_debug.linkLibC();
     game_debug.root_module.addImport("raylib", raylib_dep.module("raylib"));
+
+    game_debug.use_llvm = true; //llvm for debugging
 
     b.installArtifact(game_debug);
 

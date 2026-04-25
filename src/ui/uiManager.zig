@@ -1,6 +1,7 @@
 const std = @import("std");
 const Game = @import("../game/game.zig");
 const TurnManager = @import("../game/turnManager.zig");
+const CameraManger = @import("../game/cameraManager.zig");
 const Window = @import("../game/window.zig");
 const Gamestate = @import("../game/gamestate.zig");
 const Types = @import("../common/types.zig");
@@ -56,20 +57,7 @@ pub fn updateAndDraw(game: *Game.Game) !void {
     const cancel = InputManager.takeCancelInput();
 
     //move
-    const move = InputManager.takePositionInput();
-
-    //menu select
-    if (move) |_move| {
-        updateActiveMenu(_move);
-    }
-
-    var menuSelect: ?MenuItemData = null;
-    if (confirm) {
-        menuSelect = getSelectedItem();
-        if (menuSelect != null) {
-            confirm = false;
-        }
-    }
+    move = InputManager.takePositionInput(game.delta);
 
     //quick select
     const quickSelect = InputManager.takeQuickSelectInput();
@@ -321,32 +309,34 @@ fn getScaledSize(size: rl.Vector2) rl.Vector2 {
 }
 
 fn relativeToScreenPos(rPos: RelativePos, size: rl.Vector2) rl.Vector2 {
+    _ = size;
     const anchorPosition = getAnchorPosition(rPos.anchor);
     const position = Utils.vector2Scale(rPos.pos, Window.scale);
-    var result = Utils.vector2Add(anchorPosition, position);
+    const result = Utils.vector2Add(anchorPosition, position);
+    return result;
 
     //Adjust for element size based on anchor
-    switch (rPos.anchor) {
-        .top_center, .center, .bottom_center => {
-            result.x -= (size.x * Window.scale) / 2;
-        },
-        .top_right, .center_right, .bottom_right => {
-            result.x -= size.x * Window.scale;
-        },
-        else => {},
-    }
-
-    switch (rPos.anchor) {
-        .center_left, .center, .center_right => {
-            result.y -= (size.y * Window.scale) / 2;
-        },
-        .bottom_left, .bottom_center, .bottom_right => {
-            result.y -= size.y * Window.scale;
-        },
-        else => {},
-    }
-
-    return result;
+    // switch (rPos.anchor) {
+    //     .top_center, .center, .bottom_center => {
+    //         result.x -= (size.x * Window.scale) / 2;
+    //     },
+    //     .top_right, .center_right, .bottom_right => {
+    //         result.x -= size.x * Window.scale;
+    //     },
+    //     else => {},
+    // }
+    //
+    // switch (rPos.anchor) {
+    //     .center_left, .center, .center_right => {
+    //         result.y -= (size.y * Window.scale) / 2;
+    //     },
+    //     .bottom_left, .bottom_center, .bottom_right => {
+    //         result.y -= size.y * Window.scale;
+    //     },
+    //     else => {},
+    // }
+    //
+    // return result;
 }
 
 fn getAnchorPosition(anchor: AnchorEnum) rl.Vector2 {
@@ -537,7 +527,7 @@ pub const ElementMenuItem = struct {
 };
 
 pub const MenuItemData = union(enum) {
-    puppet_id: u32,
+    puppet_handle: EntityManager.Handle,
     action: ActionType,
 };
 
@@ -652,7 +642,38 @@ pub fn getCombatToggle() bool {
     return combat;
 }
 
-pub fn makeCharacterPlate(relPos: RelativePos, size: rl.Vector2) !i32 {
+fn drawNonInteractive() void {
+    drawHealthBar();
+
+    drawPlayerPlate();
+    drawTurnPhase();
+    drawTurnNumber();
+    drawCombatIndicator();
+    drawIndicators();
+}
+
+fn drawIndicators() void {
+    drawHealthBars();
+}
+
+fn drawHealthBars() void {
+    var iterator = EntityManager.activeConstIterator(0);
+    while (iterator.next()) |entity| {
+        _ = entity;
+    }
+}
+
+fn drawHealthBar() void {
+    const player = EntityManager.getPlayer();
+    const pos = player.pos;
+    const playerVector = Types.vector2IntConvert(pos);
+    const pixelPos = Utils.vector2TileToPixel(playerVector);
+    const worldPos = rl.getWorldToScreen2D(pixelPos, CameraManger.camera.*);
+    const size = rl.Vector2.init(Config.tile_width, 5);
+    rl.drawRectangleV(worldPos, size, rl.Color.red);
+}
+
+fn drawCharacterPlate(relPos: RelativePos, size: rl.Vector2, name: [:0]const u8) void {
     var relativePosition = relPos;
     const background = Element.initBackground(
         relativePosition,
@@ -718,17 +739,79 @@ pub fn updatePuppetMenu(this: *Element, game: *Game.Game) anyerror!void {
     }
 }
 
-pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
+fn beginMenu() void {
+    itemIndex = 0;
+}
+
+fn endMenu() void {
+    //itemCount = item_index;
+}
+
+fn menuItem(label: [:0]const u8, pos: RelativePos) bool {
+    const isHot = hotIndex == itemIndex;
+    const size = rl.Vector2{ .x = 200, .y = 150 };
+
+    // if (is_hot) {
+    //     drawBackground(pos, size);
+    // }
+
+    var color = primaryColor;
+    if (isHot) {
+        color = hotItemColor;
+        var arrowPos = pos;
+        arrowPos.pos.x -= 15;
+        drawText(arrowPos, size, ">", color);
+    }
+
+    drawText(pos, size, label, color);
+
+    const selected = isHot and confirm;
+    if (selected) confirm = false;
+
+    itemIndex += 1;
+    return selected;
+}
+
+fn drawPuppetSelectMenu(game: *Game.Game) void {
+    if (TurnManager.turn == .enemy) {
+        return;
+    }
+    const panelPos = RelativePos.init(.bottom_center, -100, -180);
+    drawBackground(panelPos, .{ .x = 200, .y = 150 });
+
+    const titlePos = RelativePos.init(.bottom_center, -90, -175);
+    var itemPos = titlePos;
+    itemPos.pos.x += 5;
+    drawText(titlePos, .{ .x = 200, .y = 150 }, "Deploy Puppet:", primaryColor);
+
+    beginMenu();
+
+    const puppets = &game.player.data.player.puppets;
+    for (puppets.items[0..puppets.len]) |pupHandle| {
+        const puppet = EntityManager.getEntityHandle(pupHandle) orelse continue;
+        //TODO: @fix doesent work, accessing player instaed of a puppet
+        if (!puppet.data.puppet.deployed) {
+            itemPos.pos.y += 25;
+            if (menuItem(puppet.name, itemPos)) {
+                menuSelect = .{ .puppet_handle = pupHandle };
+            }
+        }
+    }
+
+    endMenu();
+}
+
+fn drawActionSelectMenu(game: *Game.Game) void {
+    if (TurnManager.turn == .enemy) {
+        return;
+    }
     _ = game;
     this.data.menu.menuItems.clearRetainingCapacity();
 
-    if (Gamestate.selectedEntityID) |id| {
-        const selectedEntity = EntityManager.getEntityID(id);
-        if (selectedEntity) |se| {
-            if (!se.hasMoved) {
-                const itemMove = ElementMenuItem.initActionItem("MOVE", ActionType.move);
-                try this.data.menu.menuItems.append(allocator, itemMove);
-            }
+    if (Gamestate.selectedEntityHandle) |handle| {
+        const entity = EntityManager.getEntityHandle(handle) orelse {
+            return;
+        };
 
             if (!se.hasAttacked) {
                 const itemAttack = ElementMenuItem.initActionItem("ATTACK", ActionType.attack);
@@ -741,26 +824,44 @@ pub fn updateActionMenu(this: *Element, game: *Game.Game) anyerror!void {
 pub fn updateTurnNumberText(this: *Element, game: *Game.Game) anyerror!void {
     _ = game;
 
-    _ = try std.fmt.bufPrintZ(&this.data.text.text, "Turn: {}", .{TurnManager.turnNumber});
-}
+    switch (Gamestate.showMenu) {
+        .puppet_select => {
+            const player = EntityManager.getPlayer();
+            const pups = player.data.player.puppets;
+            for (pups.items[0..pups.len]) |handle| {
+                const pup = EntityManager.getEntityHandle(handle);
+                if (pup) |p| {
+                    //TODO: active or deployed?
+                    if (!p.active) {
+                        result += 1;
+                    }
+                }
+            }
+        },
+        .action_select => {
+            // result = @typeInfo(ActionType).@"enum".fields.len;
 
-pub fn updateCurrentTurnText(this: *Element, game: *Game.Game) anyerror!void {
-    _ = game;
+            const entityHandle = Gamestate.selectedEntityHandle;
+            if (entityHandle) |handle| {
+                const entity = EntityManager.getEntityHandle(handle);
+                if (entity) |e| {
+                    if (!e.hasMoved) {
+                        result += 1;
+                    }
 
-    if (TurnManager.turn == .player) {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Player"});
-    } else if (TurnManager.turn == .enemy) {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Enemy"});
+                    if (!e.hasAttacked) {
+                        result += 1;
+                    }
+
+                    //skip turn
+                    if (!e.hasMoved or !e.hasAttacked) {
+                        result += 1;
+                    }
+                }
+            }
+        },
+        else => {},
     }
-}
 
-pub fn updateCombatIndicatorText(this: *Element, game: *Game.Game) anyerror!void {
-    _ = game;
-    const player = EntityManager.getPlayer();
-
-    if (player.inCombat) {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Combat..."});
-    } else {
-        _ = try std.fmt.bufPrintZ(&this.data.text.text, "{s}", .{"Exploring..."});
-    }
+    return result;
 }

@@ -7,22 +7,18 @@ const Utils = @import("../common/utils.zig");
 const EntityManager = @import("entityManager.zig");
 const TurnManager = @import("turnManager.zig");
 const Config = @import("../common/config.zig");
+const Allocators = @import("../common/allocators.zig");
 const Game = @import("game.zig");
 const Combat = @import("combat.zig");
 const Pathfinder = @import("../game/pathfinder.zig");
 
-var allocator: std.mem.Allocator = undefined;
-
-pub fn init(alloc: std.mem.Allocator) void {
-    allocator = alloc;
-}
-
-pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level, entities: Types.PositionHash) !void {
+pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: *Level.Level) !void {
     //TODO: @fix entities dont move when they cant find a path somewhere but they arent really blocked, its blocked very far away from them
     //TODO: @continue @fix @finish, remove entities from findPath, handle entities bumping into each other here
     //TODO: https://claude.ai/chat/dfcf88fa-e705-4d82-b2a0-dc0d537b938c
+    const grid = level.grid;
     if (entity.path == null and entity.goal != null) {
-        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level, entities);
+        const newPath = try Pathfinder.findPath(entity.pos, entity.goal.?.pos, level);
         if (newPath) |new_path| {
             entity.setNewPath(new_path);
             entity.stuck = 0;
@@ -55,18 +51,21 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 
     const new_pos = path.nodes.items[nextIndex];
-    const new_pos_entity = EntityManager.getEntityByPos(new_pos, level.worldPos);
 
-    // position has entity, recalculate
-    if (new_pos_entity) |_| {
-        //TODO: @continu, wait or sidestep
-        entity.removePath();
-        entity.stuck += 1;
-        return;
+    const tileIndex = Utils.posToIndex(new_pos);
+    if (tileIndex) |tile_index| {
+        const new_pos_entity = grid[tile_index].entity;
+
+        // position has entity, recalculate
+        if (new_pos_entity) |_| {
+            //TODO: @continu, wait or sidestep
+            entity.removePath();
+            entity.stuck += 1;
+            return;
+        }
     }
 
-    const newLocation = Types.Location.init(level.worldPos, new_pos);
-    try entity.move(newLocation);
+    try entity.move(level, new_pos);
     entity.stuck = 0;
     path.currIndex = nextIndex;
 
@@ -82,25 +81,22 @@ pub fn updateEntity(entity: *Entity.Entity, game: *Game.Game, level: Level.Level
     }
 }
 
-pub fn canMove(location: Types.Location, grid: []Level.Tile, entitiesHash: Types.PositionHash) bool {
-    const pos_index = Utils.posToIndex(location.pos);
+pub fn canMove(pos: Types.Vector2Int, grid: []Level.Tile) bool {
+    const pos_index = Utils.posToIndex(pos);
     if (pos_index) |index| {
-        if (index < grid.len and grid[index].solid) {
+        if (grid[index].solid) {
             //TODO: probably gonna add something like walkable
             return false;
         }
-    }
 
-    const entityID = entitiesHash.get(location);
-    if (entityID == null) {
-        return true;
+        if (grid[index].entity != null) {
+            return false;
+        }
     }
-
-    return false;
+    return true;
 }
 
 pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u32) !std.ArrayList(Types.Vector2Int) {
-    //TODO: use arena
     var result: std.ArrayList(Types.Vector2Int) = .empty;
 
     const dist: i32 = @intCast(distance);
@@ -124,26 +120,26 @@ pub fn tilesAround(alloc: std.mem.Allocator, pos: Types.Vector2Int, distance: u3
     return result;
 }
 
-pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) !?Types.Vector2Int {
+pub fn getClosestAttackPositionAround(alloc: std.mem.Allocator, attackingEntity: *Entity.Entity, attackedLocation: Types.Location, grid: Level.Grid) !?Types.Vector2Int {
     var tiles = try tilesAround(alloc, attackedLocation.pos, attackingEntity.attackDistance);
+
+    defer Allocators.resetScratchArena();
+    defer tiles.deinit(alloc);
+
     for (tiles.items, 0..) |tile, i| {
-        const tileLocation = Types.Location.init(attackedLocation.worldPos, tile);
-        if (!canMove(tileLocation, grid, entities)) {
+        if (!canMove(tile, grid)) {
             _ = tiles.swapRemove(i);
         }
 
-        if (!Combat.isLosFree(tile, attackedLocation.pos, attackedLocation.worldPos, entities)) {
+        if (!Combat.isLosFree(tile, attackedLocation.pos, attackedLocation.worldPos)) {
             _ = tiles.swapRemove(i);
         }
     }
 
     //TODO: @finish @continue
-    //const resultTile = Combat.closestPos(attackingEntity.pos, tiles.items);
+    const resultTile = Combat.closestPos(attackingEntity.pos, tiles.items);
 
-    //std.debug.print("tiles: {}\n", .{resultTile});
-
-    //return resultTile;
-    return null;
+    return resultTile;
 }
 
 pub fn getAvailableTileAround(location: Types.Location, grid: []Level.Tile, entities: Types.PositionHash) ?Types.Vector2Int {
@@ -242,9 +238,9 @@ pub fn boundryTransition(currentLocation: Types.Location, newLocation: Types.Loc
     return locationResult;
 }
 
-pub fn staircaseTransition(newLocation: Types.Location, grid: Types.Grid) Types.Location {
+pub fn staircaseTransition(newLocation: Types.Location, level: *Level.Level) Types.Location {
     //TODO: no transitins during combat
-    const tile = Utils.getTilePos(grid, newLocation.pos);
+    const tile = Utils.getTilePos(level.grid, newLocation.pos);
     var zDelta: i32 = 0;
     if (tile) |t| {
         switch (t.tileType) {
@@ -267,8 +263,8 @@ pub fn staircaseTransition(newLocation: Types.Location, grid: Types.Grid) Types.
 
     tmpLocation.worldPos = Types.vector3IntAdd(player.worldPos, worldPosDelta);
 
-    const level = World.getLevelAt(tmpLocation.worldPos);
-    if (level == null) {
+    const newLevel = World.getLevelAt(tmpLocation.worldPos);
+    if (newLevel == null) {
         //TODO: put a log out to player that the path is blocked or something
         std.debug.print("NO LEVEL IN THAT WAY", .{});
         return newLocation;

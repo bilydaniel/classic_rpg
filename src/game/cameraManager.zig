@@ -8,9 +8,9 @@ const rl = @import("raylib");
 pub var camera: *rl.Camera2D = undefined;
 pub var manual: bool = undefined;
 pub var speed: f32 = undefined;
-pub var targetEntity: ?u32 = undefined;
+pub var targetEntity: ?EntityManager.Handle = undefined;
 
-pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
+pub fn init(allocator: std.mem.Allocator, entityHandle: EntityManager.Handle) !void {
     camera = try allocator.create(rl.Camera2D);
     camera.* = .{
         .offset = rl.Vector2{ .x = 0, .y = 0 },
@@ -20,7 +20,7 @@ pub fn init(allocator: std.mem.Allocator, entityID: u32) !void {
     };
     manual = false;
     speed = 100.0;
-    targetEntity = entityID;
+    targetEntity = entityHandle;
 }
 
 pub fn deinit(allocator: std.mem.Allocator) void {
@@ -56,9 +56,9 @@ pub fn update(delta: f32) void {
         }
     }
     if (!manual) {
-        if (targetEntity) |entityid| {
+        if (targetEntity) |entityHandle| {
             //TODO: make it possible to just set a camera position without target
-            const entity = EntityManager.getEntityID(entityid) orelse return;
+            const entity = EntityManager.getEntityHandle(entityHandle) orelse return;
             camera.target.x = @floor(@as(f32, @floatFromInt(entity.pos.x * Config.tile_width)) - Window.scaledWidthHalf / camera.zoom);
             camera.target.y = @floor(@as(f32, @floatFromInt(entity.pos.y * Config.tile_height)) - Window.scaledHeightHalf / camera.zoom);
         }

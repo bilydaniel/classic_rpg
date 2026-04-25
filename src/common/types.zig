@@ -2,9 +2,7 @@ const std = @import("std");
 const Config = @import("../common/config.zig");
 const Level = @import("../game/level.zig");
 const EntityManager = @import("../game/entityManager.zig");
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const rl = @import("raylib");
 
 pub const Grid = []Level.Tile;
 pub const PositionHash = std.AutoHashMap(Location, usize);
@@ -70,8 +68,8 @@ pub fn vector2IntSub(a: Vector2Int, b: Vector2Int) Vector2Int {
     };
 }
 
-pub fn vector2IntConvert(a: Vector2Int) c.Vector2 {
-    return c.Vector2{
+pub fn vector2IntConvert(a: Vector2Int) rl.Vector2 {
+    return rl.Vector2{
         .x = @floatFromInt(a.x),
         .y = @floatFromInt(a.y),
     };
@@ -82,14 +80,14 @@ pub fn vector2IntDistance(a: Vector2Int, b: Vector2Int) u32 {
     const dy = @as(f32, @floatFromInt(a.y - b.y));
     return @as(u32, @intFromFloat(@floor(@sqrt(dx * dx + dy * dy))));
 }
-pub fn vector2Convert(a: c.Vector2) Vector2Int {
+pub fn vector2Convert(a: rl.Vector2) Vector2Int {
     return Vector2Int{
         .x = @intFromFloat(a.x),
         .y = @intFromFloat(a.y),
     };
 }
 
-pub fn vector2ConvertWithPixels(a: c.Vector2) Vector2Int {
+pub fn vector2ConvertWithPixels(a: rl.Vector2) Vector2Int {
     return Vector2Int{
         .x = @intFromFloat(a.x / Config.tile_width),
         .y = @intFromFloat(a.y / Config.tile_height),
@@ -137,6 +135,195 @@ pub fn StaticArray(comptime T: type, comptime capacity: usize) type {
 
         pub fn slice(this: *This) []T {
             return this.items[0..this.len];
+        }
+    };
+}
+
+pub const RectangleInt = struct {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+
+    pub fn init(x: i32, y: i32, w: i32, h: i32) RectangleInt {
+        return RectangleInt{
+            .x = x,
+            .y = y,
+            .w = w,
+            .h = h,
+        };
+    }
+
+    pub fn collision(this: RectangleInt, other: RectangleInt) bool {
+        //touching == collision
+        return this.x <= other.x + other.w and
+            this.x + this.w >= other.x and
+            this.y <= other.y + other.h and
+            this.y + this.h >= other.y;
+    }
+
+    pub fn center(this: RectangleInt) Vector2Int {
+        const result = Vector2Int.init(this.x + @divFloor(this.w, 2), this.y + @divFloor(this.h, 2));
+        return result;
+    }
+};
+
+pub fn BinaryNode(comptime T: type) type {
+    return struct {
+        const this = @This();
+        data: T,
+        left: ?usize = null,
+        right: ?usize = null,
+
+        pub fn init(data: T) this {
+            return this{
+                .data = data,
+            };
+        }
+    };
+}
+
+pub fn BinaryTree(comptime T: type) type {
+    return struct {
+        const this = @This();
+        allocator: std.mem.Allocator,
+        nodes: std.ArrayList(BinaryNode(T)),
+
+        pub fn init(alloc: std.mem.Allocator) this {
+            const nodes = std.ArrayList(BinaryNode(T)).empty;
+            return this{
+                .allocator = alloc,
+                .nodes = nodes,
+            };
+        }
+
+        pub fn deinit(t: *this) void {
+            t.nodes.deinit(t.allocator);
+        }
+
+        pub fn insert(t: *this, data: T) !void {
+            const node = BinaryNode(T).init(data);
+            const nodeIndex = t.nodes.items.len;
+
+            try t.nodes.append(t.allocator, node);
+
+            if (nodeIndex == 0) {
+                return;
+            }
+
+            const parentIndex = @divFloor(nodeIndex - 1, 2);
+            const parentNode = &t.nodes.items[parentIndex];
+            if (@mod(nodeIndex, 2) == 0) {
+                //right child
+                parentNode.right = nodeIndex;
+            } else {
+                //left child
+                parentNode.left = nodeIndex;
+            }
+        }
+        pub fn print(t: *const this) void {
+            if (t.nodes.items.len == 0) {
+                std.debug.print("Tree is empty\n", .{});
+                return;
+            }
+
+            std.debug.print("\n--- Binary Tree ---\n", .{});
+            t.printRecursive(0, 0);
+            std.debug.print("-------------------\n\n", .{});
+        }
+
+        /// Private recursive helper to handle indentation and traversal
+        fn printRecursive(t: *const this, index: usize, depth: usize) void {
+            // Base case: if the index is out of bounds, this branch is done
+            if (index >= t.nodes.items.len) {
+                return;
+            }
+
+            const left_index = 2 * index + 1;
+            const right_index = 2 * index + 2;
+
+            // 1. Traverse Right Subtree (prints at the top)
+            t.printRecursive(right_index, depth + 1);
+
+            // 2. Print current node with indentation based on its depth
+            var i: usize = 0;
+            while (i < depth) : (i += 1) {
+                std.debug.print("    ", .{}); // 4 spaces of indentation per level
+            }
+
+            // Assuming your BinaryNode(T) struct stores its value in a field called `data`
+            // {any} is used so it can print whatever type T happens to be (integers, floats, etc.)
+            std.debug.print("{any}\n", .{t.nodes.items[index].data});
+
+            // 3. Traverse Left Subtree (prints at the bottom)
+            t.printRecursive(left_index, depth + 1);
+        }
+        // Add this inside your struct, replacing the previous print functions
+
+        /// Public function to trigger the top-down tree print
+        pub fn printTopDown(t: *const this) void {
+            if (t.nodes.items.len == 0) {
+                std.debug.print("Tree is empty\n", .{});
+                return;
+            }
+
+            std.debug.print("\n--- Binary Tree (Top-Down) ---\n", .{});
+            t.printTopDownRecursive(0, 0, 0, true);
+            std.debug.print("------------------------------\n\n", .{});
+        }
+
+        /// Private recursive helper to handle box-drawing characters and lines
+        fn printTopDownRecursive(t: *const this, index: usize, mask: u64, depth: usize, is_last: bool) void {
+            if (index >= t.nodes.items.len) return;
+
+            // 1. Print the vertical lines and branches
+            if (depth > 0) {
+                var i: usize = 0;
+                while (i < depth - 1) : (i += 1) {
+                    // Safe cast to u6 for the bit shift. A tree would need exabytes
+                    // of RAM to exceed depth 64, so this will never overflow.
+                    const shift_amt = @as(u6, @intCast(i));
+
+                    if ((mask & (@as(u64, 1) << shift_amt)) != 0) {
+                        std.debug.print("│   ", .{}); // Branch continues down
+                    } else {
+                        std.debug.print("    ", .{}); // Empty space
+                    }
+                }
+
+                // Draw the connector for the current node
+                if (is_last) {
+                    std.debug.print("└── ", .{});
+                } else {
+                    std.debug.print("├── ", .{});
+                }
+            }
+
+            // 2. Print current node data
+            std.debug.print("{any}\n", .{t.nodes.items[index].data});
+
+            // 3. Update the line-drawing mask for the children
+            var new_mask = mask;
+            if (depth > 0 and !is_last) {
+                const mask_shift = @as(u6, @intCast(depth - 1));
+                new_mask |= (@as(u64, 1) << mask_shift);
+            }
+
+            // 4. Find valid children (Array-backed complete tree math)
+            const left_idx = 2 * index + 1;
+            const right_idx = 2 * index + 2;
+            const has_left = left_idx < t.nodes.items.len;
+            const has_right = right_idx < t.nodes.items.len;
+
+            // 5. Traverse downwards
+            if (has_left) {
+                // If there is a right child coming after this, the left child is NOT the last child
+                t.printTopDownRecursive(left_idx, new_mask, depth + 1, !has_right);
+            }
+            if (has_right) {
+                // The right child is always the last child in a standard binary tree
+                t.printTopDownRecursive(right_idx, new_mask, depth + 1, true);
+            }
         }
     };
 }

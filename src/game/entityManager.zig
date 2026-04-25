@@ -13,58 +13,162 @@ const c = @cImport({
     @cInclude("raylib.h");
 });
 
-var entity_allocator: std.mem.Allocator = undefined;
+var allocator: std.mem.Allocator = undefined;
 
-pub var entities: std.ArrayList(Entity.Entity) = undefined;
-//pub var entities: std.SegmentedList(Entity.Entity, 2) = undefined; //TODO: bigger preallocate, testing for now
+pub const Entities = std.SegmentedList(Slot, 2);
+pub var entities: Entities = undefined; //TODO: bigger preallocate, testing for now
 
-pub var positionHash: Types.PositionHash = undefined;
-pub var idHash: Types.IdHash = undefined;
+pub var freeList: std.ArrayList(usize) = undefined;
 
-pub var playerID: u32 = undefined;
+pub var playerHandle: Handle = undefined;
 
 pub var spawnQueue: std.ArrayList(Entity.Entity) = undefined;
-pub var despawnQueue: std.ArrayList(u32) = undefined;
+pub var despawnQueue: std.ArrayList(Handle) = undefined;
 
-pub fn init(allocator: std.mem.Allocator) void {
-    entity_allocator = allocator;
+const Slot = struct {
+    entity: Entity.Entity,
+    generation: u32,
+    occupied: bool,
 
-    //entities = std.SegmentedList(Entity.Entity).empty;
-    entities = std.ArrayList(Entity.Entity).empty;
+    pub fn init(entity: *Entity.Entity, generation: u32, occupied: bool) Slot {
+        return Slot{
+            .entity = entity.*,
+            .generation = generation,
+            .occupied = occupied,
+        };
+    }
+};
 
-    //@memory what allocator for hash?
-    positionHash = Types.PositionHash.init(allocator);
-    idHash = Types.IdHash.init(allocator);
+pub const Handle = struct {
+    index: usize,
+    generation: u32,
+
+    pub fn init(index: usize, generation: u32) Handle {
+        return Handle{
+            .index = index,
+            .generation = generation,
+        };
+    }
+
+    pub fn initFirst(index: usize) Handle {
+        return Handle{
+            .index = index,
+            .generation = 1,
+        };
+    }
+
+    pub fn valid(this: *Handle) bool {
+        return (this.generation != 0);
+    }
+
+    pub fn equal(this: Handle, other: Handle) bool {
+        if (this.index == other.index and this.generation == other.generation) {
+            return true;
+        }
+        return false;
+    }
+};
+
+pub fn activeIterator(index: usize) ActiveEntityIterator {
+    return ActiveEntityIterator.init(index, &entities);
+}
+
+pub fn activeConstIterator(index: usize) ActiveEntityConstIterator {
+    return ActiveEntityConstIterator.init(index, &entities);
+}
+
+pub fn allIterator(index: usize) AllEntityIterator {
+    return AllEntityIterator.init(index, &entities);
+}
+
+pub const ActiveEntityIterator = struct {
+    iterator: Entities.Iterator,
+
+    pub fn init(index: usize, _entities: *Entities) ActiveEntityIterator {
+        return ActiveEntityIterator{
+            .iterator = _entities.iterator(index),
+        };
+    }
+
+    pub fn next(this: *ActiveEntityIterator) ?*Entity.Entity {
+        while (this.iterator.next()) |slot| {
+            if (slot.occupied) {
+                return &slot.entity;
+            }
+        }
+        return null;
+    }
+};
+
+pub const ActiveEntityConstIterator = struct {
+    iterator: Entities.ConstIterator,
+
+    pub fn init(index: usize, _entities: *const Entities) ActiveEntityConstIterator {
+        return ActiveEntityConstIterator{
+            .iterator = _entities.constIterator(index),
+        };
+    }
+
+    pub fn next(this: *ActiveEntityConstIterator) ?*const Entity.Entity {
+        while (this.iterator.next()) |slot| {
+            if (slot.occupied) {
+                return &slot.entity;
+            }
+        }
+        return null;
+    }
+};
+
+pub const AllEntityIterator = struct {
+    iterator: Entities.Iterator,
+
+    pub fn init(index: usize, _entities: *Entities) AllEntityIterator {
+        return AllEntityIterator{
+            .iterator = _entities.iterator(index),
+        };
+    }
+
+    pub fn next(this: *AllEntityIterator) ?*Entity.Entity {
+        while (this.iterator.next()) |slot| {
+            return &slot.entity;
+        }
+        return null;
+    }
+};
+
+pub fn init(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+
+    entities = std.SegmentedList(Slot, 2){};
+    freeList = std.ArrayList(usize).empty;
 
     spawnQueue = std.ArrayList(Entity.Entity).empty;
-    despawnQueue = std.ArrayList(u32).empty;
+    despawnQueue = std.ArrayList(Handle).empty;
     //TODO: uncomment, testing for now if dangling pointers happen
-    //entities.ensureTotalCapacity(allocator, 256);
 }
 
 pub fn deinit() void {
-    const allocator = entity_allocator;
+    //TODO: @fix @finish @continue
+    var it = allIterator(0);
+    while (it.next()) |entity| {
+        entity.deinit();
+    }
     entities.deinit(allocator);
-    positionHash.deinit();
-    idHash.deinit();
+    freeList.deinit(allocator);
     spawnQueue.deinit(allocator);
     despawnQueue.deinit(allocator);
 }
 
 //TODO: @finish @continue
 pub fn spawnEntities() !void {}
+
 pub fn despawnEntities() !void {
-    for (despawnQueue.items) |id| {
-        if (id != playerID) {
-            try removeEntityID(id);
+    for (despawnQueue.items) |handle| {
+        if (!handle.equal(playerHandle)) {
+            try removeEntity(handle);
         }
     }
-
     despawnQueue.clearRetainingCapacity();
-}
-
-pub fn despawnQueueAdd(id: u32) !void {
-    try despawnQueue.append(entity_allocator, id);
 }
 
 // just a helper funciton, returns the player so it can be used to fill into context
@@ -72,22 +176,40 @@ pub fn fillEntities() !void {
     //
     //PLAYER
     //
-    const playerData = try Entity.PlayerData.init(entity_allocator);
-    var player = try Entity.Entity.init(entity_allocator, Types.Vector2Int{ .x = 3, .y = 2 }, 1, Entity.EntityData{ .player = playerData });
-    player.name = "Pepega";
-    player.setTextureID(AssetManager.TileNames.player);
-    playerID = player.id;
+    const firstLevel = World.getLevelAt(Types.Vector3Int.init(0, 0, 0)) orelse undefined;
+    const rooms = firstLevel.rooms;
+    std.debug.assert(rooms.items.len > 0);
+
+    //TODO: spawn enemies into other rooms
+    const firstRoom = rooms.items[0];
+    const spawnPoint = Types.Vector2Int.init(firstRoom.x, firstRoom.y);
+
+    const playerData = try Entity.PlayerData.init();
+    var playerEntity = try Entity.Entity.init(spawnPoint, 1, Entity.EntityData{ .player = playerData });
+
+    playerEntity.name = "Pepega";
+    playerEntity.setTextureID(AssetManager.TileNames.player);
+
+    //player has index 0
+    try addActiveEntity(&playerEntity);
+    playerHandle = Handle.initFirst(playerEntity.index);
+
+    var player = getPlayer();
+    var puppets = &player.data.player.puppets;
 
     //
     //PUPPET_1
     //
     const pup_pos = Types.Vector2Int{ .x = 1, .y = 1 };
-    var puppet = try Entity.Entity.init(entity_allocator, pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
+    var puppet = try Entity.Entity.init(pup_pos, 1.0, Entity.EntityData{ .puppet = .{ .deployed = false } });
     puppet.visible = false;
     puppet.name = "Pamama";
     puppet.setTextureID(AssetManager.TileNames.puppet_1);
-    try player.data.player.puppets.append(puppet.id);
-    std.debug.print("puppets: {}\n", .{player.data.player.puppets});
+    try addInactiveEntity(&puppet);
+
+    const pupHandle = Handle.initFirst(puppet.index);
+    try puppets.append(pupHandle);
+    std.debug.print("puppets_init: {}\n", .{puppets});
 
     //
     //PUPPET_2
@@ -99,8 +221,6 @@ pub fn fillEntities() !void {
     // puppet2.setTextureID(AssetManager.TileNames.puppet_1);
     // try player.data.player.puppets.append(puppet2.id);
 
-    try addActiveEntity(player);
-    try addInactiveEntity(puppet);
     //try addInactiveEntity(puppet2);
 
     //
@@ -112,22 +232,22 @@ pub fn fillEntities() !void {
     const enemy_goal_pos = Types.Vector2Int.init(2, 2);
     const enemy_goal = Types.Location.init(enemy_goal_world, enemy_goal_pos);
 
-    var entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+    var entity = try Entity.Entity.init(pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity.goal = enemy_goal;
 
     entity.setTextureID(enemy_tile);
 
     const pos2 = Types.Vector2Int{ .x = 6, .y = 16 };
-    var entity2 = try Entity.Entity.init(entity_allocator, pos2, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+    var entity2 = try Entity.Entity.init(pos2, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity2.setTextureID(enemy_tile);
 
     const pos3 = Types.Vector2Int{ .x = 7, .y = 17 };
-    var entity3 = try Entity.Entity.init(entity_allocator, pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+    var entity3 = try Entity.Entity.init(pos3, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
     entity3.setTextureID(enemy_tile);
 
-    try addActiveEntity(entity);
-    try addActiveEntity(entity2);
-    try addActiveEntity(entity3);
+    try addActiveEntity(&entity);
+    try addActiveEntity(&entity2);
+    try addActiveEntity(&entity3);
 
     //try addRandomEnemies(100);
 }
@@ -137,74 +257,114 @@ fn addRandomEnemies(number: usize) !void {
     var entity: Entity.Entity = undefined;
     const grid = World.getCurrentLevel().grid;
     for (0..number) |_| {
-        const pos = Systems.getRandomMovablePosition(grid, positionHash);
-        entity = try Entity.Entity.init(entity_allocator, pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
+        const pos = Systems.getRandomMovablePosition(grid);
+        entity = try Entity.Entity.init(pos, 1.0, Entity.EntityData{ .enemy = .{ .asd = true } });
         entity.setTextureID(enemy_tile);
         try addActiveEntity(entity);
     }
 }
 
-pub fn addActiveEntity(entity: Entity.Entity) !void {
-    var e = entity;
-    e.active = true;
-    try entities.append(entity_allocator, e);
-    try idHash.put(entity.id, entities.items.len - 1);
-
-    const location = Types.Location.init(e.worldPos, e.pos);
-    try positionHash.put(location, entities.items.len - 1);
+pub fn addEntityToLevel(handle: Handle, pos: Types.Vector2Int) void {
+    const level = World.getCurrentLevel();
+    level.addEntity(handle, pos);
 }
 
-pub fn addInactiveEntity(entity: Entity.Entity) !void {
-    var e = entity;
-    e.active = false;
-    try entities.append(entity_allocator, e);
-    try idHash.put(entity.id, entities.items.len - 1);
+pub fn removeEntityFromLevel(pos: Types.Vector2Int) void {
+    const level = World.getCurrentLevel();
+    level.removeEntity(pos);
 }
 
-pub fn activateEntity(id: u32) !void {
-    const index = idHash.get(id) orelse return;
-    const entity = getEntityIndex(index) orelse return;
+//TODO: maybe send entity as pointer? entity is kinda big
+pub fn addActiveEntity(ent: *Entity.Entity) !void {
+    var entity = ent;
+
+    if (freeList.items.len > 0) {
+        //get the free slot
+        const index = freeList.pop() orelse unreachable;
+        entity.index = index;
+
+        const oldSlot = entities.at(index);
+        //TODO: check, no idea if it works this way
+
+        oldSlot.occupied = true;
+        oldSlot.generation += 1;
+        oldSlot.entity = entity.*;
+
+        const handle = Handle.init(entity.index, oldSlot.generation);
+        addEntityToLevel(handle, entity.pos);
+
+        return;
+    }
+
+    entity.index = entities.len;
     entity.active = true;
+    const slot = Slot.init(entity, 1, true);
+    try entities.append(allocator, slot);
 
-    const location = Types.Location.init(entity.worldPos, entity.pos);
-    try positionHash.put(location, index);
+    const handle = Handle.initFirst(entity.index);
+    addEntityToLevel(handle, entity.pos);
+
+    return;
 }
 
-pub fn deactivateEntity(id: u32) !void {
-    const index = idHash.get(id) orelse return;
-    const entity = getEntityIndex(index) orelse return;
+pub fn addInactiveEntity(ent: *Entity.Entity) !void {
+    var entity = ent;
+    if (freeList.items.len > 0) {
+        //get the free slot
+        const index = freeList.pop() orelse unreachable;
+        entity.index = index;
+
+        const oldSlot = entities.at(index);
+        //TODO: check, no idea if it works this way
+
+        oldSlot.*.occupied = true;
+        oldSlot.*.generation += 1;
+        oldSlot.*.entity = entity.*;
+        return; //TODO: maybe return handle?
+    }
+
+    entity.index = entities.len;
     entity.active = false;
-    //TODO: check this, not sure if correct, tired
-    const location = Types.Location.init(entity.worldPos, entity.pos);
-    _ = positionHash.remove(location);
+    const slot = Slot.init(entity, 1, true);
+    try entities.append(allocator, slot);
+
+    return; //TODO: maybe return handle?
 }
 
-pub fn removeEntityID(id: u32) !void {
-    const entityIndex = idHash.get(id) orelse return;
-
-    const entity = entities.swapRemove(entityIndex);
-    const location = Types.Location.init(entity.worldPos, entity.pos);
-    _ = positionHash.remove(location);
-    _ = idHash.remove(entity.id);
-
-    // if we swapremoved any elemnt other than the last
-    if (entityIndex < entities.items.len) {
-        const swappedEntity = entities.items[entityIndex];
-        const swappedLocation = Types.Location.init(swappedEntity.worldPos, swappedEntity.pos);
-        try positionHash.put(swappedLocation, entityIndex);
-        try idHash.put(swappedEntity.id, entityIndex);
+pub fn activateEntity(handle: Handle) !void {
+    const entity = getEntityHandle(handle);
+    if (entity) |e| {
+        e.active = true;
+        addEntityToLevel(handle, e.pos);
     }
 }
 
-pub fn moveEntityHash(from: Types.Location, to: Types.Location) !void {
-    const keyValue = positionHash.fetchRemove(from);
-    if (keyValue) |kv| {
-        try positionHash.put(to, kv.value);
+pub fn deactivateEntity(handle: Handle) !void {
+    const entity = getEntityHandle(handle);
+    if (entity) |e| {
+        e.active = false;
+        removeEntityFromLevel(e.pos);
+    }
+}
+
+pub fn removeEntity(handle: Handle) !void {
+    const slot = entities.at(handle.index);
+    if (slot.generation != handle.generation) {
+        return;
+    }
+    if (slot.occupied) {
+        removeEntityFromLevel(slot.entity.pos);
+        slot.occupied = false;
+        slot.generation += 1;
+        slot.entity.deinit();
+        //TODO: deinit the entity?
+        try freeList.append(allocator, handle.index);
     }
 }
 
 pub fn draw() void {
-    for (entities.items) |*e| {
+    var iterator = activeIterator(0);
+    while (iterator.next()) |e| {
         if (Types.vector3IntCompare(e.worldPos, World.currentLevel)) {
             e.draw();
         }
@@ -231,8 +391,12 @@ pub fn allEnemiesTurnTaken() bool {
 }
 
 pub fn getPlayer() *Entity.Entity {
-    const playerIndex = idHash.get(playerID) orelse unreachable;
-    return &entities.items[playerIndex];
+    const player = getEntityHandle(playerHandle);
+    if (player) |p| {
+        return p;
+    } else {
+        unreachable;
+    }
 }
 
 pub fn getEnemies() []*Entity.Entity {}
@@ -241,17 +405,25 @@ pub fn getPuppets() []*Entity.Entity {
     //return &entities.items[PLAYER_INDEX];
 }
 
-pub fn getEntityID(id: u32) ?*Entity.Entity {
-    const entityIndex = idHash.get(id) orelse return null;
-    return &entities.items[entityIndex];
+pub fn getEntityHandle(handle: Handle) ?*Entity.Entity {
+    //TODO: do i need to check this?, when should i check it?
+
+    const slot = entities.at(handle.index);
+    if (!slot.occupied) {
+        return null;
+    }
+    if (slot.generation != handle.generation) {
+        return null;
+    }
+
+    return &slot.entity;
 }
 
-pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
-    //TODO: check if correct
-    const location = Types.Location.init(worldPos, pos);
-    const index = positionHash.get(location) orelse return null;
-    return &entities.items[index];
-}
+// pub fn getEntityByPos(pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
+//     //TODO: check if correct
+//     const location = Types.Location.init(worldPos, pos);
+//     return &entities.items[index];
+// }
 
 pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vector2Int, worldPos: Types.Vector3Int) ?*Entity.Entity {
     for (entities_.items) |*e| {
@@ -263,7 +435,8 @@ pub fn filterEntityByPos(entities_: std.ArrayList(Entity.Entity), pos: Types.Vec
 }
 
 pub fn resetTurnFlags() void {
-    for (entities.items) |*entity| {
+    var iterator = activeIterator(0);
+    while (iterator.next()) |entity| {
         entity.hasMoved = false;
         entity.hasAttacked = false;
         entity.turnTaken = false;
@@ -272,6 +445,8 @@ pub fn resetTurnFlags() void {
 }
 
 pub fn deactivatePuppets() !void {
+    //TODO: @contitnue @finish, change the puppets in playert from id to handle
+    //TODO: probably should clear out things like path etc.
     const player = getPlayer();
     for (player.data.player.puppets.items) |id| {
         try deactivateEntity(id);

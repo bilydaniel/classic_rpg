@@ -8,10 +8,8 @@ const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const Systems = @import("Systems.zig");
 const LevelGenerator = @import("levelGenerator.zig");
-
-const c = @cImport({
-    @cInclude("raylib.h");
-});
+const Config = @import("../common/config.zig");
+const rl = @import("raylib");
 
 pub var currentLevel: Types.Vector3Int = undefined;
 pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
@@ -19,11 +17,16 @@ pub var levels: std.AutoHashMap(Types.Vector3Int, Level.Level) = undefined;
 pub fn init(allocator: std.mem.Allocator) !void {
     levels = std.AutoHashMap(Types.Vector3Int, Level.Level).init(allocator);
 
-    //const randomLevel = LevelGenerator.generate();
-
     var worldPos = Types.Vector3Int.init(0, 0, 0);
     var level1 = try Level.Level.init(allocator, 0, worldPos);
-    level1.generateInterestingLevel();
+
+    if (Config.useRandomLevel) {
+        level1.deinit(allocator);
+        level1 = try LevelGenerator.generate(0, worldPos);
+        //level1 = try LevelGenerator.generateBSP(0, worldPos);
+    } else {
+        level1.generateInterestingLevel();
+    }
 
     worldPos.z -= 1;
     var level2 = try Level.Level.init(allocator, 1, worldPos);
@@ -66,6 +69,7 @@ pub fn draw() void {
 pub fn update() void {}
 
 pub fn changeCurrentLevel(to: Types.Vector3Int) void {
+    //TODO: make proper
     currentLevel = to;
 }
 

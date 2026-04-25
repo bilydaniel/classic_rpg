@@ -13,6 +13,7 @@ const UiManager = @import("../ui/uiManager.zig");
 const ShaderManager = @import("shaderManager.zig");
 const PlayerController = @import("playerController.zig");
 const Config = @import("../common/config.zig");
+const LevelGenerator = @import("levelGenerator.zig");
 const rl = @import("raylib");
 
 pub const Game = struct {
@@ -26,6 +27,7 @@ pub const Game = struct {
 
         const game = try allocator.create(Game);
 
+        LevelGenerator.init(allocator);
         Systems.init(allocator);
         PlayerController.init(allocator);
         Gamestate.init(allocator);
@@ -37,9 +39,7 @@ pub const Game = struct {
         TurnManager.init(allocator);
 
         try TilesetManager.init();
-        try Pathfinder.init(allocator);
-        try CameraManager.init(allocator, player.id);
-        try World.init(allocator);
+        try CameraManager.init(allocator, EntityManager.playerHandle);
         try ShaderManager.init(allocator);
 
         try UiManager.init(allocator);
@@ -94,6 +94,7 @@ pub const Game = struct {
         // First pass: render game into Window.screen
         rl.beginTextureMode(Window.screen);
         rl.clearBackground(rl.Color.black);
+
         rl.beginMode2D(CameraManager.camera.*);
         World.draw();
         this.player.draw();

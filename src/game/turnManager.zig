@@ -21,15 +21,15 @@ pub var turn: TurnEnum = .player;
 pub var phase: PhaseEnum = .setup;
 pub var turnNumber: i32 = 1;
 
-pub var updatingEntity: ?u32 = null;
+pub var updatingEntity: ?EntityManager.Handle = null;
 
-pub var enemyQueue: std.ArrayList(u32) = undefined;
+pub var enemyQueue: std.ArrayList(EntityManager.Handle) = undefined;
 pub var enemyQueueIndex: u32 = 0;
 
 var allocator: std.mem.Allocator = undefined;
 
 pub fn init(alloc: std.mem.Allocator) void {
-    enemyQueue = std.ArrayList(u32).empty;
+    enemyQueue = std.ArrayList(EntityManager.Handle).empty;
     //@memory arena?, samme issue as highlight, i use the same arraylist, no idea if better to use arena, id ont actualy need to deinit
     allocator = alloc;
 }
@@ -50,9 +50,15 @@ pub fn update(game: *Game.Game) !void {
         .setup => {
             std.debug.print("setup\n", .{});
 
-            for (EntityManager.entities.items) |e| {
-                if (e.data == .enemy) {
-                    try enemyQueue.append(allocator, e.id);
+            var iterator = EntityManager.entities.constIterator(0);
+            while (iterator.next()) |slot| {
+                if (!slot.occupied) {
+                    continue;
+                }
+
+                if (slot.entity.data == .enemy) {
+                    const handle = EntityManager.Handle.init(slot.entity.index, slot.generation);
+                    try enemyQueue.append(allocator, handle);
                 }
             }
             //TODO: order enemies, some heuristic(distance to goal)
@@ -71,8 +77,8 @@ pub fn update(game: *Game.Game) !void {
             std.debug.print("cleanup\n", .{});
             EntityManager.resetTurnFlags(); //TODO: might need reset it by entitiesOutCombat etc.
 
-            if (Gamestate.selectedEntityID) |id| {
-                CameraManager.targetEntity = id;
+            if (Gamestate.selectedEntityHandle) |handle| {
+                CameraManager.targetEntity = handle;
             }
 
             enemyQueueIndex = 0;
@@ -92,9 +98,9 @@ fn updatePlayerTurn(game: *Game.Game) !void {
         return;
     }
 
-    if (updatingEntity) |id| {
-        CameraManager.targetEntity = id;
-        var entity = EntityManager.getEntityID(id) orelse {
+    if (updatingEntity) |handle| {
+        CameraManager.targetEntity = handle;
+        var entity = EntityManager.getEntityHandle(handle) orelse {
             updatingEntity = null;
             return;
         };
@@ -113,9 +119,9 @@ fn updateEnemyTurn(game: *Game.Game) !void {
         return;
     }
 
-    if (updatingEntity) |id| {
-        CameraManager.targetEntity = id;
-        var entity = EntityManager.getEntityID(id) orelse {
+    if (updatingEntity) |handle| {
+        CameraManager.targetEntity = handle;
+        var entity = EntityManager.getEntityHandle(handle) orelse {
             updatingEntity = null;
             enemyQueueIndex += 1;
             return;
@@ -130,8 +136,8 @@ fn updateEnemyTurn(game: *Game.Game) !void {
         return;
     }
 
-    const entityID = enemyQueue.items[enemyQueueIndex];
-    const entity = EntityManager.getEntityID(entityID) orelse {
+    const entityHandle = enemyQueue.items[enemyQueueIndex];
+    const entity = EntityManager.getEntityHandle(entityHandle) orelse {
         enemyQueueIndex += 1;
         return;
     };
@@ -142,7 +148,7 @@ fn updateEnemyTurn(game: *Game.Game) !void {
     }
 
     if (entity.inCombat) {
-        updatingEntity = entity.id;
+        updatingEntity = entityHandle;
     } else {
         try entity.update(game);
         if (entity.turnTaken) {

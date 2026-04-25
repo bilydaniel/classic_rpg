@@ -1,12 +1,14 @@
 const std = @import("std");
 const Entity = @import("entity.zig");
+const EntityManager = @import("entityManager.zig");
 const World = @import("world.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
 const rl = @import("raylib");
 
-pub fn checkCombatStart(player: *Entity.Entity, entities: std.ArrayList(Entity.Entity)) bool {
-    for (entities.items) |e| {
+pub fn checkCombatStart(player: *Entity.Entity) bool {
+    var iterator = EntityManager.activeConstIterator(0);
+    while (iterator.next()) |e| {
         if (e.data == .enemy) {
             //TODO: remove prints
             // std.debug.print("player: {}\n", .{player.worldPos});
@@ -58,81 +60,60 @@ pub fn closestEntity(from: Types.Vector2Int, to: []*Entity.Entity) ?*Entity.Enti
     return closestEnt;
 }
 
-//pub fn closestPos(from: Types.Vector2Int, to: []Types.Vector2Int) ?Types.Vector2Int {
-// var closestEnt: ?*Entity.Entity = null;
-// var closestDistance: u32 = std.math.maxInt(u32);
+pub fn closestPos(from: Types.Vector2Int, to: []Types.Vector2Int) ?Types.Vector2Int {
+    var closestTile: ?Types.Vector2Int = null;
+    var closestDistance: u32 = std.math.maxInt(u32);
 
-// std.debug.print("to_entities: {any}\n", .{to});
-// std.debug.print("to_entities_len: {any}\n", .{to.len});
+    for (to) |toPos| {
+        const distance = Types.vector2IntDistance(from, toPos);
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestTile = toPos;
+        }
+    }
 
-//for (to) |toEntity| {
-//std.debug.print("toEntity: {s}\n", .{toEntity.name});
-//const distance = Types.vector2IntDistance(from, toEntity.pos);
-// std.debug.print("distance: {}\n", .{distance});
-// std.debug.print("closest_distance: {}\n", .{closestDistance});
-// if (distance < closestDistance) {
-//     closestDistance = distance;
-//     closestEnt = toEntity;
-// }
-//}
+    return closestTile;
+}
 
-//return closestEnt;
-//}
-
-pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.Vector3Int, entities: Types.PositionHash) bool {
-    //TODO: debug this, no idea if it works
+pub fn isLosFree(from: Types.Vector2Int, to: Types.Vector2Int, worldPos: Types.Vector3Int) bool {
     const level = World.getLevelAt(worldPos) orelse return false;
     const grid = level.grid;
 
     var currentPos = from;
-    const dPos = Types.Vector2Int.init(@intCast(@abs(to.x - currentPos.x)), @intCast(@abs(to.y - currentPos.y)));
 
-    var stepX: i32 = 0;
-    if (from.x < to.x) {
-        stepX = 1;
-    } else {
-        stepX = -1;
-    }
+    const dx = @as(i32, @intCast(@abs(to.x - from.x)));
+    const dy = @as(i32, @intCast(@abs(to.y - from.y)));
 
-    var stepY: i32 = 0;
-    if (from.y < to.y) {
-        stepY = 1;
-    } else {
-        stepY = -1;
-    }
+    const stepX: i32 = if (from.x < to.x) 1 else if (from.x > to.x) -1 else 0;
+    const stepY: i32 = if (from.y < to.y) 1 else if (from.y > to.y) -1 else 0;
 
-    var e: i32 = 0;
-    if (dPos.x > dPos.y) {
-        e = @divTrunc(dPos.x, 2);
-    } else {
-        e = @divTrunc(-dPos.y, 2);
-    }
-    var e2: i32 = 0;
+    var err: i32 = dx - dy;
 
     while (true) {
-        e2 = e;
-        if (e2 > -dPos.x) {
-            e -= @as(i32, @intCast(dPos.y));
-            currentPos.x += stepX;
-        }
-        if (e2 < @as(i32, @intCast(dPos.x))) {
-            e += @as(i32, @intCast(dPos.x));
-            currentPos.y += stepY;
-        }
-
-        if (currentPos.x == to.x and currentPos.y == to.y) {
+        if (Types.vector2IntCompare(currentPos, to)) {
             return true;
         }
 
-        const tileIndex = Utils.posToIndex(currentPos) orelse return false;
+        const tile = Utils.getTilePos(grid, currentPos) orelse return false;
 
-        if (grid[tileIndex].solid) {
+        if (tile.solid) {
             return false;
         }
 
-        const location = Types.Location.init(worldPos, currentPos);
-        if (entities.get(location) != null) {
+        if (tile.entity != null and !Types.vector2IntCompare(currentPos, from)) {
             return false;
+        }
+
+        const e2 = err * 2;
+
+        if (e2 > -dy) {
+            err -= dy;
+            currentPos.x += stepX;
+        }
+
+        if (e2 < dx) {
+            err += dx;
+            currentPos.y += stepY;
         }
     }
 }
