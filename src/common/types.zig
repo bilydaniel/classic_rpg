@@ -166,6 +166,10 @@ pub const RectangleInt = struct {
         const result = Vector2Int.init(this.x + @divFloor(this.w, 2), this.y + @divFloor(this.h, 2));
         return result;
     }
+
+    pub fn getRLRect(this: RectangleInt) rl.Rectangle {
+        return rl.Rectangle.init(@floatFromInt(this.x), @floatFromInt(this.y), @floatFromInt(this.w), @floatFromInt(this.h));
+    }
 };
 
 pub fn BinaryNode(comptime T: type) type {
@@ -221,6 +225,21 @@ pub fn BinaryTree(comptime T: type) type {
                 parentNode.left = nodeIndex;
             }
         }
+
+        pub fn getRoot(t: *this) ?*BinaryNode(T) {
+            if (t.nodes.items.len == 0) {
+                return null;
+            }
+            return &t.nodes.items[0];
+        }
+
+        pub fn getNode(t: *this, index: usize) ?*BinaryNode(T) {
+            if (t.nodes.items.len <= index) {
+                return null;
+            }
+            return &t.nodes.items[index];
+        }
+
         pub fn print(t: *const this) void {
             if (t.nodes.items.len == 0) {
                 std.debug.print("Tree is empty\n", .{});
@@ -327,3 +346,6 @@ pub fn BinaryTree(comptime T: type) type {
         }
     };
 }
+
+pub const BSPNode = BinaryNode(RectangleInt);
+pub const BSPTree = BinaryTree(RectangleInt);

@@ -120,7 +120,6 @@ pub fn makeLShape(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2
 }
 
 pub fn makeLine(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2Int, tileType: Level.TileType) !void {
-    std.debug.print("carve_line\n", .{});
     if (from.x == to.x) {
         // vertical
         var current = from.y;
@@ -136,7 +135,6 @@ pub fn makeLine(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2In
             const index = Utils.posToIndex(pos);
             if (index) |_index| {
                 level.grid[_index] = Level.Tile.init(tileType);
-                std.debug.print("carving_tile\n", .{});
             }
         }
     } else if (from.y == to.y) {
@@ -149,16 +147,12 @@ pub fn makeLine(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2In
             dx = -1;
         }
 
-        std.debug.print("while_cond: {} {} \n", .{ current, to.x });
         while (current != to.x) : (current += dx) {
-            std.debug.print("while...\n", .{});
             const pos = Types.Vector2Int.init(current, from.y);
             const index = Utils.posToIndex(pos);
-            std.debug.print("index: {?}\n", .{index});
 
             if (index) |_index| {
                 level.grid[_index] = Level.Tile.init(tileType);
-                std.debug.print("carving_tile\n", .{});
             }
         }
     } else {
@@ -171,7 +165,7 @@ pub fn generateBSP(id: u32, worldPos: Types.Vector3Int) !Level.Level {
     //TODO: add min / max
     //const splitMin = 0.1;
 
-    var tree = Types.BinaryTree(Types.RectangleInt).init(Allocators.persistent);
+    var tree = Types.BSPTree.init(Allocators.persistent);
     defer tree.deinit();
 
     var levelVal = try Level.Level.init(Allocators.persistent, id, worldPos);
@@ -210,12 +204,49 @@ pub fn generateBSP(id: u32, worldPos: Types.Vector3Int) !Level.Level {
         try tree.insert(room2);
     }
 
-    const carveRoom = splitRooms.items[splitRooms.items.len - 1];
-    //tree.print();
     tree.printTopDown();
-    std.debug.print("tree: {any}\n", .{tree.nodes.items});
-    try carveRoomRectangle(level, carveRoom);
-    // try carveRoomRectangle(level, room2);
+
+    try carveBSPCorridor(level, &tree, 0);
+
+    //TODO: remove
+    const fakeRoom = Types.RectangleInt.init(0, 0, 1, 1);
+    try carveRoomRectangle(level, fakeRoom);
 
     return levelVal;
+}
+
+pub fn carveBSPCorridor(level: *Level.Level, tree: *Types.BSPTree, index: usize) !void {
+    std.debug.print("index: {}\n", .{index});
+    const node = tree.getNode(index) orelse return;
+
+    if (index != 0 and node.left == null and node.right == null) {
+        std.debug.print("rooming...\n", .{});
+        std.debug.print("room: {}\n", .{node.data});
+        const room = roomCutOff(node.data);
+
+        debugDrawRoom(room);
+
+        //try carveRoomRectangle(level, room);
+    }
+    if (node.left != null and node.right != null) {
+        const leftIndex = node.left.?;
+        const rightIndex = node.right.?;
+        const leftNode = tree.getNode(leftIndex) orelse unreachable;
+        const rightNode = tree.getNode(rightIndex) orelse unreachable;
+
+        try makeLine(level, leftNode.data.center(), rightNode.data.center(), .floor);
+
+        try carveBSPCorridor(level, tree, leftIndex);
+        try carveBSPCorridor(level, tree, rightIndex);
+    }
+}
+
+pub fn roomCutOff(room: Types.RectangleInt) Types.RectangleInt {
+    //TODO: make better
+    return Types.RectangleInt.init(room.x, room.y, room.w - 1, room.h - 1);
+}
+
+pub fn debugDrawRoom(room: Types.RectangleInt) void {
+    //const rlRect = room.getRLRect();
+    rl.drawRectangleLines(room.x * Config.tile_width, room.y * Config.tile_height, room.w * Config.tile_width, room.h * Config.tile_height, rl.Color.red);
 }
