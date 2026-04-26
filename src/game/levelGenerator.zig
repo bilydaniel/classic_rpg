@@ -3,6 +3,7 @@ const Allocators = @import("../common/allocators.zig");
 const Config = @import("../common/config.zig");
 const Types = @import("../common/types.zig");
 const Utils = @import("../common/utils.zig");
+const Debug = @import("../common/debug.zig");
 const rl = @import("raylib");
 const std = @import("std");
 
@@ -161,7 +162,7 @@ pub fn makeLine(level: *Level.Level, from: Types.Vector2Int, to: Types.Vector2In
 }
 
 pub fn generateBSP(id: u32, worldPos: Types.Vector3Int) !Level.Level {
-    const iterations: u32 = 5;
+    const iterations: u32 = 10;
     //TODO: add min / max
     //const splitMin = 0.1;
 
@@ -224,10 +225,12 @@ pub fn carveBSPCorridor(level: *Level.Level, tree: *Types.BSPTree, index: usize)
         std.debug.print("room: {}\n", .{node.data});
         const room = roomCutOff(node.data);
 
-        debugDrawRoom(room);
+        //debugDrawRoom(room);
+        Debug.addRect(tilePos: Vector2Int)
 
-        //try carveRoomRectangle(level, room);
+        try carveRoomRectangle(level, room);
     }
+
     if (node.left != null and node.right != null) {
         const leftIndex = node.left.?;
         const rightIndex = node.right.?;
@@ -243,7 +246,8 @@ pub fn carveBSPCorridor(level: *Level.Level, tree: *Types.BSPTree, index: usize)
 
 pub fn roomCutOff(room: Types.RectangleInt) Types.RectangleInt {
     //TODO: make better
-    return Types.RectangleInt.init(room.x, room.y, room.w - 1, room.h - 1);
+    const cutoff = 2;
+    return Types.RectangleInt.init(room.x + cutoff, room.y + cutoff, room.w - cutoff, room.h - cutoff);
 }
 
 pub fn debugDrawRoom(room: Types.RectangleInt) void {

@@ -349,3 +349,35 @@ pub fn BinaryTree(comptime T: type) type {
 
 pub const BSPNode = BinaryNode(RectangleInt);
 pub const BSPTree = BinaryTree(RectangleInt);
+
+pub const ShapeKind = enum {
+    rectangle,
+    circle,
+};
+
+pub const Shape = struct {
+    kind: ShapeKind,
+    pos: Vector2Int,
+    w: i32 = 0,
+    h: i32 = 0,
+    r: f32 = 0,
+    color: rl.Color = rl.Color.red,
+
+    pub fn initRectangle(pos: Vector2Int, w: i32, h: i32, color: rl.Color) Shape {
+        return Shape{
+            .kind = .rectangle,
+            .pos = pos,
+            .w = w,
+            .h = h,
+            .color = color,
+        };
+    }
+    pub fn initCircle(pos: Vector2Int, r: f32, color: rl.Color) Shape {
+        return Shape{
+            .kind = .circle,
+            .pos = pos,
+            .r = r,
+            .color = color,
+        };
+    }
+};
