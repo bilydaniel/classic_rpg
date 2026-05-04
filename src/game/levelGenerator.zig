@@ -226,7 +226,7 @@ pub fn carveBSPCorridor(level: *Level.Level, tree: *Types.BSPTree, index: usize)
         const room = roomCutOff(node.data);
 
         //debugDrawRoom(room);
-        Debug.addRect(tilePos: Vector2Int)
+        try Debug.addRect(room.x, room.y, room.w, room.h, false);
 
         try carveRoomRectangle(level, room);
     }

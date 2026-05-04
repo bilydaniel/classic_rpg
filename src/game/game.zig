@@ -17,6 +17,7 @@ const Config = @import("../common/config.zig");
 const LevelGenerator = @import("levelGenerator.zig");
 const rl = @import("raylib");
 const Profiler = @import("../common/profiler.zig");
+const Debug = @import("../common/debug.zig");
 
 pub const Game = struct {
     delta: f32,
@@ -118,6 +119,7 @@ pub const Game = struct {
         EntityManager.draw();
         ShaderManager.draw();
         try Gamestate.draw();
+        try Debug.draw();
 
         rl.endMode2D();
 
@@ -127,6 +129,8 @@ pub const Game = struct {
         //
         //SHADER PASS
         //
+
+        //TODO: check when does raylib take inputs, its either shouldclose or beginDrawing
         rl.beginDrawing();
         rl.clearBackground(rl.Color.black);
 

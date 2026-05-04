@@ -380,4 +380,15 @@ pub const Shape = struct {
             .color = color,
         };
     }
+
+    pub fn draw(this: *Shape) void {
+        switch (this.kind) {
+            .circle => {
+                rl.drawCircleLines(this.pos.x, this.pos.y, this.r, this.color);
+            },
+            .rectangle => {
+                rl.drawRectangleLines(this.pos.x, this.pos.y, this.w, this.h, this.color);
+            },
+        }
+    }
 };
